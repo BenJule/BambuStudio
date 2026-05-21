@@ -3,7 +3,7 @@ name: Build all
 on:
   push:
     branches:
-     - main
+     - master
     paths:
      - 'deps/**'
      - 'src/**'
@@ -45,7 +45,7 @@ jobs:
         include:
           - os: ubuntu-22.04
           - os: ubuntu-24.04
-          - os: windows-latest
+          - os: windows-2025
           - os: macos-15-intel
             arch: x86_64
           - os: macos-15
