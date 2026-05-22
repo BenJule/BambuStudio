@@ -1,41 +1,389 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BenJule BambuStudio APT Repository</title>
+  <title>BenJule/BambuStudio — APT Repository</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
-    pre { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 6px; overflow-x: auto; }
-    code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
-    h1, h2 { border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+    :root { color-scheme: light dark; }
+
+    /* ── GitHub Primer: Light ── */
+    [data-color-mode="light"],
+    [data-color-mode="auto"] {
+      --color-canvas-default:   #ffffff;
+      --color-canvas-subtle:    #f6f8fa;
+      --color-border-default:   #d0d7de;
+      --color-border-muted:     #d8dee4;
+      --color-fg-default:       #1f2328;
+      --color-fg-muted:         #656d76;
+      --color-accent-fg:        #0969da;
+      --color-accent-emphasis:  #0969da;
+      --color-accent-subtle:    #ddf4ff;
+      --color-success-fg:       #1a7f37;
+      --color-neutral-muted:    rgba(175,184,193,0.2);
+      --color-header-bg:        #24292f;
+      --color-header-fg:        #ffffff;
+      --color-header-border:    #3d444d;
+      --color-btn-bg:           #f6f8fa;
+      --color-btn-border:       rgba(31,35,40,0.15);
+      --color-btn-hover-bg:     #f3f4f6;
+    }
+
+    /* ── GitHub Primer: Dark (via OS) ── */
+    @media (prefers-color-scheme: dark) {
+      [data-color-mode="auto"] {
+        --color-canvas-default:   #0d1117;
+        --color-canvas-subtle:    #161b22;
+        --color-border-default:   #30363d;
+        --color-border-muted:     #21262d;
+        --color-fg-default:       #e6edf3;
+        --color-fg-muted:         #8d96a0;
+        --color-accent-fg:        #58a6ff;
+        --color-accent-emphasis:  #1f6feb;
+        --color-accent-subtle:    rgba(31,111,235,0.15);
+        --color-success-fg:       #3fb950;
+        --color-neutral-muted:    rgba(110,118,129,0.4);
+        --color-header-bg:        #161b22;
+        --color-header-fg:        #e6edf3;
+        --color-header-border:    #30363d;
+        --color-btn-bg:           #21262d;
+        --color-btn-border:       rgba(240,246,252,0.1);
+        --color-btn-hover-bg:     #30363d;
+      }
+    }
+
+    /* ── GitHub Primer: Dark (manual) ── */
+    [data-color-mode="dark"] {
+      --color-canvas-default:   #0d1117;
+      --color-canvas-subtle:    #161b22;
+      --color-border-default:   #30363d;
+      --color-border-muted:     #21262d;
+      --color-fg-default:       #e6edf3;
+      --color-fg-muted:         #8d96a0;
+      --color-accent-fg:        #58a6ff;
+      --color-accent-emphasis:  #1f6feb;
+      --color-accent-subtle:    rgba(31,111,235,0.15);
+      --color-success-fg:       #3fb950;
+      --color-neutral-muted:    rgba(110,118,129,0.4);
+      --color-header-bg:        #161b22;
+      --color-header-fg:        #e6edf3;
+      --color-header-border:    #30363d;
+      --color-btn-bg:           #21262d;
+      --color-btn-border:       rgba(240,246,252,0.1);
+      --color-btn-hover-bg:     #30363d;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
+                   Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--color-fg-default);
+      background: var(--color-canvas-default);
+    }
+
+    /* ── Header ── */
+    .gh-header {
+      background: var(--color-header-bg);
+      border-bottom: 1px solid var(--color-header-border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .gh-header-brand {
+      color: var(--color-header-fg);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0.9;
+    }
+    .gh-header-brand:hover { opacity: 1; text-decoration: none; }
+    .gh-header-brand svg { fill: var(--color-header-fg); }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      background: transparent;
+      border: 1px solid var(--color-header-border);
+      border-radius: 6px;
+      color: var(--color-header-fg);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 4px 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 80ms;
+      opacity: 0.75;
+    }
+    .theme-toggle:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 32px 16px 64px;
+    }
+
+    /* ── Repo banner ── */
+    .repo-banner {
+      border: 1px solid var(--color-border-default);
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      background: var(--color-canvas-subtle);
+    }
+    .repo-banner-icon { fill: var(--color-fg-muted); flex-shrink: 0; margin-top: 2px; }
+    .repo-banner strong { font-size: 16px; display: block; margin-bottom: 4px; }
+    .repo-banner p { margin: 0; color: var(--color-fg-muted); font-size: 13px; }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--color-border-muted);
+      padding-bottom: 10px;
+      margin: 0 0 20px;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--color-border-muted);
+      padding-bottom: 8px;
+      margin: 32px 0 16px;
+    }
+    h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 20px 0 8px;
+    }
+    p { margin: 8px 0; }
+
+    a { color: var(--color-accent-fg); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Inline code ── */
+    code {
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                   "Liberation Mono", monospace;
+      font-size: 85%;
+      background: var(--color-neutral-muted);
+      padding: 0.2em 0.4em;
+      border-radius: 6px;
+    }
+
+    /* ── Code blocks ── */
+    pre {
+      position: relative;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                   "Liberation Mono", monospace;
+      font-size: 85%;
+      background: var(--color-canvas-subtle);
+      border: 1px solid var(--color-border-default);
+      border-radius: 6px;
+      padding: 16px 48px 16px 16px;
+      overflow-x: auto;
+      line-height: 1.45;
+      margin: 8px 0 16px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      border-radius: 0;
+      font-size: 100%;
+    }
+
+    /* ── Copy button ── */
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--color-btn-bg);
+      border: 1px solid var(--color-btn-border);
+      border-radius: 6px;
+      color: var(--color-fg-muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      padding: 4px 10px;
+      opacity: 0;
+      transition: opacity 80ms, background 80ms;
+    }
+    pre:hover .copy-btn { opacity: 1; }
+    .copy-btn:hover { background: var(--color-btn-hover-bg); color: var(--color-fg-default); }
+    .copy-btn.copied { color: var(--color-success-fg); }
+
+    /* ── Note box ── */
+    .note {
+      border: 1px solid var(--color-border-default);
+      border-left: 4px solid var(--color-accent-emphasis);
+      border-radius: 6px;
+      padding: 12px 16px;
+      background: var(--color-accent-subtle);
+      margin: 16px 0;
+      font-size: 13px;
+      color: var(--color-fg-default);
+    }
+    .note strong { color: var(--color-accent-fg); }
+
+    /* ── Fingerprint ── */
+    .fingerprint {
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                   "Liberation Mono", monospace;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      color: var(--color-fg-muted);
+      background: var(--color-canvas-subtle);
+      border: 1px solid var(--color-border-muted);
+      border-radius: 6px;
+      padding: 8px 12px;
+      display: inline-block;
+    }
+
+    /* ── Footer ── */
+    .gh-footer {
+      margin-top: 48px;
+      padding-top: 16px;
+      border-top: 1px solid var(--color-border-muted);
+      color: var(--color-fg-muted);
+      font-size: 12px;
+      text-align: center;
+    }
+    .gh-footer a { color: var(--color-fg-muted); }
+    .gh-footer a:hover { color: var(--color-accent-fg); text-decoration: underline; }
   </style>
 </head>
 <body>
-  <h1>BenJule BambuStudio APT Repository</h1>
-  <p>This repository provides <code>.deb</code> packages for BambuStudio — a fork of
-  <a href="https://github.com/bambulab/BambuStudio">bambulab/BambuStudio</a>.</p>
 
-  <h2>Installation</h2>
+  <header class="gh-header">
+    <a class="gh-header-brand" href="https://github.com/BenJule/BambuStudio">
+      <svg height="24" width="24" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/>
+      </svg>
+      BenJule / BambuStudio
+    </a>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle color theme" id="theme-btn">
+      <span id="theme-icon">🌙</span>
+      <span id="theme-label">Dark</span>
+    </button>
+  </header>
 
-  <h3>One-liner (recommended)</h3>
-  <pre>curl -fsSL https://benjule.github.io/BambuStudio/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/bambustudio.gpg
+  <div class="container">
+
+    <div class="repo-banner">
+      <svg class="repo-banner-icon" width="20" height="20" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8Z"/>
+      </svg>
+      <div>
+        <strong>APT Repository</strong>
+        <p>Provides <code>.deb</code> packages for BambuStudio — a community fork of
+          <a href="https://github.com/bambulab/BambuStudio">bambulab/BambuStudio</a>
+          with additional fixes and features.</p>
+      </div>
+    </div>
+
+    <h1>Installation</h1>
+
+    <h3>One-liner (recommended)</h3>
+    <pre><code>curl -fsSL https://benjule.github.io/BambuStudio/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/bambustudio.gpg
 echo "deb [signed-by=/etc/apt/trusted.gpg.d/bambustudio.gpg] https://benjule.github.io/BambuStudio stable main" | sudo tee /etc/apt/sources.list.d/bambustudio.list
 sudo apt update
-sudo apt install bambu-studio</pre>
+sudo apt install bambu-studio</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
 
-  <h3>Upgrade</h3>
-  <pre>sudo apt update &amp;&amp; sudo apt upgrade bambu-studio</pre>
+    <h3>Upgrade</h3>
+    <pre><code>sudo apt update &amp;&amp; sudo apt upgrade bambu-studio</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
 
-  <h3>Remove</h3>
-  <pre>sudo apt remove bambu-studio
-sudo rm /etc/apt/sources.list.d/bambustudio.list /etc/apt/trusted.gpg.d/bambustudio.gpg</pre>
+    <h3>Remove</h3>
+    <pre><code>sudo apt remove bambu-studio
+sudo rm /etc/apt/sources.list.d/bambustudio.list /etc/apt/trusted.gpg.d/bambustudio.gpg</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
 
-  <h2>GPG Signing Key</h2>
-  <p>Packages are signed with key <code>1726EB3278D7246499B5F2C319BC754BE4AC6B68</code>
-  (<a href="KEY.gpg">KEY.gpg</a>).</p>
+    <div class="note">
+      <strong>Note:</strong> Packages are built for <strong>Debian 12 Bookworm</strong> and compatible distributions (Ubuntu 22.04+).
+    </div>
 
-  <h2>Source</h2>
-  <p><a href="https://github.com/BenJule/BambuStudio">github.com/BenJule/BambuStudio</a></p>
+    <h2>GPG Signing Key</h2>
+    <p>All packages are GPG-signed. Fingerprint:</p>
+    <p><span class="fingerprint">1726 EB32 78D7 2464 99B5&nbsp;&nbsp;F2C3 19BC 754B E4AC 6B68</span></p>
+    <p style="margin-top:12px"><a href="KEY.gpg">&#8595; Download KEY.gpg</a></p>
+
+    <h2>Manual setup</h2>
+
+    <h3>1. Add the GPG key</h3>
+    <pre><code>curl -fsSL https://benjule.github.io/BambuStudio/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/bambustudio.gpg</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+    <h3>2. Add the repository</h3>
+    <pre><code>echo "deb [signed-by=/etc/apt/trusted.gpg.d/bambustudio.gpg] https://benjule.github.io/BambuStudio stable main" | sudo tee /etc/apt/sources.list.d/bambustudio.list</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+    <h3>3. Install</h3>
+    <pre><code>sudo apt update &amp;&amp; sudo apt install bambu-studio</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+    <h2>Links</h2>
+    <p>
+      <a href="https://github.com/BenJule/BambuStudio">GitHub Repository</a>
+      &nbsp;&nbsp;·&nbsp;&nbsp;
+      <a href="https://github.com/BenJule/BambuStudio/releases">Releases</a>
+      &nbsp;&nbsp;·&nbsp;&nbsp;
+      <a href="https://github.com/BenJule/BambuStudio/issues">Issues</a>
+    </p>
+
+    <footer class="gh-footer">
+      <p>
+        Built from <a href="https://github.com/bambulab/BambuStudio">bambulab/BambuStudio</a>
+        &nbsp;·&nbsp;
+        <a href="https://github.com/BenJule/BambuStudio/blob/master/LICENSE">AGPL-3.0</a>
+      </p>
+    </footer>
+
+  </div>
+
+  <script>
+    const html = document.documentElement;
+    const STORAGE_KEY = 'bs-color-mode';
+
+    function resolvedIsDark(mode) {
+      if (mode === 'dark') return true;
+      if (mode === 'light') return false;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    function applyTheme(mode) {
+      html.setAttribute('data-color-mode', mode);
+      localStorage.setItem(STORAGE_KEY, mode);
+      const dark = resolvedIsDark(mode);
+      document.getElementById('theme-icon').textContent  = dark ? '☀️' : '🌙';
+      document.getElementById('theme-label').textContent = dark ? 'Light' : 'Dark';
+    }
+
+    function toggleTheme() {
+      const current = html.getAttribute('data-color-mode');
+      applyTheme(resolvedIsDark(current) ? 'light' : 'dark');
+    }
+
+    applyTheme(localStorage.getItem(STORAGE_KEY) || 'auto');
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      if (html.getAttribute('data-color-mode') === 'auto') applyTheme('auto');
+    });
+
+    function copyCode(btn) {
+      const text = btn.previousElementSibling.innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+  </script>
+
 </body>
 </html>
