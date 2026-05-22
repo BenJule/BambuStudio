@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BenJule BambuStudio APT Repository</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+    code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+    h1, h2 { border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+  </style>
+</head>
+<body>
+  <h1>BenJule BambuStudio APT Repository</h1>
+  <p>This repository provides <code>.deb</code> packages for BambuStudio — a fork of
+  <a href="https://github.com/bambulab/BambuStudio">bambulab/BambuStudio</a>.</p>
+
+  <h2>Installation</h2>
+
+  <h3>One-liner (recommended)</h3>
+  <pre>curl -fsSL https://benjule.github.io/BambuStudio/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/bambustudio.gpg
+echo "deb [signed-by=/etc/apt/trusted.gpg.d/bambustudio.gpg] https://benjule.github.io/BambuStudio stable main" | sudo tee /etc/apt/sources.list.d/bambustudio.list
+sudo apt update
+sudo apt install bambu-studio</pre>
+
+  <h3>Upgrade</h3>
+  <pre>sudo apt update &amp;&amp; sudo apt upgrade bambu-studio</pre>
+
+  <h3>Remove</h3>
+  <pre>sudo apt remove bambu-studio
+sudo rm /etc/apt/sources.list.d/bambustudio.list /etc/apt/trusted.gpg.d/bambustudio.gpg</pre>
+
+  <h2>GPG Signing Key</h2>
+  <p>Packages are signed with key <code>1726EB3278D7246499B5F2C319BC754BE4AC6B68</code>
+  (<a href="KEY.gpg">KEY.gpg</a>).</p>
+
+  <h2>Source</h2>
+  <p><a href="https://github.com/BenJule/BambuStudio">github.com/BenJule/BambuStudio</a></p>
+</body>
+</html>
