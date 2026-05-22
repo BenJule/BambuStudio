@@ -295,8 +295,8 @@
     <h1>Installation</h1>
 
     <h3>One-liner (recommended)</h3>
-    <pre><code>curl -fsSL https://benjule.github.io/BambuStudio/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/bambustudio.gpg
-echo "deb [signed-by=/etc/apt/trusted.gpg.d/bambustudio.gpg] https://benjule.github.io/BambuStudio stable main" | sudo tee /etc/apt/sources.list.d/bambustudio.list
+    <pre><code>curl -fsSL https://apt.s3-dev.ovh/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/bambustudio.gpg
+echo "deb [signed-by=/etc/apt/trusted.gpg.d/bambustudio.gpg] https://apt.s3-dev.ovh stable main" | sudo tee /etc/apt/sources.list.d/bambustudio.list
 sudo apt update
 sudo apt install bambu-studio</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
 
@@ -319,10 +319,10 @@ sudo rm /etc/apt/sources.list.d/bambustudio.list /etc/apt/trusted.gpg.d/bambustu
     <h2>Manual setup</h2>
 
     <h3>1. Add the GPG key</h3>
-    <pre><code>curl -fsSL https://benjule.github.io/BambuStudio/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/bambustudio.gpg</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+    <pre><code>curl -fsSL https://apt.s3-dev.ovh/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/bambustudio.gpg</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
 
     <h3>2. Add the repository</h3>
-    <pre><code>echo "deb [signed-by=/etc/apt/trusted.gpg.d/bambustudio.gpg] https://benjule.github.io/BambuStudio stable main" | sudo tee /etc/apt/sources.list.d/bambustudio.list</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+    <pre><code>echo "deb [signed-by=/etc/apt/trusted.gpg.d/bambustudio.gpg] https://apt.s3-dev.ovh stable main" | sudo tee /etc/apt/sources.list.d/bambustudio.list</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
 
     <h3>3. Install</h3>
     <pre><code>sudo apt update &amp;&amp; sudo apt install bambu-studio</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
