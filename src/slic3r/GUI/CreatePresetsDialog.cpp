@@ -1023,7 +1023,7 @@ wxBoxSizer *CreateFilamentPresetDialog::create_button_item()
         serial_name = remove_special_key(serial_name);
 
         if (vendor_name.empty()) {
-            MessageDialog dlg(this, _L("There may be escape characters in the vendor input of filament. Please delete and re-enter."), wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"),
+            MessageDialog dlg(this, _L("The filament vendor name contains invalid characters. Please remove them and try again."), wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"),
                               wxYES | wxYES_DEFAULT | wxCENTRE);
             dlg.ShowModal();
             return;
@@ -1031,7 +1031,7 @@ wxBoxSizer *CreateFilamentPresetDialog::create_button_item()
         boost::algorithm::trim(vendor_name);
         boost::algorithm::trim(serial_name);
         if (vendor_name.empty()) {
-            MessageDialog dlg(this, _L("All inputs in the custom vendor are spaces. Please re-enter."),
+            MessageDialog dlg(this, _L("The filament vendor name cannot be blank. Please enter a vendor name."),
                               wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"), wxYES | wxYES_DEFAULT | wxCENTRE);
             dlg.ShowModal();
             return;
