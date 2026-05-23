@@ -5,11 +5,13 @@ set -e
 
 ROOT=$(dirname "$(readlink -f "$0")")/..
 
-VERSION=$(grep 'set(SLIC3R_VERSION' "$ROOT/version.inc" | cut -d '"' -f2)
-if [ -z "$VERSION" ]; then
+BASE=$(grep 'set(SLIC3R_VERSION_BASE' "$ROOT/version.inc" | cut -d '"' -f2)
+if [ -z "$BASE" ]; then
     echo "Error: could not read version from version.inc" >&2
     exit 1
 fi
+COUNT=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo "0")
+VERSION="${BASE}.${COUNT}"
 
 ARCH=$(uname -m)
 APPDIR="$ROOT/build/package"
@@ -50,7 +52,7 @@ spec = textwrap.dedent(f"""
     License:    AGPLv3
     URL:        https://bambulab.com
     BuildArch:  {arch}
-    Requires:   mesa-libGL, gtk3, glib2, dbus-libs, systemd-libs, libsecret, webkit2gtk4.1, libxkbcommon
+    Requires:   mesa-libGL, gtk3, glib2, dbus-libs, systemd-libs, libsecret, (webkit2gtk4.1 or webkit2gtk4), libxkbcommon
 
     %description
     BambuStudio is a cutting-edge, feature-rich slicing software.
