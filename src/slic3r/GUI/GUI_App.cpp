@@ -1440,7 +1440,10 @@ GUI_App::GUI_App()
 	//app config initializes early becasuse it is used in instance checking in BambuStudio.cpp
     this->init_app_config();
     if (app_config) {
-        ::Label::initSysFont(app_config->get_language_code(), false);
+        // load_font_resource=true: loads private font files (Linux) AND creates
+        // static wxFont objects. Safe here because GUI_App is constructed after
+        // gtk_init() has been called by wxWidgets.
+        ::Label::initSysFont(app_config->get_language_code(), true);
     }
     this->init_download_path();
 
