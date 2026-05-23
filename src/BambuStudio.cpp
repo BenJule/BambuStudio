@@ -138,23 +138,29 @@ static bool check_display_available() {
     const char* display         = std::getenv("DISPLAY");
     const char* wayland_display = std::getenv("WAYLAND_DISPLAY");
 
-    if (display && *display && x11_socket_exists(display))
-        return true;
     if (wayland_display && *wayland_display)
         return true;
 
-    // Give a meaningful diagnosis instead of a GTK crash.
     if (display && *display) {
+        // Remote X11 displays (e.g. DISPLAY=host:0) don't have a local socket.
+        // Only require the socket for local displays (starting with ':' or 'unix:').
+        bool is_local = (display[0] == ':') ||
+                        (strncmp(display, "unix:", 5) == 0);
+        if (!is_local)
+            return true;
+        if (x11_socket_exists(display))
+            return true;
         std::cerr << "[BambuStudio] DISPLAY=" << display
                   << " is set but no XWayland socket found at /tmp/.X11-unix/.\n"
                   << "  Under KDE Plasma 6 (Wayland), XWayland may be set to\n"
                   << "  \"on demand\". Enable it unconditionally:\n"
                   << "  System Settings → Display → Compositor → Legacy Applications\n"
                   << "  Or start it before launching: Xwayland :0 &" << std::endl;
-    } else {
-        std::cerr << "[BambuStudio] No display available. "
-                  << "Set DISPLAY=:0 (X11/XWayland) or WAYLAND_DISPLAY=wayland-0 (Wayland)." << std::endl;
+        return false;
     }
+
+    std::cerr << "[BambuStudio] No display available. "
+              << "Set DISPLAY=:0 (X11/XWayland) or WAYLAND_DISPLAY=wayland-0 (Wayland)." << std::endl;
     return false;
 }
 #endif /* __linux__ */

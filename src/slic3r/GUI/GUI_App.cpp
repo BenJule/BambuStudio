@@ -2996,13 +2996,11 @@ bool GUI_App::on_init_inner()
 
 // initialize label colors and fonts
     init_label_colours();
-    init_fonts();
-#ifdef __linux__
-    // initSysFont constructs wxFont/Pango objects that require an active GDK display.
-    // Must run here (inside on_init_inner, after wxEntry/gtk_init), NOT in the GUI_App constructor.
+    // initSysFont must run before init_fonts() (which consumes Label statics),
+    // and after wxEntry/gtk_init — not in the GUI_App constructor.
     if (app_config)
         ::Label::initSysFont(app_config->get_language_code(), true);
-#endif
+    init_fonts();
     wxGetApp().Update_dark_mode_flag();
 
 #if defined(__WINDOWS__)

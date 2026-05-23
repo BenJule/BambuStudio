@@ -79,7 +79,7 @@ jobs:
 
             echo "  $WF — deleting ${#OLD_IDS[@]} old run(s)"
             for ID in "${OLD_IDS[@]}"; do
-              gh run delete "$ID" --repo "$REPO" 2>/dev/null && echo "    deleted $ID" || true
+              gh run delete "$ID" --repo "$REPO" --yes && echo "    deleted $ID" || echo "    failed to delete $ID"
             done
           done
 
