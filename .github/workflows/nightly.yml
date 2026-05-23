@@ -32,6 +32,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           lfs: 'true'
+          fetch-depth: 0
 
       - name: Cache deps
         id: cache-deps
@@ -122,6 +123,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           lfs: 'true'
+          fetch-depth: 0
 
       - name: Cache deps
         id: cache-deps
@@ -209,6 +211,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           lfs: 'true'
+          fetch-depth: 0
 
       - name: Cache deps
         id: cache-deps
@@ -343,7 +346,7 @@ jobs:
         run: |
           git tag -s "${{ steps.ver.outputs.tag }}" \
             -m "Nightly build ${{ steps.ver.outputs.date }}" \
-            "${{ github.sha }}"
+            HEAD
           git push origin "${{ steps.ver.outputs.tag }}"
 
       - name: Build status summary
