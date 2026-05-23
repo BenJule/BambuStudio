@@ -111,10 +111,12 @@ static bool x11_socket_exists(const char* display)
     char num[32]; size_t i = 0;
     while (p[i] && p[i] != '.' && i < sizeof(num) - 1) { num[i] = p[i]; ++i; }
     num[i] = '\0';
+    if (num[0] == '\0')
+        return false;
     char path[256];
     snprintf(path, sizeof(path), "/tmp/.X11-unix/X%s", num);
     struct stat st;
-    return stat(path, &st) == 0;
+    return stat(path, &st) == 0 && S_ISSOCK(st.st_mode);
 }
 
 static void setup_display_backend() {
