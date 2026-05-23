@@ -52,6 +52,8 @@ jobs:
         run: ./BuildLinux.sh -dfr
 
       - name: Build BambuStudio
+        env:
+          BBL_BUILD_FLAVOR: nightly
         run: |
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
@@ -143,6 +145,8 @@ jobs:
         run: ./BuildLinux.sh -dfr
 
       - name: Build BambuStudio
+        env:
+          BBL_BUILD_FLAVOR: nightly
         run: |
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh

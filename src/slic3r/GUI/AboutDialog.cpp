@@ -249,7 +249,12 @@ AboutDialog::AboutDialog()
     {
         vesizer->Add(0, FromDIP(165), 1, wxEXPAND, 0);
         auto version_text   = GUI_App::format_display_version();
-        auto version_string = _L("Beta Version") + " " + std::string(version_text);
+        std::string flavor  = SLIC3R_BUILD_FLAVOR;
+        std::string version_label =
+            flavor == "nightly" ? _u8L("Nightly Version") :
+            flavor == "release" ? _u8L("Release Version") :
+                                  _u8L("Dev Version");
+        auto version_string = version_label + " " + std::string(version_text);
         wxStaticText* version = new wxStaticText(header_panel, wxID_ANY, version_string.c_str(),
                                                  wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
         wxFont version_font = GetFont();
@@ -435,7 +440,11 @@ void AboutDialog::onCopyrightBtn(wxEvent &)
 void AboutDialog::onCopyToClipboard(wxEvent&)
 {
     wxTheClipboard->Open();
-    wxTheClipboard->SetData(new wxTextDataObject(_L("Beta Version") + " " + GUI_App::format_display_version()));
+    std::string flv = SLIC3R_BUILD_FLAVOR;
+    std::string lbl = flv == "nightly" ? _u8L("Nightly Version") :
+                      flv == "release" ? _u8L("Release Version") :
+                                         _u8L("Dev Version");
+    wxTheClipboard->SetData(new wxTextDataObject(lbl + " " + GUI_App::format_display_version()));
     wxTheClipboard->Close();
 }
 
