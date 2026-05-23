@@ -26,7 +26,7 @@ on:
     inputs:
       keep:
         description: 'Number of recent runs to keep per workflow'
-        default: '5'
+        default: '2'
         required: false
 
 permissions:
@@ -47,7 +47,7 @@ jobs:
       - name: Delete old completed runs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          KEEP: ${{ inputs.keep || '5' }}
+          KEEP: ${{ inputs.keep || '2' }}
         run: |
           set -euo pipefail
           REPO="${{ github.repository }}"
