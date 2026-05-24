@@ -2,9 +2,7 @@ name: Upstream Sync
 run-name: "Upstream sync — ${{ github.run_number }}"
 
 on:
-  schedule:
-    - cron: '0 3 * * 1'  # every Monday 03:00 UTC
-  workflow_dispatch: {}
+  workflow_dispatch:  # manual only — no automatic schedule
 
 permissions: read-all
 
