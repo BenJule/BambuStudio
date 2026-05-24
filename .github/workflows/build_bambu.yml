@@ -6,6 +6,9 @@ on:
       cache-key:
         required: true
         type: string
+      cache-path:
+        required: false
+        type: string
       os:
         required: true
         type: string
@@ -39,7 +42,7 @@ jobs:
       - name: load cached deps
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
-          path: ${{ github.workspace }}/deps/build
+          path: ${{ inputs.cache-path || format('{0}/deps/build', github.workspace) }}
           key: ${{ inputs.cache-key }}
           restore-keys: |
             bambu-deps-${{ inputs.os }}-${{ inputs.arch }}-
@@ -122,7 +125,7 @@ jobs:
           brew link --overwrite cmake@3.31.0
           brew pin cmake@3.31.0
           brew install zstd
-          if [ ! -d "${{ github.workspace }}/deps/build/universal" ]; then
+          if [ ! -d "${{ github.workspace }}/deps/build/arm64" ]; then
             echo "Kein macOS-ARM Cache vorhanden. Baue Abhängigkeiten + Slicer..."
             ./BuildMac.sh -x -a universal -t 10.15 -1
           else
