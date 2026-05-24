@@ -154,7 +154,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           body=$(gh api "repos/${{ github.repository }}/releases" \
-            --jq '[.[] | select(.draft == true)] | first | .body // ""')
+            --jq '[.[] | select(.draft == true and .author.login == "github-actions[bot]")] | first | .body // ""')
           if [ -n "$body" ]; then
             printf '%s' "$body" > /tmp/release-notes.md
             echo "use_draft=true" >> "$GITHUB_OUTPUT"
@@ -189,7 +189,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           draft_id=$(gh api "repos/${{ github.repository }}/releases" \
-            --jq '[.[] | select(.draft == true)] | first | .id // ""')
+            --jq '[.[] | select(.draft == true and .author.login == "github-actions[bot]")] | first | .id // ""')
           if [ -n "$draft_id" ]; then
             gh api "repos/${{ github.repository }}/releases/$draft_id" -X DELETE
             echo "Deleted draft release $draft_id"
