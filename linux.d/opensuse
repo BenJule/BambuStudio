@@ -49,6 +49,18 @@ then
     sudo zypper -n clean --all
     sudo zypper -n refresh
     sudo zypper -n install ${REQUIRED_DEV_PACKAGES[@]}
+    # CMake 4.x removed backward compat with cmake_minimum_required(VERSION < 3.5)
+    # which breaks wxWidgets cotire_test on rolling-release openSUSE Tumbleweed.
+    # Override with cmake 3.31.6 binary from cmake.org when cmake >= 4 is detected.
+    _cmake_major=$(cmake --version 2>/dev/null | awk 'NR==1{split($3,a,"."); print a[1]+0}')
+    if [ "${_cmake_major:-0}" -ge 4 ]; then
+        _cmake_ver="3.31.6"
+        _cmake_tar="cmake-${_cmake_ver}-linux-x86_64.tar.gz"
+        curl -fsSL "https://github.com/Kitware/CMake/releases/download/v${_cmake_ver}/${_cmake_tar}" \
+            -o "/tmp/${_cmake_tar}"
+        sudo tar -C /usr/local --strip-components=1 -xzf "/tmp/${_cmake_tar}"
+        echo "cmake pinned: $(cmake --version | head -1)"
+    fi
     echo -e "done\n"
     exit 0
 fi
