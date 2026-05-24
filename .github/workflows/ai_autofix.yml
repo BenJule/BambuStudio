@@ -77,9 +77,18 @@ jobs:
           fi
 
           if echo "$ISSUE_LABELS" | grep -qiE '"area: slicing"'; then
-            while IFS= read -r -d '' f; do
-              files+=("$f")
-            done < <(find src/libslic3r -maxdepth 2 -name '*.cpp' -o -name '*.hpp' -print0 2>/dev/null | head -c 100000)
+            # Only key slicing files — avoid flooding context with all headers
+            for f in \
+              src/libslic3r/Print.cpp \
+              src/libslic3r/Print.hpp \
+              src/libslic3r/PrintConfig.hpp \
+              src/libslic3r/Slicing.cpp \
+              src/libslic3r/Slicing.hpp \
+              src/libslic3r/Layer.hpp \
+              src/libslic3r/Flow.cpp \
+              src/libslic3r/Flow.hpp; do
+              [ -f "$f" ] && files+=("$f")
+            done
           fi
 
           # Default: CI workflows
