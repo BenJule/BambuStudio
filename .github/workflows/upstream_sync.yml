@@ -1,0 +1,96 @@
+name: Upstream Sync
+run-name: "Upstream sync — ${{ github.run_number }}"
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'  # every Monday 03:00 UTC
+  workflow_dispatch: {}
+
+permissions: read-all
+
+jobs:
+  sync:
+    name: Sync from bambulab/BambuStudio
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout fork
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/bambulab/BambuStudio.git || true
+          git fetch upstream --no-tags
+
+      - name: Check for new upstream commits
+        id: check
+        run: |
+          behind=$(git rev-list HEAD..upstream/master --count)
+          echo "behind=$behind" >> "$GITHUB_OUTPUT"
+          echo "Upstream is $behind commits ahead of fork master."
+
+      - name: Attempt fast-forward merge
+        id: merge
+        if: steps.check.outputs.behind > 0
+        run: |
+          git checkout master
+          if git merge --ff-only upstream/master; then
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=non_fast_forward" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push if fast-forward succeeded
+        if: steps.merge.outputs.result == 'success'
+        run: git push origin master
+
+      - name: Open conflict issue if merge failed
+        if: steps.merge.outputs.result == 'non_fast_forward'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          behind="${{ steps.check.outputs.behind }}"
+          existing=$(gh issue list --repo "${{ github.repository }}" \
+            --label "upstream-conflict" --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -z "$existing" ]; then
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "Upstream sync: merge conflict detected" \
+              --label "upstream-conflict" \
+              --assignee BenJule \
+              --body "$(printf \
+                'The weekly upstream sync detected **%s new upstream commits** that could not be fast-forwarded automatically.\n\nPlease resolve manually:\n\n```bash\ngit fetch upstream\ngit checkout master\ngit merge upstream/master\n# resolve conflicts\ngit push origin master\n```\n\nUpstream: https://github.com/bambulab/BambuStudio/commits/master' \
+                "$behind")"
+          else
+            echo "Conflict issue #$existing already open — skipping."
+          fi
+
+      - name: Summary
+        run: |
+          echo "### Upstream Sync Result" >> "$GITHUB_STEP_SUMMARY"
+          behind="${{ steps.check.outputs.behind }}"
+          result="${{ steps.merge.outputs.result }}"
+          if [ "$behind" = "0" ]; then
+            echo "Fork is already up-to-date with upstream. ✅" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$result" = "success" ]; then
+            echo "Fast-forwarded **$behind** upstream commits to master. ✅" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**$behind** upstream commits could not be merged automatically — conflict issue opened. ⚠️" >> "$GITHUB_STEP_SUMMARY"
+          fi

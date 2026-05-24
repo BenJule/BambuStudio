@@ -1,0 +1,72 @@
+name: Translation Issue
+description: Report a missing, incorrect or untranslated string in the UI
+labels: ["translation", "status: needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve BambuStudio translations!
+        For larger translation contributions, consider opening a Pull Request directly against the `.po` files in `resources/i18n/`.
+
+  - type: input
+    id: version
+    attributes:
+      label: BambuStudio Version
+      placeholder: e.g. 02.07.00.55
+    validations:
+      required: true
+
+  - type: input
+    id: language
+    attributes:
+      label: Language / locale
+      placeholder: e.g. German (de), French (fr_FR), Japanese (ja)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: Type of translation issue
+      options:
+        - Untranslated string (English shown instead of local language)
+        - Wrong / misleading translation
+        - Typo or grammatical error
+        - Missing translation file for my language
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: location
+    attributes:
+      label: Where does the issue appear?
+      description: Menu name, dialog title, button label, tooltip — be as specific as possible.
+      placeholder: |
+        e.g. Settings → Filament → "Filament color" label shows English text on German UI
+    validations:
+      required: true
+
+  - type: input
+    id: current
+    attributes:
+      label: Current (wrong) text
+      placeholder: e.g. "Filament color"
+    validations:
+      required: true
+
+  - type: input
+    id: suggested
+    attributes:
+      label: Suggested correct translation
+      placeholder: e.g. "Filamentfarbe"
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: A screenshot showing the UI with the translation issue.
+    validations:
+      required: false
