@@ -3160,6 +3160,11 @@ bool GUI_App::on_init_inner()
         scrn->Raise();
         scrn->Update();
         scrn->SetText(_L("Loading configuration")+ dots);
+        // BBLSplashScreen::SetText() does not force a repaint on non-macOS.
+        // Refresh() + Update() ensure the first status line is visible before
+        // the heavy startup work begins.
+        scrn->Refresh();
+        scrn->Update();
     }
 
     BOOST_LOG_TRIVIAL(info) << "loading systen presets...";
