@@ -55,9 +55,22 @@ then
     _cmake_major=$(cmake --version 2>/dev/null | awk 'NR==1{split($3,a,"."); print a[1]+0}')
     if [ "${_cmake_major:-0}" -ge 4 ]; then
         _cmake_ver="3.31.6"
-        _cmake_tar="cmake-${_cmake_ver}-linux-x86_64.tar.gz"
-        curl -fsSL "https://github.com/Kitware/CMake/releases/download/v${_cmake_ver}/${_cmake_tar}" \
-            -o "/tmp/${_cmake_tar}"
+        _arch=$(uname -m)
+        case "$_arch" in
+            x86_64)  _cmake_arch="linux-x86_64" ;;
+            aarch64) _cmake_arch="linux-aarch64" ;;
+            *) echo "Unsupported architecture: $_arch — cannot pin cmake 3.31.x"; exit 1 ;;
+        esac
+        _cmake_tar="cmake-${_cmake_ver}-${_cmake_arch}.tar.gz"
+        _cmake_url="https://github.com/Kitware/CMake/releases/download/v${_cmake_ver}"
+        wget -q "${_cmake_url}/${_cmake_tar}" -O "/tmp/${_cmake_tar}"
+        wget -q "${_cmake_url}/cmake-${_cmake_ver}-SHA-256.txt" -O "/tmp/cmake-SHA-256.txt"
+        _expected=$(grep "${_cmake_tar}" /tmp/cmake-SHA-256.txt | awk '{print $1}')
+        _actual=$(sha256sum "/tmp/${_cmake_tar}" | awk '{print $1}')
+        if [ "$_expected" != "$_actual" ]; then
+            echo "SHA256 mismatch for ${_cmake_tar}: expected $_expected, got $_actual"
+            exit 1
+        fi
         sudo tar -C /usr/local --strip-components=1 -xzf "/tmp/${_cmake_tar}"
         echo "cmake pinned: $(cmake --version | head -1)"
     fi
