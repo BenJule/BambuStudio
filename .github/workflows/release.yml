@@ -138,9 +138,10 @@ jobs:
       - name: Generate checksums
         run: |
           cd release-assets/
-          sha256sum * > SHA256SUMS
-          sha512sum * > SHA512SUMS
+          find . -maxdepth 1 -type f ! -name 'SHA*SUMS' | sort | xargs sha256sum > SHA256SUMS
+          find . -maxdepth 1 -type f ! -name 'SHA*SUMS' | sort | xargs sha512sum > SHA512SUMS
           echo "=== SHA256SUMS ===" && cat SHA256SUMS
+          echo "=== SHA512SUMS ===" && cat SHA512SUMS
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
