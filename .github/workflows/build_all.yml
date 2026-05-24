@@ -76,7 +76,6 @@ jobs:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
       cache-key: "bambu-deps-${{ matrix.os }}-${{ matrix.arch }}-${{ github.sha }}"
-      cache-path: "${{ github.workspace }}/deps/build"
     secrets: inherit
 
   # ── macOS Universal Binary (Fusions-Job für die Mac-Builds) ────────────────
@@ -89,7 +88,6 @@ jobs:
       os: macos-15
       arch: universal
       cache-key: "bambu-deps-macos-15-universal"
-      cache-path: "${{ github.workspace }}/deps/build"
     secrets: inherit
 
   # ── Distribution packages (Debian .deb, Fedora .rpm) ──────────────────────

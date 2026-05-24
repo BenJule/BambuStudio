@@ -187,7 +187,6 @@ jobs:
     uses: ./.github/workflows/build_bambu.yml
     with:
       cache-key: ${{ inputs.cache-key }}
-      cache-path: ${{ inputs.cache-path }}
       os: ${{ inputs.os }}
       arch: ${{ inputs.arch }}
     secrets: inherit
