@@ -387,7 +387,7 @@ void wxMediaCtrl3::PlayThread()
             }
         }
 #else
-        error = 1;
+        error = 100;
 #endif
         if (m_get_frame_thread.joinable()) {
             m_get_frame_exit.store(true);
