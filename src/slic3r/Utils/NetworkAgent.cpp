@@ -249,6 +249,20 @@ int NetworkAgent::initialize_network_module(bool using_backup, bool validate_cer
     library = plugin_folder.string() + "/" + std::string("lib") + std::string(BAMBU_NETWORK_LIBRARY) + ".so";
     #endif
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", line %1%, loading network module, using_backup %2%\n")%__LINE__ %using_backup;
+#if defined(__linux__)
+    // Debian Trixie (kernel ≥ 6.1) enforces kernel.exec-shield / AppArmor restrictions
+    // that block dlopen() on .so files whose ELF GNU_STACK header is marked executable
+    // (RWE). The Bambu networking plugin is shipped with that flag set. Clear it with
+    // patchelf before loading so the kernel's exec-limit policy does not reject the load.
+    {
+        std::string cmd = "patchelf --clear-execstack \"" + library + "\" 2>/dev/null";
+        if (std::system(cmd.c_str()) != 0) {
+            cmd = "execstack -c \"" + library + "\" 2>/dev/null";
+            std::system(cmd.c_str());
+        }
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " cleared execstack flag on " << library;
+    }
+#endif
     module_cert_summary = SummarizeModule(library);
     if (self_cert_summary) {
         module_cert_summary = SummarizeModule(library);
