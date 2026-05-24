@@ -22,18 +22,17 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: |
+            api.github.com:443
+            api.anthropic.com:443
+            github.com:443
 
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure git
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Compute branch name
         id: branch
@@ -194,14 +193,25 @@ Rules:
           with open("/tmp/pr_title.txt", "w") as f:
               f.write(data["pr_title"])
 
+          import pathlib
+          repo_root = pathlib.Path.cwd().resolve()
+
           for change in data.get("changes", []):
               filepath = change["file"]
               content = change["content"]
-              dirpath = os.path.dirname(filepath)
-              if dirpath:
-                  os.makedirs(dirpath, exist_ok=True)
-              with open(filepath, "w") as f:
-                  f.write(content)
+
+              # Guard against path traversal: reject absolute paths, .git/, and .. segments
+              if os.path.isabs(filepath) or ".." in filepath.split(os.sep) or filepath.startswith(".git"):
+                  print(f"REJECTED unsafe path: {filepath}")
+                  sys.exit(1)
+
+              resolved = (repo_root / filepath).resolve()
+              if not str(resolved).startswith(str(repo_root)):
+                  print(f"REJECTED path escaping repo root: {filepath}")
+                  sys.exit(1)
+
+              resolved.parent.mkdir(parents=True, exist_ok=True)
+              resolved.write_text(content)
               print(f"Written: {filepath}")
 
           print(f"Applied {len(data.get('changes', []))} file(s)")
@@ -213,6 +223,11 @@ Rules:
           signing-key: ${{ secrets.GIT_SIGNING_KEY }}
           signing-key-passphrase: ${{ secrets.GIT_SIGNING_KEY_PASSPHRASE }}
           signing-key-id: ${{ secrets.GIT_SIGNING_KEY_ID }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Commit and push
         run: |
@@ -244,9 +259,10 @@ Rules:
           > Please review the changes carefully before merging.
 
           Closes #${{ github.event.issue.number }}" \
-            --base master \
+            --base "${{ github.event.repository.default_branch }}" \
             --head "${{ steps.branch.outputs.name }}" \
-            --assignee BenJule)
+            --assignee BenJule \
+          )
 
           PR_NUM=$(echo "$PR_URL" | grep -oE '[0-9]+$')
 
