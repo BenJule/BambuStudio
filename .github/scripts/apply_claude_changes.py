@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Parse Claude's JSON response and apply file changes safely."""
+"""Parse Claude's JSON response and apply the unified diff."""
 import json
 import os
-import pathlib
+import subprocess
 import sys
 
 with open("/tmp/claude-output.txt") as f:
@@ -18,7 +18,7 @@ try:
     data = json.loads(raw)
 except json.JSONDecodeError as e:
     print(f"Failed to parse JSON from Claude: {e}")
-    print(f"Raw output:\n{raw[:1000]}")
+    print(f"Raw output:\n{raw[:500]}")
     sys.exit(1)
 
 with open("/tmp/commit_msg.txt", "w") as f:
@@ -27,24 +27,39 @@ with open("/tmp/commit_msg.txt", "w") as f:
 with open("/tmp/pr_title.txt", "w") as f:
     f.write(data["pr_title"])
 
-repo_root = pathlib.Path.cwd().resolve()
+diff = data.get("diff", "").strip()
+if not diff:
+    print("Claude returned empty diff — no fix could be generated")
+    sys.exit(1)
 
-for change in data.get("changes", []):
-    filepath = change["file"]
-    content = change["content"]
+# Write diff to file
+with open("/tmp/claude.patch", "w") as f:
+    f.write(diff)
 
-    # Guard against path traversal
-    if os.path.isabs(filepath) or ".." in filepath.split(os.sep) or filepath.startswith(".git"):
-        print(f"REJECTED unsafe path: {filepath}")
-        sys.exit(1)
+print("Applying patch:")
+print(diff[:500])
 
-    resolved = (repo_root / filepath).resolve()
-    if not str(resolved).startswith(str(repo_root)):
-        print(f"REJECTED path escaping repo root: {filepath}")
-        sys.exit(1)
+# Apply via git apply
+result = subprocess.run(
+    ["git", "apply", "--check", "/tmp/claude.patch"],
+    capture_output=True, text=True
+)
+if result.returncode != 0:
+    print(f"Patch check failed:\n{result.stderr}")
+    # Try with --reject to get partial application info
+    result2 = subprocess.run(
+        ["git", "apply", "--verbose", "/tmp/claude.patch"],
+        capture_output=True, text=True
+    )
+    print(f"Apply output:\n{result2.stdout}\n{result2.stderr}")
+    sys.exit(1)
 
-    resolved.parent.mkdir(parents=True, exist_ok=True)
-    resolved.write_text(content)
-    print(f"Written: {filepath}")
+result = subprocess.run(
+    ["git", "apply", "/tmp/claude.patch"],
+    capture_output=True, text=True
+)
+if result.returncode != 0:
+    print(f"Patch apply failed:\n{result.stderr}")
+    sys.exit(1)
 
-print(f"Applied {len(data.get('changes', []))} file(s)")
+print("Patch applied successfully")
