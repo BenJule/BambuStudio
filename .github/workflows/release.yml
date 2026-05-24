@@ -148,15 +148,49 @@ jobs:
         with:
           subject-path: release-assets/**
 
+      - name: Fetch draft release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          body=$(gh api "repos/${{ github.repository }}/releases" \
+            --jq '[.[] | select(.draft == true and .author.login == "github-actions[bot]")] | first | .body // ""')
+          if [ -n "$body" ]; then
+            printf '%s' "$body" > /tmp/release-notes.md
+            echo "use_draft=true" >> "$GITHUB_OUTPUT"
+            echo "Found release-drafter draft ($(wc -l < /tmp/release-notes.md) lines)"
+          else
+            echo "use_draft=false" >> "$GITHUB_OUTPUT"
+            echo "No draft release found — will use --generate-notes"
+          fi
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ needs.prepare.outputs.tag }}"
           mapfile -d '' ASSETS < <(find release-assets/ -type f -print0)
+          NOTES_ARGS=()
+          if [ "${{ steps.notes.outputs.use_draft }}" = "true" ]; then
+            NOTES_ARGS=(--notes-file /tmp/release-notes.md)
+          else
+            NOTES_ARGS=(--generate-notes)
+          fi
           gh release create "$TAG" \
             --repo "${{ github.repository }}" \
             --title "BambuStudio $TAG" \
-            --generate-notes \
+            "${NOTES_ARGS[@]}" \
             --latest \
             "${ASSETS[@]}"
+
+      - name: Delete draft release
+        if: steps.notes.outputs.use_draft == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          draft_id=$(gh api "repos/${{ github.repository }}/releases" \
+            --jq '[.[] | select(.draft == true and .author.login == "github-actions[bot]")] | first | .id // ""')
+          if [ -n "$draft_id" ]; then
+            gh api "repos/${{ github.repository }}/releases/$draft_id" -X DELETE
+            echo "Deleted draft release $draft_id"
+          fi
