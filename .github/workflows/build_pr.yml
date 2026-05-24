@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - develop
+      - master  # temporary: until master is renamed to main
     paths:
       - 'deps/**'
       - 'src/**'

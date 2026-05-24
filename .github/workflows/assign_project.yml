@@ -32,17 +32,36 @@ jobs:
           project-url: https://github.com/users/BenJule/projects/1
           github-token: ${{ secrets.PROJECT_TOKEN }}
 
-      - name: Assign BenJule
+      - name: Assign BenJule and set milestone
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7
         with:
           script: |
-            const isPR    = !!context.payload.pull_request;
-            const number  = isPR
+            const isPR   = !!context.payload.pull_request;
+            const number = isPR
               ? context.payload.pull_request.number
               : context.payload.issue.number;
+
             await github.rest.issues.addAssignees({
               owner:        context.repo.owner,
               repo:         context.repo.repo,
               issue_number: number,
               assignees:    ['BenJule'],
             });
+
+            const { data: milestones } = await github.rest.issues.listMilestones({
+              owner:     context.repo.owner,
+              repo:      context.repo.repo,
+              state:     'open',
+              sort:      'due_on',
+              direction: 'asc',
+              per_page:  1,
+            });
+            if (milestones.length > 0) {
+              await github.rest.issues.update({
+                owner:        context.repo.owner,
+                repo:         context.repo.repo,
+                issue_number: number,
+                milestone:    milestones[0].number,
+              });
+              core.info(`Set milestone: ${milestones[0].title}`);
+            }
