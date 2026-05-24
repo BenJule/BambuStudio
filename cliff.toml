@@ -23,6 +23,10 @@ body = """
 trim = true
 footer = ""
 
+[remote.github]
+owner = "BenJule"
+repo = "BambuStudio"
+
 [git]
 conventional_commits = true
 filter_unconventional = true

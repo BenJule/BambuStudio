@@ -5,12 +5,7 @@ on:
   push:
     branches:
       - 'release/**'
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'release/* branch to build RC from'
-        required: false
-        default: ''
+  workflow_dispatch: {}
 
 permissions: read-all
 
