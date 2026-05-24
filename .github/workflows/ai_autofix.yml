@@ -12,7 +12,7 @@ jobs:
     name: Fix Issue #${{ github.event.issue.number }}
     if: github.event.label.name == 'ai-fix'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: write
@@ -46,124 +46,69 @@ jobs:
           else
             prefix="fix"
           fi
-
           slug=$(echo "$ISSUE_TITLE" \
             | tr '[:upper:]' '[:lower:]' \
             | sed 's/[^a-z0-9]/-/g; s/-\+/-/g; s/^-//; s/-$//' \
             | cut -c1-40)
-
           echo "name=${prefix}/issue-${ISSUE_NUMBER}-${slug}" >> "$GITHUB_OUTPUT"
 
-      - name: Collect context files
+      - name: Install Claude CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run Claude auto-fix
         env:
-          ISSUE_LABELS: ${{ toJson(github.event.issue.labels.*.name) }}
-        run: |
-          files=()
-
-          if echo "$ISSUE_LABELS" | grep -qiE '"area: ci"'; then
-            files+=(.github/workflows/*.yml)
-          fi
-
-          if echo "$ISSUE_LABELS" | grep -qiE '"area: build"'; then
-            for f in CMakeLists.txt deps/CMakeLists.txt BuildLinux.sh build_win.bat BuildMac.sh; do
-              [ -f "$f" ] && files+=("$f")
-            done
-          fi
-
-          if echo "$ISSUE_LABELS" | grep -qiE '"area: packaging"'; then
-            while IFS= read -r -d '' f; do
-              files+=("$f")
-            done < <(find linux.d scripts -maxdepth 2 \( -name '*.sh' -o -name '*.spec' \) -print0 2>/dev/null)
-          fi
-
-          if echo "$ISSUE_LABELS" | grep -qiE '"area: slicing"'; then
-            # Only key slicing files — avoid flooding context with all headers
-            for f in \
-              src/libslic3r/Print.cpp \
-              src/libslic3r/Print.hpp \
-              src/libslic3r/PrintConfig.hpp \
-              src/libslic3r/Slicing.cpp \
-              src/libslic3r/Slicing.hpp \
-              src/libslic3r/Layer.hpp \
-              src/libslic3r/Flow.cpp \
-              src/libslic3r/Flow.hpp; do
-              [ -f "$f" ] && files+=("$f")
-            done
-          fi
-
-          # Default: CI workflows
-          if [ ${#files[@]} -eq 0 ]; then
-            files+=(.github/workflows/*.yml)
-          fi
-
-          printf '%s\n' "${files[@]}" > /tmp/filelist.txt
-          echo "Context files: ${files[*]}"
-
-      - name: Build Claude API request
-        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
-        run: python3 .github/scripts/build_claude_request.py
-
-      - name: Call Claude API
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          response=$(curl -sf https://api.anthropic.com/v1/messages \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
-            -H "anthropic-version: 2023-06-01" \
-            -H "content-type: application/json" \
-            -d @/tmp/claude-request.json)
+          claude --dangerously-skip-permissions -p \
+            "You are fixing a GitHub issue in the BambuStudio repository (a C++ 3D printing slicer fork).
 
-          echo "$response" | jq -r '.content[0].text' > /tmp/claude-output.txt
+          Issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}
 
-          if [ ! -s /tmp/claude-output.txt ]; then
-            echo "Claude returned empty response:"
-            echo "$response"
-            exit 1
+          Description:
+          ${ISSUE_BODY}
+
+          Analyze the issue, find the relevant source files, and make the minimal necessary changes to fix it.
+          Keep changes focused and correct. Do not modify unrelated files."
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "Claude response received ($(wc -c < /tmp/claude-output.txt) bytes)"
-
-      - name: Parse and apply changes
-        run: python3 .github/scripts/apply_claude_changes.py
-
       - name: Import GPG signing key
+        if: steps.changes.outputs.changed == 'true'
         uses: ./.github/actions/setup-gpg
         with:
           signing-key: ${{ secrets.GIT_SIGNING_KEY }}
           signing-key-passphrase: ${{ secrets.GIT_SIGNING_KEY_PASSPHRASE }}
           signing-key-id: ${{ secrets.GIT_SIGNING_KEY_ID }}
 
-      - name: Configure git identity
+      - name: Commit and push
+        if: steps.changes.outputs.changed == 'true'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Commit and push
-        run: |
           git checkout -b "${{ steps.branch.outputs.name }}"
           git add -A
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit — Claude returned no file modifications"
-            exit 1
-          fi
-
-          git commit -S -m "$(cat /tmp/commit_msg.txt)
+          git commit -S -m "fix: automated fix for issue #${{ github.event.issue.number }}
 
           Closes #${{ github.event.issue.number }}"
           git push origin "${{ steps.branch.outputs.name }}"
 
       - name: Create PR and request Copilot review
+        if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_TITLE=$(cat /tmp/pr_title.txt)
-
           PR_URL=$(gh pr create \
-            --title "$PR_TITLE" \
+            --title "fix: automated fix for issue #${{ github.event.issue.number }} — ${{ github.event.issue.title }}" \
             --body "This PR was automatically generated by Claude AI to address Issue #${{ github.event.issue.number }}.
 
           **Issue:** ${{ github.event.issue.title }}
@@ -175,21 +120,28 @@ jobs:
             --head "${{ steps.branch.outputs.name }}" \
             --assignee BenJule \
           )
-
           PR_NUM=$(echo "$PR_URL" | grep -oE '[0-9]+$')
-
           gh api "repos/${{ github.repository }}/pulls/${PR_NUM}/requested_reviewers" \
             -X POST --field 'reviewers[]=copilot-pull-request-reviewer[bot]'
-
           echo "PR created: $PR_URL"
 
       - name: Comment on issue
+        if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUM=$(gh pr list --head "${{ steps.branch.outputs.name }}" --json number --jq '.[0].number')
           gh issue comment "${{ github.event.issue.number }}" \
             --body "Automated fix generated in PR #${PR_NUM}. Copilot has been requested to review the changes."
+
+      - name: Handle no changes
+        if: steps.changes.outputs.changed == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" \
+            --body "Claude analyzed this issue but could not generate a fix automatically. Manual intervention required."
+          gh issue edit "${{ github.event.issue.number }}" --remove-label "ai-fix"
 
       - name: Handle failure
         if: failure()
