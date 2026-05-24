@@ -109,7 +109,7 @@ jobs:
     permissions: read-all
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 4
       matrix:
         include:
           - name: Ubuntu 22.04 AppImage + .deb
