@@ -54,7 +54,7 @@ jobs:
           if git merge --ff-only upstream/master; then
             echo "result=success" >> "$GITHUB_OUTPUT"
           else
-            echo "result=conflict" >> "$GITHUB_OUTPUT"
+            echo "result=non_fast_forward" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Push if fast-forward succeeded
@@ -62,7 +62,7 @@ jobs:
         run: git push origin master
 
       - name: Open conflict issue if merge failed
-        if: steps.merge.outputs.result == 'conflict'
+        if: steps.merge.outputs.result == 'non_fast_forward'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
