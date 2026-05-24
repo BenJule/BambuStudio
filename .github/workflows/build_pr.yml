@@ -14,7 +14,11 @@ on:
       - 'version.inc'
       - 'linux.d/**'
       - 'scripts/**'
-      - ".github/workflows/build_*.yml"
+      - ".github/workflows/build_bambu.yml"
+      - ".github/workflows/build_deps.yml"
+      - ".github/workflows/build_check_cache.yml"
+      - ".github/workflows/build_linux.yml"
+      - ".github/workflows/build_mac.yml"
       - 'BuildLinux.sh'
       - 'build_win.bat'
 
