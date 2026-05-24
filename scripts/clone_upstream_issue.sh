@@ -5,7 +5,7 @@
 #   ./scripts/clone_upstream_issue.sh 1234
 #   ./scripts/clone_upstream_issue.sh 1234 5678 9012
 #
-# Requirements: gh CLI, logged in with repo + issues scope
+# Requirements: gh CLI (logged in with repo + issues scope), jq
 
 set -euo pipefail
 
@@ -47,8 +47,8 @@ ${BODY}"
         --assignee "$ASSIGNEE" 2>&1)
 
     # Assign milestone separately (gh issue create has no --milestone <id> flag)
-    ISSUE_NUM=$(echo "$CREATED" | grep -oP '(?<=/issues/)\d+')
-    if [[ -n "$ISSUE_NUM" ]]; then
+    ISSUE_NUM="${CREATED##*/issues/}"
+    if [[ "$ISSUE_NUM" =~ ^[0-9]+$ ]]; then
         gh api "repos/${FORK}/issues/${ISSUE_NUM}" \
             -X PATCH -f milestone="$MILESTONE" --silent
         echo "  ✓ Created #${ISSUE_NUM}: ${TITLE}"
