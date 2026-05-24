@@ -1,0 +1,100 @@
+name: Printer Compatibility
+description: Report a compatibility issue with a specific Bambu Lab printer model
+labels: ["printer-compatibility", "status: needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for issues that are **specific to a printer model** — e.g. wrong defaults, missing profiles, or features that don't work on your printer.
+
+  - type: input
+    id: version
+    attributes:
+      label: BambuStudio Version
+      placeholder: e.g. 02.07.00.55
+    validations:
+      required: true
+
+  - type: dropdown
+    id: printer
+    attributes:
+      label: Printer model
+      options:
+        - X1C
+        - X1E
+        - P1S
+        - P1P
+        - A1
+        - A1 Mini
+        - H2D
+        - Other (specify below)
+    validations:
+      required: true
+
+  - type: input
+    id: printer_other
+    attributes:
+      label: Other printer model (if not listed above)
+      placeholder: e.g. Bambu Lab X2
+
+  - type: dropdown
+    id: ams
+    attributes:
+      label: AMS used?
+      options:
+        - "No"
+        - "Yes — AMS"
+        - "Yes — AMS Lite"
+        - "Yes — AMS Hub"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Operating System
+      options:
+        - Linux
+        - Windows
+        - macOS
+    validations:
+      required: true
+
+  - type: textarea
+    id: describe
+    attributes:
+      label: What is the compatibility issue?
+      description: Describe what does not work correctly for your printer model.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Select printer X1C
+        2. Load profile ...
+        3. See wrong value / crash / missing option
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log file
+      description: |
+        Log locations:
+        - **Windows:** `%APPDATA%\BambuStudio\log`
+        - **macOS:** `~/Library/Application Support/BambuStudio/log`
+        - **Linux:** `~/.config/BambuStudio/log`
+      placeholder: Drag & drop log ZIP here
+    validations:
+      required: false
