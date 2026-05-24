@@ -43,7 +43,7 @@ jobs:
         id: check
         run: |
           DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
-          behind=$(git rev-list HEAD..upstream/master --count)
+          behind=$(git rev-list "${DEFAULT_BRANCH}"..upstream/master --count)
           echo "behind=$behind" >> "$GITHUB_OUTPUT"
           echo "default_branch=$DEFAULT_BRANCH" >> "$GITHUB_OUTPUT"
           echo "Upstream is $behind commits ahead of fork $DEFAULT_BRANCH."

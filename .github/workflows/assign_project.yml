@@ -48,20 +48,27 @@ jobs:
               assignees:    ['BenJule'],
             });
 
-            const { data: milestones } = await github.rest.issues.listMilestones({
-              owner:     context.repo.owner,
-              repo:      context.repo.repo,
-              state:     'open',
-              sort:      'due_on',
-              direction: 'asc',
-              per_page:  1,
-            });
-            if (milestones.length > 0) {
-              await github.rest.issues.update({
-                owner:        context.repo.owner,
-                repo:         context.repo.repo,
-                issue_number: number,
-                milestone:    milestones[0].number,
+            const current = isPR
+              ? context.payload.pull_request.milestone
+              : context.payload.issue.milestone;
+            if (!current) {
+              const { data: milestones } = await github.rest.issues.listMilestones({
+                owner:     context.repo.owner,
+                repo:      context.repo.repo,
+                state:     'open',
+                sort:      'due_on',
+                direction: 'asc',
+                per_page:  1,
               });
-              core.info(`Set milestone: ${milestones[0].title}`);
+              if (milestones.length > 0) {
+                await github.rest.issues.update({
+                  owner:        context.repo.owner,
+                  repo:         context.repo.repo,
+                  issue_number: number,
+                  milestone:    milestones[0].number,
+                });
+                core.info(`Set milestone: ${milestones[0].title}`);
+              }
+            } else {
+              core.info(`Milestone already set: ${current.title} — skipping.`);
             }
