@@ -6751,15 +6751,12 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
         else
             speed = filament_max_volumetric_speed / path.mm3_per_mm;
     }
-    if (this->on_first_layer()) {
+    if (this->on_first_layer() || this->object_layer_over_raft()) {
         //BBS: for solid infill of initial layer, speed can be higher as long as
         //wall lines have be attached
         if (path.role() != erBottomSurface)
             speed = NOZZLE_CONFIG(initial_layer_speed);
     }
-    //BBS: remove this config
-    //else if (this->object_layer_over_raft())
-    //    speed = m_config.get_abs_value("first_layer_speed_over_raft", speed);
     //if (m_config.max_volumetric_speed.value > 0) {
     //    // cap speed with max_volumetric_speed anyway (even if user is not using autospeed)
     //    speed = std::min(
