@@ -185,6 +185,15 @@ jobs:
           echo "Found $n artifact(s):"
           find artifacts/ -maxdepth 1 -type f | sort || true
 
+      - name: Generate checksums
+        if: steps.check.outputs.n > 0
+        run: |
+          cd artifacts/
+          find . -maxdepth 1 -type f ! -name 'SHA*SUMS' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          find . -maxdepth 1 -type f ! -name 'SHA*SUMS' -print0 | sort -z | xargs -0 sha512sum > SHA512SUMS
+          echo "=== SHA256SUMS ===" && cat SHA256SUMS
+          echo "=== SHA512SUMS ===" && cat SHA512SUMS
+
       - name: Attest build provenance
         if: steps.check.outputs.n > 0
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0

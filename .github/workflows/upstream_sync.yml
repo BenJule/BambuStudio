@@ -42,15 +42,18 @@ jobs:
       - name: Check for new upstream commits
         id: check
         run: |
-          behind=$(git rev-list HEAD..upstream/master --count)
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+          behind=$(git rev-list "${DEFAULT_BRANCH}"..upstream/master --count)
           echo "behind=$behind" >> "$GITHUB_OUTPUT"
-          echo "Upstream is $behind commits ahead of fork master."
+          echo "default_branch=$DEFAULT_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "Upstream is $behind commits ahead of fork $DEFAULT_BRANCH."
 
       - name: Attempt fast-forward merge
         id: merge
         if: steps.check.outputs.behind > 0
         run: |
-          git checkout master
+          DEFAULT_BRANCH="${{ steps.check.outputs.default_branch }}"
+          git checkout "$DEFAULT_BRANCH"
           if git merge --ff-only upstream/master; then
             echo "result=success" >> "$GITHUB_OUTPUT"
           else
@@ -59,7 +62,7 @@ jobs:
 
       - name: Push if fast-forward succeeded
         if: steps.merge.outputs.result == 'success'
-        run: git push origin master
+        run: git push origin "${{ steps.check.outputs.default_branch }}"
 
       - name: Open conflict issue if merge failed
         if: steps.merge.outputs.result == 'non_fast_forward'
@@ -67,6 +70,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           behind="${{ steps.check.outputs.behind }}"
+          branch="${{ steps.check.outputs.default_branch }}"
           existing=$(gh issue list --repo "${{ github.repository }}" \
             --label "upstream-conflict" --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
           if [ -z "$existing" ]; then
@@ -76,8 +80,8 @@ jobs:
               --label "upstream-conflict" \
               --assignee BenJule \
               --body "$(printf \
-                'The weekly upstream sync detected **%s new upstream commits** that could not be fast-forwarded automatically.\n\nPlease resolve manually:\n\n```bash\ngit fetch upstream\ngit checkout master\ngit merge upstream/master\n# resolve conflicts\ngit push origin master\n```\n\nUpstream: https://github.com/bambulab/BambuStudio/commits/master' \
-                "$behind")"
+                'The weekly upstream sync detected **%s new upstream commits** that could not be fast-forwarded automatically.\n\nPlease resolve manually:\n\n```bash\ngit fetch upstream\ngit checkout %s\ngit merge upstream/master\n# resolve conflicts\ngit push origin %s\n```\n\nUpstream: https://github.com/bambulab/BambuStudio/commits/master' \
+                "$behind" "$branch" "$branch")"
           else
             echo "Conflict issue #$existing already open — skipping."
           fi
@@ -87,10 +91,11 @@ jobs:
           echo "### Upstream Sync Result" >> "$GITHUB_STEP_SUMMARY"
           behind="${{ steps.check.outputs.behind }}"
           result="${{ steps.merge.outputs.result }}"
+          branch="${{ steps.check.outputs.default_branch }}"
           if [ "$behind" = "0" ]; then
             echo "Fork is already up-to-date with upstream. ✅" >> "$GITHUB_STEP_SUMMARY"
           elif [ "$result" = "success" ]; then
-            echo "Fast-forwarded **$behind** upstream commits to master. ✅" >> "$GITHUB_STEP_SUMMARY"
+            echo "Fast-forwarded **$behind** upstream commits to ${branch}. ✅" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "**$behind** upstream commits could not be merged automatically — conflict issue opened. ⚠️" >> "$GITHUB_STEP_SUMMARY"
           fi

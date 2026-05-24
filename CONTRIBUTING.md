@@ -19,7 +19,7 @@ Use the **Feature Request** issue template. Describe the problem you're trying t
 2. Make your changes — keep commits focused and atomic
 3. Ensure the code compiles without warnings
 4. Run clang-format on changed C/C++ files (see below)
-5. Open a PR against `master` and fill in the PR template
+5. Open a PR against `main` and fill in the PR template
 
 ### Code Style
 
@@ -37,7 +37,7 @@ The `clang_format` CI check runs automatically on every PR.
 
 ### Commit Signing
 
-All commits to `master` require a GPG signature:
+All commits to `main` require a GPG signature:
 
 ```bash
 git commit -S -m "your message"
