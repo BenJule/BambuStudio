@@ -67,7 +67,7 @@ jobs:
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          claude --dangerously-skip-permissions -p \
+          timeout 1200 claude --dangerously-skip-permissions -p \
             "You are fixing a GitHub issue in the BambuStudio repository (a C++ 3D printing slicer fork).
 
           Issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}
