@@ -178,7 +178,8 @@ jobs:
               choco install msys2 -y --no-progress
             }
           }
-          & "$msys2Root\usr\bin\pacman.exe" -S --noconfirm mingw-w64-x86_64-pkgconf 2>$null
+          & "$msys2Root\usr\bin\pacman.exe" -S --noconfirm mingw-w64-x86_64-pkgconf
+          if ($LASTEXITCODE -ne 0) { throw "pacman failed to install mingw-w64-x86_64-pkgconf (exit $LASTEXITCODE)" }
           $env:PATH = "$msys2Root\mingw64\bin;$env:PATH"
           Add-Content $env:GITHUB_PATH "$msys2Root\mingw64\bin"
 
@@ -200,7 +201,8 @@ jobs:
               Write-Host "No Windows cache found. Building third-party deps first..."
               choco install strawberryperl -y --no-progress
               $msys2Root = if (Test-Path "C:\msys64\usr\bin\pacman.exe") { "C:\msys64" } else { "C:\tools\msys64" }
-              & "$msys2Root\usr\bin\pacman.exe" -S --noconfirm mingw-w64-x86_64-pkgconf 2>$null
+              & "$msys2Root\usr\bin\pacman.exe" -S --noconfirm mingw-w64-x86_64-pkgconf
+              if ($LASTEXITCODE -ne 0) { throw "pacman failed to install mingw-w64-x86_64-pkgconf (exit $LASTEXITCODE)" }
               $env:PATH = "$msys2Root\mingw64\bin;$env:PATH"
               Add-Content $env:GITHUB_PATH "$msys2Root\mingw64\bin"
               New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\deps\build\BambuStudio_dep" | Out-Null

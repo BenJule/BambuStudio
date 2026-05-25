@@ -79,7 +79,8 @@ jobs:
                 choco install msys2 -y --no-progress
               }
             }
-            & "$msys2Root\usr\bin\pacman.exe" -S --noconfirm mingw-w64-x86_64-pkgconf 2>$null
+            & "$msys2Root\usr\bin\pacman.exe" -S --noconfirm mingw-w64-x86_64-pkgconf
+            if ($LASTEXITCODE -ne 0) { throw "pacman failed to install mingw-w64-x86_64-pkgconf (exit $LASTEXITCODE)" }
             $env:PATH = "$msys2Root\mingw64\bin;$env:PATH"
             Add-Content $env:GITHUB_PATH "$msys2Root\mingw64\bin"
             # Pin cmake to 3.31.x — CMake 4.x removed compatibility with
