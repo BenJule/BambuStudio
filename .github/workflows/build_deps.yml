@@ -71,7 +71,9 @@ jobs:
           INPUT_ARCH: ${{ inputs.arch }}
         run: |
             $vsArch = if ($env:INPUT_ARCH -eq "arm64") { "ARM64" } else { "x64" }
-            choco install strawberryperl pkgconfiglite -y
+            choco install strawberryperl -y --no-progress
+            & C:\msys64\usr\bin\pacman.exe -S --noconfirm mingw-w64-x86_64-pkgconf 2>$null
+            Add-Content $env:GITHUB_PATH "C:\msys64\mingw64\bin"
             # Pin cmake to 3.31.x — CMake 4.x removed compatibility with
             # cmake_minimum_required(VERSION < 3.5) which breaks wxWidgets
             # cotire_test and other vendored subprojects.
