@@ -169,10 +169,19 @@ jobs:
         shell: pwsh
         run: |
           choco install nsis --version=3.10.0 -y --no-progress
-          # pkgconfiglite SourceForge URL is unreliable — use MSYS2 instead
-          & C:\msys64\usr\bin\pacman.exe -S --noconfirm mingw-w64-x86_64-pkgconf 2>$null
-          $env:PATH = "C:\msys64\mingw64\bin;$env:PATH"
-          Add-Content $env:GITHUB_PATH "C:\msys64\mingw64\bin"
+          # MSYS2 is pre-installed at C:\msys64 on windows-2022 runners;
+          # windows-11-arm runners don't have it — install via Chocolatey (lands in C:\tools\msys64).
+          $msys2Root = "C:\msys64"
+          if (-not (Test-Path "$msys2Root\usr\bin\pacman.exe")) {
+            $msys2Root = "C:\tools\msys64"
+            if (-not (Test-Path "$msys2Root\usr\bin\pacman.exe")) {
+              choco install msys2 -y --no-progress
+            }
+          }
+          & "$msys2Root\usr\bin\pacman.exe" -S --noconfirm mingw-w64-x86_64-pkgconf
+          if ($LASTEXITCODE -ne 0) { throw "pacman failed to install mingw-w64-x86_64-pkgconf (exit $LASTEXITCODE)" }
+          $env:PATH = "$msys2Root\mingw64\bin;$env:PATH"
+          Add-Content $env:GITHUB_PATH "$msys2Root\mingw64\bin"
 
       - name: Build slicer Win
         if: runner.os == 'Windows'
@@ -191,9 +200,11 @@ jobs:
           if (!(Test-Path $depPath)) {
               Write-Host "No Windows cache found. Building third-party deps first..."
               choco install strawberryperl -y --no-progress
-              & C:\msys64\usr\bin\pacman.exe -S --noconfirm mingw-w64-x86_64-pkgconf 2>$null
-              $env:PATH = "C:\msys64\mingw64\bin;$env:PATH"
-              Add-Content $env:GITHUB_PATH "C:\msys64\mingw64\bin"
+              $msys2Root = if (Test-Path "C:\msys64\usr\bin\pacman.exe") { "C:\msys64" } else { "C:\tools\msys64" }
+              & "$msys2Root\usr\bin\pacman.exe" -S --noconfirm mingw-w64-x86_64-pkgconf
+              if ($LASTEXITCODE -ne 0) { throw "pacman failed to install mingw-w64-x86_64-pkgconf (exit $LASTEXITCODE)" }
+              $env:PATH = "$msys2Root\mingw64\bin;$env:PATH"
+              Add-Content $env:GITHUB_PATH "$msys2Root\mingw64\bin"
               New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\deps\build\BambuStudio_dep" | Out-Null
               Push-Location "$env:GITHUB_WORKSPACE\deps\build"
               cmake ../ -G "Visual Studio 17 2022" -A $vsArch -DDESTDIR="./BambuStudio_dep" -DCMAKE_BUILD_TYPE=Release -DDEP_DEBUG=OFF

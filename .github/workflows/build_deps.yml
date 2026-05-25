@@ -72,9 +72,17 @@ jobs:
         run: |
             $vsArch = if ($env:INPUT_ARCH -eq "arm64") { "ARM64" } else { "x64" }
             choco install strawberryperl -y --no-progress
-            & C:\msys64\usr\bin\pacman.exe -S --noconfirm mingw-w64-x86_64-pkgconf 2>$null
-            $env:PATH = "C:\msys64\mingw64\bin;$env:PATH"
-            Add-Content $env:GITHUB_PATH "C:\msys64\mingw64\bin"
+            $msys2Root = "C:\msys64"
+            if (-not (Test-Path "$msys2Root\usr\bin\pacman.exe")) {
+              $msys2Root = "C:\tools\msys64"
+              if (-not (Test-Path "$msys2Root\usr\bin\pacman.exe")) {
+                choco install msys2 -y --no-progress
+              }
+            }
+            & "$msys2Root\usr\bin\pacman.exe" -S --noconfirm mingw-w64-x86_64-pkgconf
+            if ($LASTEXITCODE -ne 0) { throw "pacman failed to install mingw-w64-x86_64-pkgconf (exit $LASTEXITCODE)" }
+            $env:PATH = "$msys2Root\mingw64\bin;$env:PATH"
+            Add-Content $env:GITHUB_PATH "$msys2Root\mingw64\bin"
             # Pin cmake to 3.31.x — CMake 4.x removed compatibility with
             # cmake_minimum_required(VERSION < 3.5) which breaks wxWidgets
             # cotire_test and other vendored subprojects.
