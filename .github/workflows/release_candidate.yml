@@ -61,7 +61,7 @@ jobs:
   build_flatpak:
     name: Flatpak (x86_64)
     needs: [build_platforms]
-    if: always() && needs.build_platforms.result != 'cancelled'
+    if: always() && needs.build_platforms.result != 'skipped'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
@@ -130,9 +130,8 @@ jobs:
     needs: [build_packages, build_platforms, build_flatpak]
     if: |
       always() &&
-      needs.build_packages.result != 'cancelled' &&
-      needs.build_platforms.result != 'cancelled' &&
-      needs.build_flatpak.result != 'cancelled'
+      needs.build_platforms.result != 'skipped' &&
+      needs.build_flatpak.result != 'skipped'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
