@@ -47,22 +47,32 @@ modules:
         if [ -d squashfs-root/usr/share ]; then
           cp -a squashfs-root/usr/share/. /app/share/
         fi
-      # Remove AppStream files shipped by the AppImage to prevent conflicts
-      # with appstreamcli compose (AppStream 1.0 is strict about duplicate IDs)
+      # Remove ALL AppStream / desktop files shipped by the AppImage —
+      # they can have invalid fields or duplicate IDs that break appstreamcli compose.
       - rm -rf /app/share/appdata
-      - find /app/share/metainfo -maxdepth 1 -name "*.xml" -delete 2>/dev/null || true
-      # Install our AppStream metadata
+      - find /app/share/metainfo   -maxdepth 1 -name "*.xml"     -delete 2>/dev/null || true
+      - find /app/share/applications -name "*.desktop"            -delete 2>/dev/null || true
+      # Install our own clean AppStream metadata
       - install -Dm644 com.bambulab.BambuStudio.metainfo.xml
           /app/share/metainfo/com.bambulab.BambuStudio.metainfo.xml
-      # Desktop-Datei auf Flatpak-ID umbenennen
+      # Create a minimal, valid desktop file (avoids appstreamcli parse errors
+      # caused by the AppImage's desktop file having non-standard fields)
       - |
-        if [ -f /app/share/applications/BambuStudio.desktop ]; then
-          desktop-file-edit \
-            --set-key=Icon --set-value=com.bambulab.BambuStudio \
-            /app/share/applications/BambuStudio.desktop
-          mv /app/share/applications/BambuStudio.desktop \
-             /app/share/applications/com.bambulab.BambuStudio.desktop
-        fi
+        install -d /app/share/applications
+        cat > /app/share/applications/com.bambulab.BambuStudio.desktop << 'DESKTOP_EOF'
+        [Desktop Entry]
+        Type=Application
+        Name=BambuStudio
+        GenericName=3D Slicer
+        Comment=Feature-rich slicer for Bambu Lab 3D printers
+        Exec=bambu-studio %f
+        Icon=com.bambulab.BambuStudio
+        Categories=Graphics;3DGraphics;Engineering;
+        MimeType=model/stl;model/3mf;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;model/step;
+        Keywords=3D printing;slicer;Bambu Lab;gcode;STL;3MF;
+        StartupWMClass=BambuStudio
+        Terminal=false
+        DESKTOP_EOF
       # Icon installieren (192px aus Repository)
       - install -Dm644 BambuStudio_192px.png
           /app/share/icons/hicolor/192x192/apps/com.bambulab.BambuStudio.png
