@@ -165,7 +165,7 @@ jobs:
 
       - name: Build deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: timeout 120m ./BuildLinux.sh -dr
+        run: timeout 180m ./BuildLinux.sh -dr
 
       - name: Get version
         id: ver
@@ -173,7 +173,7 @@ jobs:
 
       - name: Build BambuStudio + AppImage
         run: |
-          timeout 160m ./BuildLinux.sh -isr
+          timeout 300m ./BuildLinux.sh -isr
           mv -n ./build/BambuStudio_ubu64.AppImage \
             "./build/BambuStudio_${{ matrix.artifact_suffix }}_${{ steps.ver.outputs.ver }}.AppImage" \
             2>/dev/null || true
