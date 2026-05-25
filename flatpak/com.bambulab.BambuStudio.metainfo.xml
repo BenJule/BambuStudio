@@ -59,8 +59,9 @@
 
   <content_rating type="oars-1.1" />
 
+  <!-- version and date are injected by CI (see nightly.yml / release_candidate.yml) -->
   <releases>
-    <release version="02.07.00" date="2026-05-25" type="development">
+    <release version="0" date="1970-01-01" type="development">
       <description><p>Development build.</p></description>
     </release>
   </releases>
