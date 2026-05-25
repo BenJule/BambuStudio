@@ -166,10 +166,14 @@ jobs:
 
       - name: Install nsis and pkgconfig
         if: runner.os == 'Windows'
-        shell: cmd
+        shell: pwsh
         run: |
-          choco install nsis --version=3.10.0 --force -y
-          choco install pkgconfiglite --version=0.28 --force -y
+          choco install nsis --version=3.10.0 -y --no-progress
+          # pkgconfiglite SourceForge URL is unreliable — use MSYS2 instead
+          & C:\msys64\usr\bin\pacman.exe -S --noconfirm mingw-w64-x86_64-pkgconf 2>$null
+          if (-not (Get-Command pkg-config -ErrorAction SilentlyContinue)) {
+            Add-Content $env:GITHUB_PATH "C:\msys64\mingw64\bin"
+          }
 
       - name: Build slicer Win
         if: runner.os == 'Windows'
@@ -187,7 +191,9 @@ jobs:
           $depPath = "$env:GITHUB_WORKSPACE\deps\build\BambuStudio_dep"
           if (!(Test-Path $depPath)) {
               Write-Host "No Windows cache found. Building third-party deps first..."
-              choco install strawberryperl pkgconfiglite -y
+              choco install strawberryperl -y --no-progress
+              & C:\msys64\usr\bin\pacman.exe -S --noconfirm mingw-w64-x86_64-pkgconf 2>$null
+              Add-Content $env:GITHUB_PATH "C:\msys64\mingw64\bin"
               New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\deps\build\BambuStudio_dep" | Out-Null
               Push-Location "$env:GITHUB_WORKSPACE\deps\build"
               cmake ../ -G "Visual Studio 17 2022" -A $vsArch -DDESTDIR="./BambuStudio_dep" -DCMAKE_BUILD_TYPE=Release -DDEP_DEBUG=OFF
