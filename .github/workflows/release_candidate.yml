@@ -105,6 +105,13 @@ jobs:
           "$APPIMAGE" --appimage-extract
           mv squashfs-root flatpak/squashfs-root
 
+      - name: Inject version into Flatpak metainfo
+        run: |
+          ver=$(grep 'set(SLIC3R_VERSION_BASE' version.inc | cut -d '"' -f2)
+          date=$(date -u +'%Y-%m-%d')
+          sed -i "s|version=\"0\" date=\"1970-01-01\"|version=\"${ver}\" date=\"${date}\"|" \
+            flatpak/com.bambulab.BambuStudio.metainfo.xml
+
       - name: Build Flatpak bundle
         run: |
           flatpak-builder --user --force-clean \
