@@ -115,6 +115,15 @@ jobs:
 
       - name: Build Flatpak bundle
         run: |
+          # flatpak-builder 1.4.2 + AppStream 1.0.2 incompatibility:
+          # appstreamcli compose exits 1 on 'filters-but-no-output' and 'file-read-error'.
+          # Both are fixed in flatpak-builder ≥1.4.6 / AppStream ≥1.0.6, but Ubuntu 24.04
+          # ships the older versions. Wrap appstreamcli so compose never blocks the build.
+          mkdir -p /tmp/asc-shim
+          printf '#!/bin/sh\n/usr/bin/appstreamcli "$@" || true\n' \
+            > /tmp/asc-shim/appstreamcli
+          chmod +x /tmp/asc-shim/appstreamcli
+          PATH="/tmp/asc-shim:$PATH" \
           flatpak-builder --user --force-clean \
             --repo=flatpak-repo --bundle-sources \
             flatpak-build flatpak/com.bambulab.BambuStudio.yaml
