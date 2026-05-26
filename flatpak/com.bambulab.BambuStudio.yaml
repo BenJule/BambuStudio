@@ -74,15 +74,15 @@ modules:
         StartupNotify=false
         StartupWMClass=bambu-studio
         DESKTOP_EOF
-      # Icon installieren (192px aus Repository)
+      # Icons installieren: 128px + 192px PNG, plus quadratisches SVG (128x128 viewBox)
+      # BambuStudioBlack.svg ist ein 10x12 UI-Marker — NICHT das App-Icon.
+      # BambuStudio.svg (128x128) und BambuStudio_128px.png sind die korrekten App-Icons.
+      - install -Dm644 BambuStudio_128px.png
+          /app/share/icons/hicolor/128x128/apps/com.bambulab.BambuStudio.png
       - install -Dm644 BambuStudio_192px.png
           /app/share/icons/hicolor/192x192/apps/com.bambulab.BambuStudio.png
-      # SVG-Icon installieren
-      - |
-        if [ -f BambuStudioBlack.svg ]; then
-          install -Dm644 BambuStudioBlack.svg \
-            /app/share/icons/hicolor/scalable/apps/com.bambulab.BambuStudio.svg
-        fi
+      - install -Dm644 BambuStudio.svg
+          /app/share/icons/hicolor/scalable/apps/com.bambulab.BambuStudio.svg
     sources:
       # squashfs-root/ wird vom CI-Workflow aus der AppImage extrahiert
       - type: dir
@@ -92,8 +92,11 @@ modules:
         path: com.bambulab.BambuStudio.metainfo.xml
       # Icons direkt aus dem Repository
       - type: file
+        path: ../resources/images/BambuStudio_128px.png
+        dest-filename: BambuStudio_128px.png
+      - type: file
         path: ../resources/images/BambuStudio_192px.png
         dest-filename: BambuStudio_192px.png
       - type: file
-        path: ../resources/images/BambuStudioBlack.svg
-        dest-filename: BambuStudioBlack.svg
+        path: ../resources/images/BambuStudio.svg
+        dest-filename: BambuStudio.svg
