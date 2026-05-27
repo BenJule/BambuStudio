@@ -36,22 +36,20 @@ modules:
   - name: bambu-studio
     buildsystem: simple
     build-commands:
-      # BambuStudio AppImage layout (non-standard — no usr/bin or usr/lib):
-      #   bin/bambu-studio   → /app/bin/   (executable; resolves resources at ../resources)
-      #   bin/*.so*          → /app/lib/   (exposed via LD_LIBRARY_PATH=/app/lib)
-      #   resources/         → /app/resources/  (binary looks here: canonical(exe)/../../resources)
-      #   usr/share/         → /app/share/  (icons at hicolor/*/apps/)
+      # flatpak-builder type:dir copies the *contents* of squashfs-root/ into
+      # the module build dir — so paths here are relative to those contents.
+      # AppImage layout: bin/bambu-studio (binary), bin/*.so* (libs), resources/, usr/share/
       - install -d /app/bin /app/lib /app/resources /app/share
       # Binary
-      - install -m755 squashfs-root/bin/bambu-studio /app/bin/bambu-studio
+      - install -m755 bin/bambu-studio /app/bin/bambu-studio
       # Shared libraries
-      - find squashfs-root/bin -maxdepth 1 -name '*.so*' -exec cp -a {} /app/lib/ \;
+      - find bin -maxdepth 1 -name '*.so*' -exec cp -a {} /app/lib/ \;
       # Application resources (profiles, translations, images, …)
-      - cp -a squashfs-root/resources/. /app/resources/
+      - cp -a resources/. /app/resources/
       # Icons and share data shipped by the AppImage
       - |
-        if [ -d squashfs-root/usr/share ]; then
-          cp -a squashfs-root/usr/share/. /app/share/
+        if [ -d usr/share ]; then
+          cp -a usr/share/. /app/share/
         fi
       # Remove ALL AppStream / desktop files shipped by the AppImage —
       # they can have invalid fields or duplicate IDs that break appstreamcli compose.
