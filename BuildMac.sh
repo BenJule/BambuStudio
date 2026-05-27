@@ -79,6 +79,14 @@ if [ -z "$OSX_DEPLOYMENT_TARGET" ]; then
   export OSX_DEPLOYMENT_TARGET="10.15"
 fi
 
+# Auto-detect ccache and inject compiler launcher flags into cmake configure.
+CCACHE_CMAKE_FLAGS=""
+if command -v ccache >/dev/null 2>&1; then
+  CCACHE_CMAKE_FLAGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+  export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-2G}"
+  echo "ccache detected — compiler launcher enabled (CCACHE_DIR=${CCACHE_DIR:-~/.ccache})"
+fi
+
 echo "Build params:"
 echo " - ARCH: $ARCH"
 echo " - BUILD_CONFIG: $BUILD_CONFIG"
@@ -122,7 +130,8 @@ function build_deps() {
                         -DOPENSSL_ARCH="darwin64-${_ARCH}-cc" \
                         -DCMAKE_BUILD_TYPE="$BUILD_CONFIG" \
                         -DCMAKE_OSX_ARCHITECTURES:STRING="${_ARCH}" \
-                        -DCMAKE_OSX_DEPLOYMENT_TARGET="${OSX_DEPLOYMENT_TARGET}"
+                        -DCMAKE_OSX_DEPLOYMENT_TARGET="${OSX_DEPLOYMENT_TARGET}" \
+                        ${CCACHE_CMAKE_FLAGS}
                 fi
                 cmake --build . --parallel ${CMAKE_BUILD_PARALLEL_LEVEL} --config "$BUILD_CONFIG" --target deps
             )
@@ -166,7 +175,8 @@ function build_slicer() {
                     -DCMAKE_INSTALL_RPATH="${DEPS}/usr/local" \
                     -DCMAKE_MACOSX_BUNDLE=ON \
                     -DCMAKE_OSX_ARCHITECTURES="${_ARCH}" \
-                    -DCMAKE_OSX_DEPLOYMENT_TARGET="${OSX_DEPLOYMENT_TARGET}"
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET="${OSX_DEPLOYMENT_TARGET}" \
+                    ${CCACHE_CMAKE_FLAGS}
             fi
             cmake --build . --config "$BUILD_CONFIG" --target "$SLICER_BUILD_TARGET"
         )

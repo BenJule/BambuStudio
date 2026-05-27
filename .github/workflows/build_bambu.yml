@@ -89,12 +89,22 @@ jobs:
           Write-Host "date: $date version: $ver"
 
 # ── macOS ───────────────────────────────────────────────────────────────────
+      - name: Restore/save ccache (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.h', 'src/**/*.hpp', 'src/**/*.mm') }}
+          restore-keys: |
+            ccache-${{ inputs.os }}-${{ inputs.arch }}-
+          save-always: true
+
       - name: Build slicer mac (Intel x86_64)
         if: runner.os == 'macOS' && inputs.arch == 'x86_64'
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          brew install automake texinfo nasm yasm
+          brew install automake texinfo nasm yasm ccache
           brew uninstall --ignore-dependencies zstd || true
           brew unlink cmake || true
           brew tap-new $USER/old-cmake || true
@@ -103,20 +113,22 @@ jobs:
           brew link --overwrite cmake@3.31.0 || cmake --version | grep -q "3\.31\." || { echo "cmake@3.31.0 link failed unexpectedly"; exit 1; }
           brew pin cmake@3.31.0
           brew install zstd
+          ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/x86_64" ]; then
             echo "No macOS Intel cache found. Building deps + slicer..."
-            ./BuildMac.sh -x -a x86_64 -t 10.15 -1
+            ./BuildMac.sh -x -a x86_64 -t 10.15
           else
             echo "Using cached deps..."
-            ./BuildMac.sh -s -x -a x86_64 -t 10.15 -1
+            ./BuildMac.sh -s -x -a x86_64 -t 10.15
           fi
+          ccache --show-stats
 
       - name: Build slicer mac (ARM / Universal)
         if: runner.os == 'macOS' && inputs.arch != 'x86_64'
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          brew install automake texinfo nasm yasm
+          brew install automake texinfo nasm yasm ccache
           brew uninstall --ignore-dependencies zstd || true
           brew unlink cmake || true
           brew tap-new $USER/old-cmake || true
@@ -125,6 +137,7 @@ jobs:
           brew link --overwrite cmake@3.31.0 || cmake --version | grep -q "3\.31\." || { echo "cmake@3.31.0 link failed unexpectedly"; exit 1; }
           brew pin cmake@3.31.0
           brew install zstd
+          ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/arm64" ]; then
             echo "No macOS ARM cache found. Building deps + slicer..."
             ./BuildMac.sh -x -a universal -t 10.15 -1
@@ -132,6 +145,8 @@ jobs:
             echo "Using cached deps..."
             ./BuildMac.sh -s -x -a universal -t 10.15 -1
           fi
+          ccache --show-stats
+
 
       - name: Pack macOS .dmg
         if: runner.os == 'macOS'
