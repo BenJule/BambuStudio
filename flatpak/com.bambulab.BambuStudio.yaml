@@ -28,21 +28,27 @@ finish-args:
   # Umgebungsvariablen
   - --env=GDK_BACKEND=x11
   - --env=BAMBU_PROFILE_DIRECTORY=/var/config/BambuStudio
+  # BambuStudio AppImage ships .so files alongside the binary in bin/;
+  # expose them through the standard Flatpak library path.
+  - --env=LD_LIBRARY_PATH=/app/lib
 
 modules:
   - name: bambu-studio
     buildsystem: simple
     build-commands:
-      # Binaries und Libraries aus der extrahierten AppImage installieren
-      - install -d /app/bin /app/lib /app/share
-      - |
-        if [ -d squashfs-root/usr/bin ]; then
-          cp -a squashfs-root/usr/bin/. /app/bin/
-        fi
-      - |
-        if [ -d squashfs-root/usr/lib ]; then
-          cp -a squashfs-root/usr/lib/. /app/lib/
-        fi
+      # BambuStudio AppImage layout (non-standard — no usr/bin or usr/lib):
+      #   bin/bambu-studio   → /app/bin/   (executable; resolves resources at ../resources)
+      #   bin/*.so*          → /app/lib/   (exposed via LD_LIBRARY_PATH=/app/lib)
+      #   resources/         → /app/resources/  (binary looks here: canonical(exe)/../../resources)
+      #   usr/share/         → /app/share/  (icons at hicolor/*/apps/)
+      - install -d /app/bin /app/lib /app/resources /app/share
+      # Binary
+      - install -m755 squashfs-root/bin/bambu-studio /app/bin/bambu-studio
+      # Shared libraries
+      - find squashfs-root/bin -maxdepth 1 -name '*.so*' -exec cp -a {} /app/lib/ \;
+      # Application resources (profiles, translations, images, …)
+      - cp -a squashfs-root/resources/. /app/resources/
+      # Icons and share data shipped by the AppImage
       - |
         if [ -d squashfs-root/usr/share ]; then
           cp -a squashfs-root/usr/share/. /app/share/
