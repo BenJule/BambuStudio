@@ -89,15 +89,15 @@ jobs:
           Write-Host "date: $date version: $ver"
 
 # ── macOS ───────────────────────────────────────────────────────────────────
-      - name: Restore/save ccache (macOS)
+      - name: Restore ccache (macOS)
         if: runner.os == 'macOS'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        id: ccache-restore
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
           key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.h', 'src/**/*.hpp', 'src/**/*.mm') }}
           restore-keys: |
             ccache-${{ inputs.os }}-${{ inputs.arch }}-
-          save-always: true
 
       - name: Build slicer mac (Intel x86_64)
         if: runner.os == 'macOS' && inputs.arch == 'x86_64'
@@ -147,6 +147,12 @@ jobs:
           fi
           ccache --show-stats
 
+      - name: Save ccache (macOS)
+        if: always() && runner.os == 'macOS'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.h', 'src/**/*.hpp', 'src/**/*.mm') }}
 
       - name: Pack macOS .dmg
         if: runner.os == 'macOS'
