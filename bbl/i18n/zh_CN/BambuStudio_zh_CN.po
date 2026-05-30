@@ -5934,7 +5934,7 @@ msgstr "打印机正在忙于下载，请等下载完成后再尝试。"
 msgid "Printer camera is malfunctioning."
 msgstr "打印机摄像头异常。"
 
-msgid "Problem occured. Please update the printer firmware and try again."
+msgid "Problem occurred. Please update the printer firmware and try again."
 msgstr "出现了一些问题。请更新打印机固件后重试。"
 
 msgid "LAN Only Liveview is off. Please turn on the liveview on printer screen."
@@ -16222,7 +16222,7 @@ msgstr "成功连接到 Duet 控制器。"
 msgid "Could not connect to Duet"
 msgstr "无法连接到 Duet 控制器。"
 
-msgid "Unknown error occured"
+msgid "Unknown error occurred"
 msgstr "发生了未知错误。"
 
 msgid "Wrong password"
@@ -20550,7 +20550,7 @@ msgstr ""
 #~ msgid_plural "Failed to repair folowing model objects"
 #~ msgstr[0] "以下模型对象修复失败"
 
-#~ msgid "A problem occured during calibration. Click to view the solution."
+#~ msgid "A problem occurred during calibration. Click to view the solution."
 #~ msgstr "校准过程遇到问题。点击查看解决方案。"
 
 #~ msgid "Choose an AMS slot then press \"Load\" or \"Unload\" button to automatically load or unload filiament."

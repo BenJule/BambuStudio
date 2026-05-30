@@ -5919,7 +5919,7 @@ msgstr "The printer is currently busy downloading. Please try again after it fin
 msgid "Printer camera is malfunctioning."
 msgstr "Printer camera is malfunctioning."
 
-msgid "Problem occured. Please update the printer firmware and try again."
+msgid "Problem occurred. Please update the printer firmware and try again."
 msgstr "A problem occurred. Please update the printer firmware and try again."
 
 msgid "LAN Only Liveview is off. Please turn on the liveview on printer screen."
@@ -16076,8 +16076,8 @@ msgstr "Connection to Duet is working correctly."
 msgid "Could not connect to Duet"
 msgstr "Could not connect to Duet"
 
-msgid "Unknown error occured"
-msgstr "Unknown error occured"
+msgid "Unknown error occurred"
+msgstr "Unknown error occurred"
 
 msgid "Wrong password"
 msgstr "Wrong password"
@@ -18326,8 +18326,8 @@ msgstr ""
 #~ msgid "A error occurred. Maybe memory of system is not enough or it's a bug of the program"
 #~ msgstr "A error occurred. Maybe memory of system is not enough or it's a bug of the program"
 
-#~ msgid "A problem occured during calibration. Click to view the solution."
-#~ msgstr "A problem occured during calibration. Click to view the solution."
+#~ msgid "A problem occurred during calibration. Click to view the solution."
+#~ msgstr "A problem occurred during calibration. Click to view the solution."
 
 #~ msgid "Acivate for better air filtration"
 #~ msgstr "Activate for better air filtration"

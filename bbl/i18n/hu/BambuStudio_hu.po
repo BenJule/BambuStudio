@@ -5969,7 +5969,7 @@ msgstr "A nyomtató a letöltéssel van elfoglalva. Kérjük, várd meg, amíg a
 msgid "Printer camera is malfunctioning."
 msgstr "A nyomtató kamerája hibásan működik."
 
-msgid "Problem occured. Please update the printer firmware and try again."
+msgid "Problem occurred. Please update the printer firmware and try again."
 msgstr "Probléma merült fel. Kérjük, frissítsd a nyomtató firmware-ét, és próbáld meg újra."
 
 msgid "LAN Only Liveview is off. Please turn on the liveview on printer screen."
@@ -16296,7 +16296,7 @@ msgstr "Connection to Duet is working correctly."
 msgid "Could not connect to Duet"
 msgstr "Nem sikerült csatlakozni a Duethez"
 
-msgid "Unknown error occured"
+msgid "Unknown error occurred"
 msgstr "Ismeretlen hiba történt"
 
 msgid "Wrong password"
@@ -19396,7 +19396,7 @@ msgstr ""
 #~ msgid "A error occurred. Maybe memory of system is not enough or it's a bug of the program"
 #~ msgstr "Hiba történt. Lehet, hogy nincs elég rendszermemória, vagy a program hibás"
 
-#~ msgid "A problem occured during calibration. Click to view the solution."
+#~ msgid "A problem occurred during calibration. Click to view the solution."
 #~ msgstr "A kalibráció során probléma merült fel. Kattints a megoldás megtekintéséhez."
 
 #~ msgid "Acivate for better air filtration"
