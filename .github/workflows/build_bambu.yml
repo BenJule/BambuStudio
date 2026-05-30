@@ -290,11 +290,6 @@ jobs:
             echo "linux_arch=amd64" >> "$GITHUB_ENV"
           fi
 
-      - name: Build .deb package
-        if: runner.os == 'Linux'
-        shell: bash
-        run: ./BuildLinux.sh -pr
-
       - name: Upload artifacts Ubuntu AppImage
         if: ${{ ! env.ACT && runner.os == 'Linux' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
@@ -302,9 +297,3 @@ jobs:
           name: BambuStudio_Linux_AppImage_${{ inputs.os }}_${{ env.linux_arch }}_${{ env.ver }}
           path: './build/Bambu_Studio_${{ inputs.os }}_${{ env.ver }}.AppImage'
 
-      - name: Upload .deb package
-        if: ${{ ! env.ACT && runner.os == 'Linux' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
-        with:
-          name: BambuStudio_Linux_Debian_${{ inputs.os }}_${{ env.linux_arch }}_${{ env.ver }}
-          path: './build/bambustudio_*.deb'
