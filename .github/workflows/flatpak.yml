@@ -113,7 +113,8 @@ jobs:
         run: |
           ./BambuStudio.AppImage --appimage-extract
           echo "Extracted to squashfs-root/"
-          ls squashfs-root/usr/bin/ | head -5
+          ls squashfs-root/ | head -10
+          ls squashfs-root/bin/ 2>/dev/null | head -5 || true
 
       - name: Prepare Flatpak sources
         run: |
