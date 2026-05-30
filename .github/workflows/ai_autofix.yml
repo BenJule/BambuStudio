@@ -53,7 +53,10 @@ jobs:
           echo "name=${prefix}/issue-${ISSUE_NUMBER}-${slug}" >> "$GITHUB_OUTPUT"
 
       - name: Install Claude CLI
-        run: npm install -g @anthropic-ai/claude-code@2.1.152
+        working-directory: .github/npm
+        run: |
+          npm ci
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Restore Claude credentials
         run: |
@@ -97,15 +100,18 @@ jobs:
 
       - name: Commit and push
         if: steps.changes.outputs.changed == 'true'
+        env:
+          BRANCH_NAME: ${{ steps.branch.outputs.name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
           git config user.name  "BenJule"
           git config user.email "benjamin.luetker@gmail.com"
-          git checkout -b "${{ steps.branch.outputs.name }}"
+          git checkout -b "$BRANCH_NAME"
           git add -A
-          git commit -S -m "fix: automated fix for issue #${{ github.event.issue.number }}
+          git commit -S -m "fix: automated fix for issue #${ISSUE_NUMBER}
 
-          Closes #${{ github.event.issue.number }}"
-          git push origin "${{ steps.branch.outputs.name }}"
+          Closes #${ISSUE_NUMBER}"
+          git push origin "$BRANCH_NAME"
 
       - name: Create PR and request Copilot review
         if: steps.changes.outputs.changed == 'true'
@@ -139,25 +145,30 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ steps.branch.outputs.name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          PR_NUM=$(gh pr list --head "${{ steps.branch.outputs.name }}" --json number --jq '.[0].number')
-          gh issue comment "${{ github.event.issue.number }}" \
+          PR_NUM=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
+          gh issue comment "$ISSUE_NUMBER" \
             --body "Automated fix generated in PR #${PR_NUM}. Copilot has been requested to review the changes."
 
       - name: Handle no changes
         if: steps.changes.outputs.changed == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          gh issue comment "${{ github.event.issue.number }}" \
+          gh issue comment "$ISSUE_NUMBER" \
             --body "Claude analyzed this issue but could not generate a fix automatically. Manual intervention required."
-          gh issue edit "${{ github.event.issue.number }}" --remove-label "ai-fix"
+          gh issue edit "$ISSUE_NUMBER" --remove-label "ai-fix"
 
       - name: Handle failure
         if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          gh issue comment "${{ github.event.issue.number }}" \
-            --body "The automated fix attempt failed. Check the [workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details."
-          gh issue edit "${{ github.event.issue.number }}" --remove-label "ai-fix"
+          gh issue comment "$ISSUE_NUMBER" \
+            --body "The automated fix attempt failed. Check the [workflow run](${RUN_URL}) for details."
+          gh issue edit "$ISSUE_NUMBER" --remove-label "ai-fix"
