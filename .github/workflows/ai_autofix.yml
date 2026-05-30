@@ -53,7 +53,8 @@ jobs:
           echo "name=${prefix}/issue-${ISSUE_NUMBER}-${slug}" >> "$GITHUB_OUTPUT"
 
       - name: Install Claude CLI
-        run: npm ci --prefix .github/npm
+        working-directory: .github/npm
+        run: npm ci
 
       - name: Restore Claude credentials
         run: |
