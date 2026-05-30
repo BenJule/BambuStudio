@@ -12,7 +12,7 @@ jobs:
     name: Fix Issue #${{ github.event.issue.number }}
     if: github.event.label.name == 'ai-fix'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 90
     permissions:
       contents: write
       pull-requests: write
@@ -52,6 +52,9 @@ jobs:
             | cut -c1-40)
           echo "name=${prefix}/issue-${ISSUE_NUMBER}-${slug}" >> "$GITHUB_OUTPUT"
 
+      - name: Install tools
+        run: sudo apt-get install -y --no-install-recommends clang-format python3-yaml
+
       - name: Install Claude CLI
         run: npm install -g @anthropic-ai/claude-code@2.1.152
 
@@ -61,22 +64,123 @@ jobs:
           echo '${{ secrets.CLAUDE_CREDENTIALS }}' > ~/.claude/.credentials.json
           chmod 600 ~/.claude/.credentials.json
 
-      - name: Run Claude auto-fix
+      - name: Gather context
+        env:
+          ISSUE_LABELS: ${{ toJson(github.event.issue.labels.*.name) }}
+        run: |
+          # Recent commits for context
+          {
+            echo 'RECENT_LOG<<_CTX_EOF_'
+            git log --oneline -20
+            echo '_CTX_EOF_'
+          } >> "$GITHUB_ENV"
+
+          # Label-based focus hint
+          if echo "$ISSUE_LABELS" | grep -qiE '"crash"'; then
+            echo 'FOCUS=This is a CRASH bug. Focus on null pointer dereferences, use-after-free, out-of-bounds access, and exception handling.' >> "$GITHUB_ENV"
+          elif echo "$ISSUE_LABELS" | grep -qiE '"bug"|"regression"'; then
+            echo 'FOCUS=This is a bug/regression. Analyze recent commits for the breaking change and fix the root cause.' >> "$GITHUB_ENV"
+          elif echo "$ISSUE_LABELS" | grep -qiE '"enhancement"|"feature"'; then
+            echo 'FOCUS=This is a feature request. Implement the minimal necessary changes to add the requested functionality.' >> "$GITHUB_ENV"
+          elif echo "$ISSUE_LABELS" | grep -qiE '"area: ci"|"area: build"'; then
+            echo 'FOCUS=This is a CI/build issue. Focus on workflow YAML files, CMakeLists.txt, and build scripts.' >> "$GITHUB_ENV"
+          else
+            echo 'FOCUS=Analyze the issue carefully and make the minimal necessary changes.' >> "$GITHUB_ENV"
+          fi
+
+      - name: Run Claude auto-fix (retry loop)
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          timeout 1200 claude --dangerously-skip-permissions -p \
-            "You are fixing a GitHub issue in the BambuStudio repository (a C++ 3D printing slicer fork).
+          MAX_ATTEMPTS=3
+          ATTEMPT=0
+          PREV_FEEDBACK=""
 
-          Issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}
+          while [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "::group::Claude attempt ${ATTEMPT}/${MAX_ATTEMPTS}"
 
-          Description:
-          ${ISSUE_BODY}
+            # Reset working tree on retry
+            if [ "$ATTEMPT" -gt 1 ]; then
+              git checkout -- .
+              git clean -fd
+            fi
 
-          Analyze the issue, find the relevant source files, and make the minimal necessary changes to fix it.
-          Keep changes focused and correct. Do not modify unrelated files."
+            # Build feedback section using printf to avoid YAML indentation issues
+            FEEDBACK_SECTION=""
+            if [ -n "$PREV_FEEDBACK" ]; then
+              FEEDBACK_SECTION=$(printf '\nPrevious attempt had these issues — please fix them:\n%s' "$PREV_FEEDBACK")
+            fi
+
+            # Write prompt to temp file to avoid multi-line YAML quoting issues
+            {
+              echo "You are fixing a GitHub issue in the BambuStudio repository (a C++ 3D printing slicer fork based on PrusaSlicer)."
+              echo ""
+              echo "Issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}"
+              echo ""
+              echo "Description:"
+              echo "${ISSUE_BODY}"
+              echo ""
+              echo "Focus: ${FOCUS}"
+              echo ""
+              echo "Recent commits for context:"
+              echo "${RECENT_LOG}"
+              printf '%s' "${FEEDBACK_SECTION}"
+              echo ""
+              echo "Instructions:"
+              echo "- Find the relevant source files and make the minimal necessary changes to fix the issue."
+              echo "- C++ files will be auto-formatted with clang-format after your changes — focus on correctness, not style."
+              echo "- Do NOT modify unrelated files."
+              echo "- Do NOT add unnecessary comments or documentation."
+            } > /tmp/claude_prompt.txt
+
+            timeout 1200 claude --dangerously-skip-permissions -p "$(cat /tmp/claude_prompt.txt)"
+
+            echo "::endgroup::"
+
+            # Auto-apply clang-format to changed C++ files
+            CHANGED_CPP=$(git diff --name-only | grep -E '\.(cpp|h|hpp|cc|cxx|mm)$' || true)
+            if [ -n "$CHANGED_CPP" ]; then
+              echo "$CHANGED_CPP" | xargs clang-format -i
+            fi
+
+            # Validate changed YAML files
+            FEEDBACK=""
+            while IFS= read -r f; do
+              [ -f "$f" ] || continue
+              if ! python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))" "$f" 2>/tmp/synerr; then
+                FEEDBACK="${FEEDBACK}YAML syntax error in ${f}: $(head -1 /tmp/synerr)\n"
+              fi
+            done < <(git diff --name-only | grep -E '\.(yml|yaml)$' || true)
+
+            # Validate changed JSON files
+            while IFS= read -r f; do
+              [ -f "$f" ] || continue
+              if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f" 2>/tmp/synerr; then
+                FEEDBACK="${FEEDBACK}JSON syntax error in ${f}: $(head -1 /tmp/synerr)\n"
+              fi
+            done < <(git diff --name-only | grep -E '\.json$' || true)
+
+            # No changes made
+            if git diff --quiet && git diff --cached --quiet; then
+              if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+                PREV_FEEDBACK="You made no changes. Look more carefully at the issue description and make the necessary changes."
+                continue
+              fi
+              break
+            fi
+
+            # Retry if syntax errors remain and attempts are left
+            if [ -n "$FEEDBACK" ] && [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+              PREV_FEEDBACK=$(printf '%b' "$FEEDBACK")
+              continue
+            fi
+
+            echo "Fix complete after ${ATTEMPT} attempt(s)."
+            break
+          done
 
       - name: Check for changes
         id: changes
@@ -87,8 +191,103 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Import GPG signing key
+      - name: Cache build deps
         if: steps.changes.outputs.changed == 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: deps/build/destdir
+          key: autofix-deps-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
+
+      - name: Verify fix builds (Debian)
+        if: steps.changes.outputs.changed == 'true'
+        id: build_check
+        run: |
+          set -o pipefail
+          # Install build dependencies
+          sudo ./BuildLinux.sh -ur 2>&1 | tail -5
+
+          # Build deps if not cached
+          if [ ! -d deps/build/destdir ]; then
+            echo "Building deps (not cached)..."
+            ./BuildLinux.sh -dfr 2>&1 | tail -20
+          fi
+
+          # Build BambuStudio — capture output for feedback on failure
+          if timeout 2400 ./BuildLinux.sh -sfr 2>&1 | tee /tmp/build_output.log | tail -30; then
+            echo "build_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build_ok=false" >> "$GITHUB_OUTPUT"
+            # Extract last 100 lines of errors for Claude retry
+            grep -E "error:|Error:|FAILED|undefined reference" /tmp/build_output.log | tail -50 \
+              > /tmp/build_errors.txt || tail -100 /tmp/build_output.log > /tmp/build_errors.txt
+          fi
+
+      - name: Retry fix with build errors
+        if: steps.changes.outputs.changed == 'true' && steps.build_check.outputs.build_ok == 'false'
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          BUILD_ERRORS=$(cat /tmp/build_errors.txt 2>/dev/null || echo "Build failed — no error output captured")
+
+          # Reset and let Claude fix the build errors
+          git checkout -- .
+          git clean -fd
+
+          {
+            echo "You previously attempted to fix Issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}"
+            echo ""
+            echo "The fix you made caused build errors. Here are the compiler/linker errors:"
+            echo ""
+            echo "${BUILD_ERRORS}"
+            echo ""
+            echo "Please fix the code so it compiles correctly."
+            echo ""
+            echo "Focus: ${FOCUS}"
+            echo ""
+            echo "Original issue description:"
+            echo "${ISSUE_BODY}"
+          } > /tmp/claude_prompt.txt
+
+          timeout 1200 claude --dangerously-skip-permissions -p "$(cat /tmp/claude_prompt.txt)"
+
+          # Re-apply clang-format
+          CHANGED_CPP=$(git diff --name-only | grep -E '\.(cpp|h|hpp|cc|cxx|mm)$' || true)
+          if [ -n "$CHANGED_CPP" ]; then
+            echo "$CHANGED_CPP" | xargs clang-format -i
+          fi
+
+          # Second build verification
+          if timeout 2400 ./BuildLinux.sh -sfr 2>&1 | tee /tmp/build_output2.log | tail -30; then
+            echo "BUILD_RETRY_OK=true" >> "$GITHUB_ENV"
+          else
+            echo "BUILD_RETRY_OK=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Abort if build still fails after retry
+        if: steps.changes.outputs.changed == 'true' && steps.build_check.outputs.build_ok == 'false' && env.BUILD_RETRY_OK == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --body "Claude generated a fix but it failed to compile even after a retry. Manual intervention required. See [workflow run](${RUN_URL}) for build errors."
+          gh issue edit "$ISSUE_NUMBER" --remove-label "ai-fix"
+          exit 1
+
+      - name: Re-check for changes after build retry
+        id: changes2
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Import GPG signing key
+        if: steps.changes2.outputs.changed == 'true'
         uses: ./.github/actions/setup-gpg
         with:
           signing-key: ${{ secrets.GIT_SIGNING_KEY }}
@@ -96,7 +295,7 @@ jobs:
           signing-key-id: ${{ secrets.GIT_SIGNING_KEY_ID }}
 
       - name: Commit and push
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes2.outputs.changed == 'true'
         env:
           BRANCH_NAME: ${{ steps.branch.outputs.name }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -111,7 +310,7 @@ jobs:
           git push origin "$BRANCH_NAME"
 
       - name: Create PR and request Copilot review
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes2.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -120,15 +319,18 @@ jobs:
           BRANCH_NAME: ${{ steps.branch.outputs.name }}
           GH_REPO: ${{ github.repository }}
         run: |
+          {
+            echo "This PR was automatically generated by Claude AI to address Issue #${ISSUE_NUMBER}."
+            echo ""
+            echo "**Issue:** ${ISSUE_TITLE}"
+            echo ""
+            echo "> Please review the changes carefully before merging."
+            echo ""
+            echo "Closes #${ISSUE_NUMBER}"
+          } > /tmp/pr_body.txt
           PR_URL=$(gh pr create \
             --title "fix: automated fix for issue #${ISSUE_NUMBER} — ${ISSUE_TITLE}" \
-            --body "This PR was automatically generated by Claude AI to address Issue #${ISSUE_NUMBER}.
-
-          **Issue:** ${ISSUE_TITLE}
-
-          > Please review the changes carefully before merging.
-
-          Closes #${ISSUE_NUMBER}" \
+            --body-file /tmp/pr_body.txt \
             --base "${DEFAULT_BRANCH}" \
             --head "${BRANCH_NAME}" \
             --assignee BenJule \
@@ -139,7 +341,7 @@ jobs:
           echo "PR created: $PR_URL"
 
       - name: Comment on issue
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes2.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH_NAME: ${{ steps.branch.outputs.name }}
@@ -147,7 +349,7 @@ jobs:
         run: |
           PR_NUM=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
           gh issue comment "$ISSUE_NUMBER" \
-            --body "Automated fix generated in PR #${PR_NUM}. Copilot has been requested to review the changes."
+            --body "Automated fix generated in PR #${PR_NUM}. Build verification passed. Copilot has been requested to review the changes."
 
       - name: Handle no changes
         if: steps.changes.outputs.changed == 'false'
