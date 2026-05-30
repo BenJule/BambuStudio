@@ -5972,7 +5972,7 @@ msgstr "A impressora está ocupada fazendo o download. Aguarde o término do dow
 msgid "Printer camera is malfunctioning."
 msgstr "A câmera da impressora está com defeito."
 
-msgid "Problem occured. Please update the printer firmware and try again."
+msgid "Problem occurred. Please update the printer firmware and try again."
 msgstr "Ocorreu um problema. Atualize o firmware da impressora e tente novamente."
 
 msgid "LAN Only Liveview is off. Please turn on the liveview on printer screen."
@@ -16312,7 +16312,7 @@ msgstr "A conexão com o Duet funciona corretamente."
 msgid "Could not connect to Duet"
 msgstr "Não foi possível conectar-se ao Duet"
 
-msgid "Unknown error occured"
+msgid "Unknown error occurred"
 msgstr "Ocorreu um erro desconhecido"
 
 msgid "Wrong password"
@@ -19443,7 +19443,7 @@ msgstr ""
 #~ msgid "A error occurred. Maybe memory of system is not enough or it's a bug of the program"
 #~ msgstr "Ocorreu um erro. Talvez a memória do sistema não seja suficiente ou seja um bug do programa"
 
-#~ msgid "A problem occured during calibration. Click to view the solution."
+#~ msgid "A problem occurred during calibration. Click to view the solution."
 #~ msgstr "Ocorreu um problema durante a calibração. Clique para ver a solução."
 
 #~ msgid "Acivate for better air filtration"

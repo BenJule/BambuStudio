@@ -5836,7 +5836,7 @@ msgstr ""
 msgid "Printer camera is malfunctioning."
 msgstr ""
 
-msgid "Problem occured. Please update the printer firmware and try again."
+msgid "Problem occurred. Please update the printer firmware and try again."
 msgstr ""
 
 msgid "LAN Only Liveview is off. Please turn on the liveview on printer screen."
@@ -15866,7 +15866,7 @@ msgstr ""
 msgid "Could not connect to Duet"
 msgstr ""
 
-msgid "Unknown error occured"
+msgid "Unknown error occurred"
 msgstr ""
 
 msgid "Wrong password"

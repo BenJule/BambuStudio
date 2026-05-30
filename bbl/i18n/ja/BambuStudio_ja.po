@@ -5940,7 +5940,7 @@ msgstr "プリンターは現在ダウンロード中です。終了後、再度
 msgid "Printer camera is malfunctioning."
 msgstr "プリンタのカメラが正常に動作していません。"
 
-msgid "Problem occured. Please update the printer firmware and try again."
+msgid "Problem occurred. Please update the printer firmware and try again."
 msgstr "問題が発生しました。プリンタのファームウェアを更新し、再試行してください。"
 
 msgid "LAN Only Liveview is off. Please turn on the liveview on printer screen."
@@ -16265,7 +16265,7 @@ msgstr "Duet への接続は正常です。"
 msgid "Could not connect to Duet"
 msgstr "Duetに接続できませんでした"
 
-msgid "Unknown error occured"
+msgid "Unknown error occurred"
 msgstr "不明なエラーが発生しました"
 
 msgid "Wrong password"
@@ -19460,7 +19460,7 @@ msgstr ""
 #~ msgid "A error occurred. Maybe memory of system is not enough or it's a bug of the program"
 #~ msgstr "エラーが発生しました。システムのメモリ不足か、不具合が発生した可能性があります。"
 
-#~ msgid "A problem occured during calibration. Click to view the solution."
+#~ msgid "A problem occurred during calibration. Click to view the solution."
 #~ msgstr "キャリブレーション中に問題が発生しました。クリックして解決策をご確認ください。"
 
 #~ msgid "Acivate for better air filtration"

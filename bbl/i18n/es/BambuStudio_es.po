@@ -5971,7 +5971,7 @@ msgstr "La impresora está actualmente ocupada descargando. Inténtelo de nuevo 
 msgid "Printer camera is malfunctioning."
 msgstr "La cámara de la impresora funciona mal."
 
-msgid "Problem occured. Please update the printer firmware and try again."
+msgid "Problem occurred. Please update the printer firmware and try again."
 msgstr "Se ha producido un problema. Actualice el firmware de la impresora e inténtelo de nuevo."
 
 msgid "LAN Only Liveview is off. Please turn on the liveview on printer screen."
@@ -16320,7 +16320,7 @@ msgstr "Connection to Duet is working correctly."
 msgid "Could not connect to Duet"
 msgstr "No se puede conectar a Duet"
 
-msgid "Unknown error occured"
+msgid "Unknown error occurred"
 msgstr "Se ha producido un error desconocido"
 
 msgid "Wrong password"
@@ -19458,7 +19458,7 @@ msgstr ""
 #~ msgid "A error occurred. Maybe memory of system is not enough or it's a bug of the program"
 #~ msgstr "Se ha producido un error. Tal vez la memoria del sistema no es suficiente o es un error del programa"
 
-#~ msgid "A problem occured during calibration. Click to view the solution."
+#~ msgid "A problem occurred during calibration. Click to view the solution."
 #~ msgstr "Se ha producido un problema durante la calibración. Haga clic para ver la solución."
 
 #~ msgid "Acivate for better air filtration"

@@ -6036,7 +6036,7 @@ msgstr "Tiskárna právě stahuje data. Zkuste to prosím znovu po dokončení."
 msgid "Printer camera is malfunctioning."
 msgstr "Kamera tiskárny nefunguje správně."
 
-msgid "Problem occured. Please update the printer firmware and try again."
+msgid "Problem occurred. Please update the printer firmware and try again."
 msgstr "Došlo k problému. Aktualizujte firmware tiskárny a zkuste to znovu."
 
 msgid "LAN Only Liveview is off. Please turn on the liveview on printer screen."
@@ -16478,7 +16478,7 @@ msgstr "Připojení k Duet funguje správně."
 msgid "Could not connect to Duet"
 msgstr "Nepodařilo se připojit k Duet"
 
-msgid "Unknown error occured"
+msgid "Unknown error occurred"
 msgstr "Došlo k neznámé chybě"
 
 msgid "Wrong password"

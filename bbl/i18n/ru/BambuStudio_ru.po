@@ -6051,7 +6051,7 @@ msgstr "Сейчас идёт загрузка. Пожалуйста, повто
 msgid "Printer camera is malfunctioning."
 msgstr "Камера принтера неисправна."
 
-msgid "Problem occured. Please update the printer firmware and try again."
+msgid "Problem occurred. Please update the printer firmware and try again."
 msgstr "Возникла проблема. Пожалуйста, обновите прошивку принтера и повторите попытку."
 
 msgid "LAN Only Liveview is off. Please turn on the liveview on printer screen."
@@ -16508,7 +16508,7 @@ msgstr "Подключение к Duet успешно установлено."
 msgid "Could not connect to Duet"
 msgstr "Не удалось подключиться к Duet"
 
-msgid "Unknown error occured"
+msgid "Unknown error occurred"
 msgstr "Произошла неизвестная ошибка"
 
 msgid "Wrong password"
