@@ -70,11 +70,13 @@ jobs:
 
       - name: Download AppImage
         id: appimage
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
           VER="${TAG#v}"                    # 02.07.00.55-fork.1
           UPSTREAM_VER="${VER%-fork.*}"    # 02.07.00.55  (filename only uses upstream ver)
-          # Try naming patterns (newest first, then fallbacks)
+          # Try explicit naming patterns first (versioned releases)
           for PATTERN in \
             "Bambu_Studio_ubuntu-24.04_V${UPSTREAM_VER}.AppImage" \
             "Bambu_Studio_ubuntu-22.04_V${UPSTREAM_VER}.AppImage" \
@@ -90,6 +92,17 @@ jobs:
               break
             fi
           done
+          # Fallback: pick first ubuntu-24.04 AppImage asset from the release (handles nightly tags)
+          if [[ ! -f BambuStudio.AppImage ]]; then
+            ASSET_URL=$(gh release view "${TAG}" --repo "${{ github.repository }}" \
+              --json assets --jq \
+              '[.assets[] | select(.name | test("ubuntu-24.04[^a-z].*\\.AppImage$"; "i"))] | .[0].url // ""')
+            if [[ -n "${ASSET_URL}" ]]; then
+              echo "Fallback download: ${ASSET_URL}"
+              curl -L -o BambuStudio.AppImage "${ASSET_URL}"
+              echo "url=${ASSET_URL}" >> "$GITHUB_OUTPUT"
+            fi
+          fi
           if [[ ! -f BambuStudio.AppImage ]]; then
             echo "::error::No AppImage found for tag $TAG"
             exit 1
