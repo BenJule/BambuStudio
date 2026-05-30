@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
+      prev_tag: ${{ steps.tag.outputs.prev_tag }}
     permissions:
       contents: write
 
@@ -42,14 +43,21 @@ jobs:
         id: tag
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            tag="${{ github.ref_name }}"
           elif [[ -n "${{ inputs.tag }}" ]]; then
-            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+            tag="${{ inputs.tag }}"
           else
             base=$(grep 'set(SLIC3R_VERSION_BASE' version.inc | cut -d '"' -f2)
             count=$(git rev-list --count HEAD)
-            echo "tag=v${base}.${count}-dev" >> "$GITHUB_OUTPUT"
+            tag="v${base}.${count}-dev"
           fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          # Exclude the new tag itself (may not exist yet for workflow_dispatch)
+          prev_tag=$(git tag --sort=-version:refname \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-dev$' \
+            | grep -v "^${tag}$" \
+            | head -1 || echo "")
+          echo "prev_tag=${prev_tag}" >> "$GITHUB_OUTPUT"
 
       - name: Import GPG key
         if: github.event_name == 'workflow_dispatch'
@@ -68,6 +76,77 @@ jobs:
 
       - name: Show tag
         run: echo "Releasing ${{ steps.tag.outputs.tag }}"
+
+  generate_changelog:
+    name: Generate Claude changelog
+    needs: [prepare]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Claude CLI
+        run: npm install -g @anthropic-ai/claude-code@2.1.152
+
+      - name: Restore Claude credentials
+        run: |
+          mkdir -p ~/.claude
+          echo '${{ secrets.CLAUDE_CREDENTIALS }}' > ~/.claude/.credentials.json
+          chmod 600 ~/.claude/.credentials.json
+
+      - name: Generate changelog
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+          PREV_TAG: ${{ needs.prepare.outputs.prev_tag }}
+        run: |
+          if [ -n "$PREV_TAG" ]; then
+            COMMIT_LOG=$(git log "${PREV_TAG}..HEAD" --oneline --no-merges | head -100)
+            RANGE="${PREV_TAG}..HEAD"
+          else
+            COMMIT_LOG=$(git log --oneline --no-merges | head -100)
+            RANGE="initial"
+          fi
+
+          # Write prompt to temp file to avoid multi-line YAML quoting issues
+          {
+            echo "Generate a concise, user-facing changelog in Markdown for BambuStudio release ${TAG}."
+            echo ""
+            echo "Previous release: ${PREV_TAG:-(first release)}"
+            echo "Commit range: ${RANGE}"
+            echo ""
+            echo "Commits:"
+            echo "${COMMIT_LOG}"
+            echo ""
+            echo "Instructions:"
+            echo "- Write for end users, not developers."
+            echo "- Group into sections: Features, Bug Fixes, Improvements, CI/Infrastructure (omit empty sections)."
+            echo "- Each bullet: one sentence, imperative mood, no commit hashes."
+            echo "- Max 30 bullets total."
+            echo "- Output only the Markdown, no preamble or explanation."
+          } > /tmp/changelog_prompt.txt
+
+          timeout 300 claude --dangerously-skip-permissions -p "$(cat /tmp/changelog_prompt.txt)" \
+            > changelog.md
+
+          echo "=== Generated changelog ==="
+          cat changelog.md
+
+      - name: Upload changelog artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        with:
+          name: changelog
+          path: changelog.md
+          retention-days: 7
 
   build:
     name: Build ${{ matrix.os }}
@@ -99,20 +178,20 @@ jobs:
   build_packages:
     name: Build Debian .deb + Fedora .rpm
     needs: [prepare, build]
-    if: ${{ !cancelled() && needs.build.result != 'failure' }}
+    if: needs.build.result == 'success'
     uses: ./.github/workflows/build_packages.yml
     with:
       retention-days: 90
     secrets: inherit
 
   create_release:
-    name: Publish Latest release
-    needs: [prepare, build, build_packages]
+    name: Publish release
+    needs: [prepare, generate_changelog, build, build_packages]
     if: |
       always() &&
       needs.prepare.result == 'success' &&
-      (needs.build.result == 'success' || needs.build.result == 'failure') &&
-      (needs.build_packages.result == 'success' || needs.build_packages.result == 'failure' || needs.build_packages.result == 'skipped' || needs.build_packages.result == 'cancelled')
+      needs.build.result == 'success' &&
+      needs.build_packages.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -132,6 +211,14 @@ jobs:
           path: release-assets/
           merge-multiple: true
 
+      - name: Prepare changelog
+        run: |
+          if [ -f release-assets/changelog.md ]; then
+            mv release-assets/changelog.md ./changelog.md
+          else
+            printf '## Changes\n\nSee commit history for details.\n' > changelog.md
+          fi
+
       - name: List assets
         run: find release-assets/ -type f | sort
 
@@ -148,54 +235,92 @@ jobs:
         with:
           subject-path: release-assets/**
 
-      - name: Fetch draft release notes
-        id: notes
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          body=$(gh api "repos/${{ github.repository }}/releases" \
-            --jq '[.[] | select(.draft == true and .author.login == "github-actions[bot]")] | first | .body // ""')
-          if [ -n "$body" ]; then
-            printf '%s' "$body" > /tmp/release-notes.md
-            echo "use_draft=true" >> "$GITHUB_OUTPUT"
-            echo "Found release-drafter draft ($(wc -l < /tmp/release-notes.md) lines)"
-          else
-            echo "use_draft=false" >> "$GITHUB_OUTPUT"
-            echo "No draft release found — will use --generate-notes"
-          fi
-
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ needs.prepare.outputs.tag }}"
           mapfile -d '' ASSETS < <(find release-assets/ -type f -print0)
-          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            echo "Release $TAG already exists — uploading/updating assets"
-            gh release upload "$TAG" --repo "${{ github.repository }}" --clobber "${ASSETS[@]}"
-          else
-            NOTES_ARGS=()
-            if [ "${{ steps.notes.outputs.use_draft }}" = "true" ]; then
-              NOTES_ARGS=(--notes-file /tmp/release-notes.md)
-            else
-              NOTES_ARGS=(--generate-notes)
-            fi
-            gh release create "$TAG" \
-              --repo "${{ github.repository }}" \
-              --title "BambuStudio $TAG" \
-              "${NOTES_ARGS[@]}" \
-              --latest \
-              "${ASSETS[@]}"
-          fi
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "BambuStudio $TAG" \
+            --notes-file changelog.md \
+            --latest \
+            "${ASSETS[@]}"
 
-      - name: Delete draft release
-        if: steps.notes.outputs.use_draft == 'true'
+  smoke_test:
+    name: Smoke test .deb
+    needs: [prepare, create_release]
+    if: needs.create_release.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Download .deb from release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: |
-          draft_id=$(gh api "repos/${{ github.repository }}/releases" \
-            --jq '[.[] | select(.draft == true and .author.login == "github-actions[bot]")] | first | .id // ""')
-          if [ -n "$draft_id" ]; then
-            gh api "repos/${{ github.repository }}/releases/$draft_id" -X DELETE
-            echo "Deleted draft release $draft_id"
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern "*.deb" \
+            --dir ./smoke/
+          DEB=$(find ./smoke/ -name "*.deb" | head -1)
+          if [ -z "$DEB" ]; then
+            echo "::error::No .deb asset found in release $TAG"
+            exit 1
           fi
+          echo "DEB=$DEB" >> "$GITHUB_ENV"
+
+      - name: Verify .deb integrity
+        run: |
+          echo "=== Package info ==="
+          dpkg-deb --info "$DEB"
+          echo "=== Package contents ==="
+          dpkg-deb --contents "$DEB" | tee /tmp/deb_contents.txt
+          FILE_COUNT=$(wc -l < /tmp/deb_contents.txt)
+          echo "Total files: $FILE_COUNT"
+          if [ "$FILE_COUNT" -lt 10 ]; then
+            echo "::error::.deb contains only $FILE_COUNT entries — package is likely corrupt (expected >10)"
+            exit 1
+          fi
+
+      - name: Install .deb
+        run: |
+          sudo apt-get install -f -y
+          sudo dpkg -i "$DEB" || { sudo apt-get install -f -y && sudo dpkg -i "$DEB"; }
+
+      - name: Verify binary present
+        run: |
+          # The package installs a 'bambustudio' wrapper in PATH and
+          # the real binary at /usr/lib/bambustudio/bin/bambu-studio
+          if command -v bambustudio &>/dev/null; then
+            echo "OK: $(which bambustudio)"
+          elif [ -f /usr/lib/bambustudio/bin/bambu-studio ]; then
+            echo "OK: /usr/lib/bambustudio/bin/bambu-studio"
+            file /usr/lib/bambustudio/bin/bambu-studio
+          else
+            echo "::error::bambustudio binary not found after dpkg install"
+            dpkg -L bambu-studio 2>/dev/null | head -30 || true
+            exit 1
+          fi
+
+      - name: Rollback release on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          echo "Smoke test failed — deleting release $TAG to prevent shipping a broken package"
+          gh release delete "$TAG" \
+            --repo "${{ github.repository }}" \
+            --yes \
+            --cleanup-tag || echo "Warning: could not delete release (may already be gone)"
+          echo "::error::Release $TAG was deleted because the smoke test failed. Fix the packaging issue and re-trigger the release."
