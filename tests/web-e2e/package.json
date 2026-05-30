@@ -22,7 +22,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@inquirer/prompts": "^8.4.3",
+    "@inquirer/prompts": "^8.5.1",
     "boxen": "^8.0.1",
     "chalk": "^5.4.1",
     "dotenv": "^17.4.2"
