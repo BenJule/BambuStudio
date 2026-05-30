@@ -31,3 +31,14 @@ updates:
       - "javascript"
     commit-message:
       prefix: "ci"
+
+  - package-ecosystem: "npm"
+    directory: "/.github/npm"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "area: ci"
+    commit-message:
+      prefix: "ci"
