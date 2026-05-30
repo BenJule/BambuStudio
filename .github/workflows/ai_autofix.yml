@@ -53,10 +53,7 @@ jobs:
           echo "name=${prefix}/issue-${ISSUE_NUMBER}-${slug}" >> "$GITHUB_OUTPUT"
 
       - name: Install Claude CLI
-        working-directory: .github/npm
-        run: |
-          npm ci
-          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+        run: npm ci --prefix .github/npm
 
       - name: Restore Claude credentials
         run: |
@@ -70,7 +67,8 @@ jobs:
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          timeout 1200 claude --dangerously-skip-permissions -p \
+          timeout 1200 "$GITHUB_WORKSPACE/.github/npm/node_modules/.bin/claude" \
+            --dangerously-skip-permissions -p \
             "You are fixing a GitHub issue in the BambuStudio repository (a C++ 3D printing slicer fork).
 
           Issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}
