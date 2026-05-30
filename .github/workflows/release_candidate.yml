@@ -85,7 +85,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            flatpak flatpak-builder squashfs-tools desktop-file-utils appstream
+            flatpak flatpak-builder squashfs-tools desktop-file-utils appstream elfutils
 
       - name: Add Flathub remote
         run: |
