@@ -96,7 +96,7 @@ jobs:
           if [[ ! -f BambuStudio.AppImage ]]; then
             ASSET_URL=$(gh release view "${TAG}" --repo "${{ github.repository }}" \
               --json assets --jq \
-              '[.assets[] | select(.name | test("ubuntu-24.04[^a-z].*\\.AppImage$"; "i"))] | .[0].url // ""')
+              '[.assets[] | select(.name | test("ubuntu-24.04[^a-z-].*\\.AppImage$"; "i"))] | .[0].url // ""')
             if [[ -n "${ASSET_URL}" ]]; then
               echo "Fallback download: ${ASSET_URL}"
               curl -L -o BambuStudio.AppImage "${ASSET_URL}"
