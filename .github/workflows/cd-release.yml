@@ -168,20 +168,16 @@ jobs:
   build_slow:
     name: Build ${{ matrix.os }}
     needs: [prepare]
-    continue-on-error: ${{ matrix.optional == true }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: macos-15-intel
             arch: x86_64
-            optional: true
           - os: macos-15
             arch: universal
-            optional: true
           - os: macos-26
             arch: universal
-            optional: true
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: ${{ matrix.os }}
@@ -200,12 +196,11 @@ jobs:
 
   create_release:
     name: Publish release
-    needs: [prepare, generate_changelog, build_fast, build_slow, build_packages]
+    needs: [prepare, generate_changelog, build_fast, build_packages]
     if: |
       always() &&
       needs.prepare.result == 'success' &&
       needs.build_fast.result == 'success' &&
-      needs.build_slow.result == 'success' &&
       needs.build_packages.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
