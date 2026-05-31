@@ -1,5 +1,5 @@
 name: 'CD: APT Repository'
-run-name: "APT update — ${{ github.event.release.tag_name || inputs.tag || 'latest' }}"
+run-name: "APT update (${{ inputs.channel || 'stable' }}) — ${{ github.event.release.tag_name || inputs.tag || 'latest' }}"
 
 on:
   release:
@@ -7,19 +7,36 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag, e.g. v02.07.00.55-fork.1 (empty = latest)'
+        description: 'Release tag (empty = latest stable)'
         required: false
         type: string
+      channel:
+        description: 'APT channel to update'
+        required: false
+        type: choice
+        default: stable
+        options: [stable, nightly]
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+        type: string
+      channel:
+        description: 'APT channel: stable or nightly'
+        required: false
+        type: string
+        default: stable
 
 permissions: read-all
 
 concurrency:
-  group: cd-deploy-apt
+  group: cd-deploy-apt-${{ inputs.channel || 'stable' }}
   cancel-in-progress: false
 
 jobs:
   update-apt-repo:
-    name: Update APT Repository
+    name: Update APT Repository (${{ inputs.channel || 'stable' }})
     runs-on: ubuntu-24.04
     timeout-minutes: 20
 
@@ -28,36 +45,42 @@ jobs:
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
         with:
           egress-policy: audit
-      - name: Determine tag
+
+      - name: Determine tag and channel
         id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+
+          # release event is always stable; workflow_call/dispatch use inputs
           if [[ "${{ github.event_name }}" == "release" ]]; then
             TAG="${{ github.event.release.tag_name }}"
+            CHANNEL="stable"
           elif [[ -n "${{ inputs.tag }}" ]]; then
             TAG="${{ inputs.tag }}"
+            CHANNEL="${{ inputs.channel || 'stable' }}"
           else
             TAG=$(gh release list --repo "${{ github.repository }}" \
               --exclude-pre-releases \
               --limit 1 --json tagName -q '.[0].tagName')
+            CHANNEL="stable"
           fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Using tag: $TAG"
-        env:
-          GH_TOKEN: ${{ github.token }}
+
+          echo "tag=$TAG"     >> "$GITHUB_OUTPUT"
+          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+          echo "Using tag: $TAG  channel: $CHANNEL"
 
       - name: Install tools
         run: sudo apt-get install -y --no-install-recommends dpkg-dev apt-utils knockd rsync
 
       - name: Download .deb from release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           TAG="${{ steps.tag.outputs.tag }}"
           mkdir -p pool/main/b/bambu-studio
-          # Only the Debian Trixie build goes into the apt repo.
-          # Downloading all *.deb would put Ubuntu/self-hosted builds with the same
-          # version string into the pool, producing duplicate Packages stanzas and
-          # causing apt to offer a same-version "upgrade" on every run.
           gh release download "$TAG" \
             --repo "${{ github.repository }}" \
             --pattern "*debian-trixie*.deb" \
@@ -66,49 +89,54 @@ jobs:
           ls -lh pool/main/b/bambu-studio/
           [ -n "$(ls pool/main/b/bambu-studio/*.deb 2>/dev/null)" ] || \
             { echo "ERROR: no debian-trixie .deb found in release $TAG" >&2; exit 1; }
-        env:
-          GH_TOKEN: ${{ github.token }}
 
       - name: Generate Packages index
         run: |
           set -euo pipefail
-          mkdir -p dists/stable/main/binary-amd64
+          CHANNEL="${{ steps.tag.outputs.channel }}"
+          mkdir -p "dists/${CHANNEL}/main/binary-amd64"
           dpkg-scanpackages pool/ \
-            > dists/stable/main/binary-amd64/Packages
-          gzip  -k -f dists/stable/main/binary-amd64/Packages
-          bzip2 -k -f dists/stable/main/binary-amd64/Packages
-          echo "Packages: $(wc -l < dists/stable/main/binary-amd64/Packages) lines"
+            > "dists/${CHANNEL}/main/binary-amd64/Packages"
+          gzip  -k -f "dists/${CHANNEL}/main/binary-amd64/Packages"
+          bzip2 -k -f "dists/${CHANNEL}/main/binary-amd64/Packages"
+          echo "Packages: $(wc -l < "dists/${CHANNEL}/main/binary-amd64/Packages") lines"
 
       - name: Generate Release file
         run: |
           set -euo pipefail
-          mkdir -p dists/stable
+          CHANNEL="${{ steps.tag.outputs.channel }}"
+          if [[ "$CHANNEL" == "nightly" ]]; then
+            DESCRIPTION="BenJule BambuStudio APT Repository — Nightly Channel"
+          else
+            DESCRIPTION="BenJule BambuStudio APT Repository"
+          fi
           apt-ftparchive \
             -o APT::FTPArchive::Release::Origin="BenJule BambuStudio" \
             -o APT::FTPArchive::Release::Label="BenJule BambuStudio" \
-            -o APT::FTPArchive::Release::Suite=stable \
-            -o APT::FTPArchive::Release::Codename=stable \
+            -o "APT::FTPArchive::Release::Suite=${CHANNEL}" \
+            -o "APT::FTPArchive::Release::Codename=${CHANNEL}" \
             -o APT::FTPArchive::Release::Architectures=amd64 \
             -o APT::FTPArchive::Release::Components=main \
-            -o "APT::FTPArchive::Release::Description=BenJule BambuStudio APT Repository" \
-            release dists/stable \
-            > dists/stable/Release
-          cat dists/stable/Release
+            -o "APT::FTPArchive::Release::Description=${DESCRIPTION}" \
+            release "dists/${CHANNEL}" \
+            > "dists/${CHANNEL}/Release"
+          cat "dists/${CHANNEL}/Release"
 
       - name: Sign Release
         run: |
           set -euo pipefail
+          CHANNEL="${{ steps.tag.outputs.channel }}"
           echo "${{ secrets.APT_SIGNING_KEY }}" | gpg --batch --import
           gpg --batch --yes \
             --default-key 1726EB3278D7246499B5F2C319BC754BE4AC6B68 \
             --clearsign \
-            -o dists/stable/InRelease \
-            dists/stable/Release
+            -o "dists/${CHANNEL}/InRelease" \
+            "dists/${CHANNEL}/Release"
           gpg --batch --yes \
             --default-key 1726EB3278D7246499B5F2C319BC754BE4AC6B68 \
             -abs \
-            -o dists/stable/Release.gpg \
-            dists/stable/Release
+            -o "dists/${CHANNEL}/Release.gpg" \
+            "dists/${CHANNEL}/Release"
 
       - name: Setup SSH key
         run: |
@@ -120,9 +148,15 @@ jobs:
       - name: Port knock and deploy
         run: |
           set -euo pipefail
+          CHANNEL="${{ steps.tag.outputs.channel }}"
+          if [[ "$CHANNEL" == "nightly" ]]; then
+            DEST="/srv/apt-repo/nightly/"
+          else
+            DEST="/srv/apt-repo/"
+          fi
           knock -d 200 "${{ secrets.VPS_HOST }}" 7000 8000 9000
           sleep 1
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
             pool dists \
-            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/srv/apt-repo/"
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${DEST}"

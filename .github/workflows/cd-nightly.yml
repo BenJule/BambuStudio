@@ -218,6 +218,8 @@ jobs:
       always() &&
       needs.build_platforms.result != 'skipped' &&
       needs.build_flatpak.result != 'skipped'
+    outputs:
+      tag: ${{ steps.ver.outputs.tag }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -346,3 +348,25 @@ jobs:
             --notes-file /tmp/release-notes.md \
             --prerelease \
             "${FILES[@]}"
+
+  # ── 5. Deploy to APT nightly channel ─────────────────────────────────────
+  deploy_apt:
+    name: Update APT nightly channel
+    needs: [publish]
+    if: needs.publish.result == 'success'
+    uses: ./.github/workflows/cd-deploy-apt.yml
+    with:
+      tag: ${{ needs.publish.outputs.tag }}
+      channel: nightly
+    secrets: inherit
+
+  # ── 6. Update AUR nightly package ────────────────────────────────────────
+  deploy_aur:
+    name: Update AUR nightly package
+    needs: [publish]
+    if: needs.publish.result == 'success'
+    uses: ./.github/workflows/cd-deploy-aur.yml
+    with:
+      tag: ${{ needs.publish.outputs.tag }}
+      channel: nightly
+    secrets: inherit
