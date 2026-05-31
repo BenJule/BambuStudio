@@ -82,8 +82,11 @@ jobs:
             '[.assets[] | select((.name | test("^BambuStudio_ubuntu-24\\.04_amd64_.*\\.AppImage$"; "i")) and (.name | test("_selfhosted\\.AppImage$"; "i") | not))] | .[0].browser_download_url // ""')
           if [[ -n "${ASSET_URL}" ]]; then
             echo "Downloading: ${ASSET_URL}"
-            curl -L -o BambuStudio.AppImage "${ASSET_URL}"
-            echo "url=${ASSET_URL}" >> "$GITHUB_OUTPUT"
+            if curl -fL -o BambuStudio.AppImage "${ASSET_URL}"; then
+              echo "url=${ASSET_URL}" >> "$GITHUB_OUTPUT"
+            else
+              rm -f BambuStudio.AppImage
+            fi
           fi
           # Legacy fallback: explicit patterns for older releases
           if [[ ! -f BambuStudio.AppImage ]]; then
@@ -97,9 +100,12 @@ jobs:
               URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${PATTERN}"
               if curl -sIf "$URL" >/dev/null 2>&1; then
                 echo "Fallback download: $URL"
-                curl -L -o BambuStudio.AppImage "$URL"
-                echo "url=$URL" >> "$GITHUB_OUTPUT"
-                break
+                if curl -fL -o BambuStudio.AppImage "$URL"; then
+                  echo "url=$URL" >> "$GITHUB_OUTPUT"
+                  break
+                else
+                  rm -f BambuStudio.AppImage
+                fi
               fi
             done
           fi

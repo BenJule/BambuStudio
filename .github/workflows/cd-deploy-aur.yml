@@ -74,7 +74,7 @@ jobs:
             echo "::error::No AppImage asset found for tag $TAG"
             exit 1
           fi
-          SHA256=$(curl -sL "$URL" | sha256sum | cut -d' ' -f1)
+          SHA256=$(curl -fsSL "$URL" | sha256sum | cut -d' ' -f1)
           echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
 
