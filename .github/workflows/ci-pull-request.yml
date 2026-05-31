@@ -20,6 +20,7 @@ on:
       - ".github/workflows/ci-build-linux.yml"
       - ".github/workflows/ci-build-macos.yml"
       - ".github/workflows/ci-pull-request.yml"
+      - ".github/workflows/cd-packages.yml"
       - 'BuildLinux.sh'
       - 'BuildMac.sh'
       - 'build_win.bat'
