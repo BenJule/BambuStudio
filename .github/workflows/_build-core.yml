@@ -189,6 +189,16 @@ jobs:
         if: runner.os == 'Windows'
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57  # v3
 
+      - name: Setup MSVC developer environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@a102174a2b586eec2ea151a69e6fd14404a8ce7c  # v1.13.0
+        with:
+          arch: ${{ inputs.arch == 'arm64' && 'amd64_arm64' || 'amd64' }}
+
+      - name: Setup sccache
+        if: runner.os == 'Windows'
+        uses: mozilla-actions/sccache-action@d651010b8da762cde178750d8eda7b5febfe147a  # v0.0.9
+
       - name: Install nsis and pkgconfig
         if: runner.os == 'Windows'
         shell: pwsh
@@ -238,13 +248,23 @@ jobs:
           }
           New-Item -ItemType Directory -Force -Path build | Out-Null
           Push-Location build
-          cmake .. -G "Visual Studio 17 2022" -A $vsArch `
+          cmake .. -G Ninja `
+            -DCMAKE_C_COMPILER=cl.exe `
+            -DCMAKE_CXX_COMPILER=cl.exe `
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
             -DBBL_RELEASE_TO_PUBLIC=1 -DBBL_INTERNAL_TESTING=0 `
             -DCMAKE_PREFIX_PATH="$depPath\usr\local" `
             -DCMAKE_INSTALL_PREFIX="../install-dir" `
             -DCMAKE_BUILD_TYPE=Release
-          cmake --build . --target install --config Release -- -m
+          cmake --build . --target install
           Pop-Location
+
+      - name: sccache statistics
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          sccache --show-stats | Tee-Object -Append -FilePath $env:GITHUB_STEP_SUMMARY
 
       - name: Pack app Win
         if: runner.os == 'Windows'

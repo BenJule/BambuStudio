@@ -218,14 +218,45 @@ jobs:
       - name: Fix permissions
         run: chown -R "$(id -u):$(id -g)" ./
 
+      - name: Install and configure ccache
+        run: |
+          dnf install -y --setopt=install_weak_deps=False ccache
+          echo "/usr/lib64/ccache" >> "$GITHUB_PATH"
+          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
+
+      - name: Restore ccache
+        id: ccache-restore
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-fedora42-${{ hashFiles('src/**/*.cpp', 'src/**/*.c', 'src/**/*.h', 'src/**/*.hpp') }}
+          restore-keys: |
+            ccache-fedora42-
+
       - name: Build deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: ./BuildLinux.sh -dfr
 
       - name: Build BambuStudio
+        id: build-bambu
         run: |
+          ccache --zero-stats
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
+
+      - name: ccache statistics
+        if: always()
+        run: |
+          echo "### ccache statistics (Fedora 42)" >> "$GITHUB_STEP_SUMMARY"
+          ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Save ccache
+        if: steps.build-bambu.outcome == 'success' && steps.ccache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-fedora42-${{ hashFiles('src/**/*.cpp', 'src/**/*.c', 'src/**/*.h', 'src/**/*.hpp') }}
 
       - name: Build package
         run: bash scripts/build_rpm.sh
@@ -308,6 +339,22 @@ jobs:
       - name: Fix permissions
         run: sudo chown "$(id -u):$(id -g)" -R ./
 
+      - name: Install and configure ccache
+        run: |
+          sudo apt-get install -y --no-install-recommends ccache
+          echo "/usr/lib/ccache" >> "$GITHUB_PATH"
+          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
+
+      - name: Restore ccache
+        id: ccache-restore
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-${{ matrix.artifact_suffix }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.c', 'src/**/*.h', 'src/**/*.hpp') }}
+          restore-keys: |
+            ccache-${{ matrix.artifact_suffix }}-
+
       - name: Build deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: timeout 180m ./BuildLinux.sh -dr
@@ -317,11 +364,26 @@ jobs:
         uses: ./.github/actions/get-version
 
       - name: Build BambuStudio + AppImage
+        id: build-bambu
         run: |
+          ccache --zero-stats
           timeout 300m ./BuildLinux.sh -isr
           mv -n ./build/BambuStudio_ubu64.AppImage \
             "./build/BambuStudio_${{ matrix.os_label }}_amd64_${{ steps.ver.outputs.ver }}_selfhosted.AppImage" \
             2>/dev/null || true
+
+      - name: ccache statistics
+        if: always()
+        run: |
+          echo "### ccache statistics (${{ matrix.name }})" >> "$GITHUB_STEP_SUMMARY"
+          ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Save ccache
+        if: steps.build-bambu.outcome == 'success' && steps.ccache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-${{ matrix.artifact_suffix }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.c', 'src/**/*.h', 'src/**/*.hpp') }}
 
       - name: Build package
         run: ${{ matrix.pkg_cmd }}
