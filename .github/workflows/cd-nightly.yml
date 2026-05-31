@@ -461,7 +461,7 @@ jobs:
             file /usr/lib/bambustudio/bin/bambu-studio
           else
             echo "::error::bambustudio binary not found after dpkg install"
-            dpkg -L bambu-studio 2>/dev/null | head -30 || true
+            dpkg -L bambustudio 2>/dev/null | head -30 || true
             exit 1
           fi
 
