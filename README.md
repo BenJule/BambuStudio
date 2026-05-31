@@ -1,8 +1,8 @@
 ![image](https://user-images.githubusercontent.com/106916061/179006347-497d24c0-9bd6-45b7-8c49-d5cc8ecfe5d7.png)
 # BambuStudio
 
-[![Nightly Build](https://github.com/BenJule/BambuStudio/actions/workflows/nightly.yml/badge.svg)](https://github.com/BenJule/BambuStudio/actions/workflows/nightly.yml)
-[![PR Build](https://github.com/BenJule/BambuStudio/actions/workflows/build_pr.yml/badge.svg)](https://github.com/BenJule/BambuStudio/actions/workflows/build_pr.yml)
+[![Nightly Build](https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml/badge.svg)](https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml)
+[![PR Build](https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml/badge.svg)](https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/BenJule/BambuStudio/badge)](https://securityscorecards.dev/viewer/?uri=github.com/BenJule/BambuStudio)
 
 Bambu Studio is a cutting-edge, feature-rich slicing software.  
