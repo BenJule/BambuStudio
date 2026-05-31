@@ -168,7 +168,7 @@ jobs:
             arch: universal
           - os: macos-26
             arch: universal
-    uses: ./.github/workflows/build_check_cache.yml
+    uses: ./.github/workflows/_build-cached.yml
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
@@ -179,7 +179,7 @@ jobs:
     name: Build Debian .deb + Fedora .rpm
     needs: [prepare, build]
     if: needs.build.result == 'success'
-    uses: ./.github/workflows/build_packages.yml
+    uses: ./.github/workflows/cd-packages.yml
     with:
       retention-days: 90
     secrets: inherit

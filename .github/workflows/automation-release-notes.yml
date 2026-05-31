@@ -15,6 +15,7 @@ jobs:
   draft:
     name: Draft release notes
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: write
       pull-requests: write

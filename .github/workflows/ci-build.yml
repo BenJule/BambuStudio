@@ -13,7 +13,7 @@ on:
       - 'version.inc'
       - 'localization/**'
       - 'resources/**'
-      - '.github/workflows/build_*.yml'
+      - '.github/workflows/*.yml'
       - 'scripts/flatpak/**'
 
   pull_request:
@@ -26,7 +26,7 @@ on:
       - 'src/**'
       - '**/CMakeLists.txt'
       - 'version.inc'
-      - '.github/workflows/build_*.yml'
+      - '.github/workflows/*.yml'
       - 'build_linux.sh'
       - 'build_win.bat'
       - 'BuildMac.sh'
@@ -56,7 +56,7 @@ jobs:
           - ubuntu-22.04
           - ubuntu-24.04
           - ubuntu-24.04-arm
-    uses: ./.github/workflows/build_check_cache.yml
+    uses: ./.github/workflows/_build-cached.yml
     with:
       os:              ${{ matrix.os }}
       build-deps-only: ${{ inputs.build-deps-only || false }}
@@ -73,7 +73,7 @@ jobs:
             arch: x64
           - os: windows-11-arm
             arch: arm64
-    uses: ./.github/workflows/build_check_cache.yml
+    uses: ./.github/workflows/_build-cached.yml
     with:
       os:              ${{ matrix.os }}
       arch:            ${{ matrix.arch }}
@@ -88,7 +88,7 @@ jobs:
       matrix:
         os:
           - macos-15-intel
-    uses: ./.github/workflows/build_check_cache.yml
+    uses: ./.github/workflows/_build-cached.yml
     with:
       os:              ${{ matrix.os }}
       arch:            x86_64
@@ -103,7 +103,7 @@ jobs:
         os:
           - macos-15
           - macos-26
-    uses: ./.github/workflows/build_check_cache.yml
+    uses: ./.github/workflows/_build-cached.yml
     with:
       os:              ${{ matrix.os }}
       arch:            universal
@@ -115,5 +115,5 @@ jobs:
     name: Build distribution packages
     needs: build_linux
     if: ${{ !cancelled() && needs.build_linux.result != 'failure' }}
-    uses: ./.github/workflows/build_packages.yml
+    uses: ./.github/workflows/cd-packages.yml
     secrets: inherit
