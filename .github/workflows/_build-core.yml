@@ -163,6 +163,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         shell: bash
         run: |
+          set -euo pipefail
           if [[ "${{ inputs.arch }}" == "x86_64" ]]; then
             APP_PATH="${{ github.workspace }}/build/x86_64/BambuStudio/BambuStudio.app"
           else
@@ -172,6 +173,8 @@ jobs:
           STAGING=$(mktemp -d)
           RW_DMG="$STAGING/rw.dmg"
           MOUNT_DIR=$(mktemp -d)
+          cleanup() { hdiutil detach "$MOUNT_DIR" -force >/dev/null 2>&1 || true; rm -rf "$STAGING" "$MOUNT_DIR"; }
+          trap cleanup EXIT
           # Size: app + 50 MB headroom
           APP_SIZE=$(du -sm "$APP_PATH" | cut -f1)
           hdiutil create -size "$((APP_SIZE + 50))m" \
@@ -184,7 +187,6 @@ jobs:
           hdiutil detach "$MOUNT_DIR"
           hdiutil convert "$RW_DMG" -format UDZO \
             -o "${{ github.workspace }}/$DMG_NAME"
-          rm -rf "$STAGING"
 
       - name: Upload artifacts mac
         if: runner.os == 'macOS'
