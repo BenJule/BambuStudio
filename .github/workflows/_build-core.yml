@@ -58,7 +58,7 @@ jobs:
         run: |
           set -euo pipefail
           ver_pure=$(grep 'set(SLIC3R_VERSION_BASE' version.inc | cut -d '"' -f2)
-          count=$(git rev-list --count HEAD)
+          count=$(git rev-list --count HEAD 2>/dev/null || echo "0")
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
             ver="PR-${PR_NUMBER}"
           else
@@ -76,7 +76,8 @@ jobs:
           PR_NUMBER: ${{ github.event.number }}
         run: |
           $date = Get-Date -Format 'yyyyMMdd'
-          $count = git rev-list --count HEAD
+          $count = (git rev-list --count HEAD 2>$null)
+          if ($LASTEXITCODE -ne 0 -or -not $count) { $count = 0 }
           if ($env:EVENT_NAME -eq 'pull_request') {
               $ver = "PR-$env:PR_NUMBER"
           } else {
