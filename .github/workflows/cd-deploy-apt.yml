@@ -83,12 +83,12 @@ jobs:
           mkdir -p pool/main/b/bambu-studio
           gh release download "$TAG" \
             --repo "${{ github.repository }}" \
-            --pattern "*debian-trixie*.deb" \
+            --pattern "bambustudio_*_amd64.deb" \
             --dir pool/main/b/bambu-studio/ \
             --clobber
           ls -lh pool/main/b/bambu-studio/
           [ -n "$(ls pool/main/b/bambu-studio/*.deb 2>/dev/null)" ] || \
-            { echo "ERROR: no debian-trixie .deb found in release $TAG" >&2; exit 1; }
+            { echo "ERROR: no bambustudio .deb found in release $TAG" >&2; exit 1; }
 
       - name: Generate Packages index
         run: |
