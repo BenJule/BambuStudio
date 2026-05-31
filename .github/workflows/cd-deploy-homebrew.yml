@@ -53,7 +53,7 @@ jobs:
           set -euo pipefail
           TAG="v${{ steps.version.outputs.version }}"
           VER="${TAG#v}"
-          UPSTREAM_VER="${VER%-fork.*}"    # strip fork suffix for filename
+          UPSTREAM_VER="${VER%-bj.*}"    # strip distributor suffix for filename
           BASE="https://github.com/${{ github.repository }}/releases/download/${TAG}"
 
           URL_ARM="${BASE}/BambuStudio_Mac_arm64_V${UPSTREAM_VER}.zip"

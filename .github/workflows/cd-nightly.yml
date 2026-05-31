@@ -424,11 +424,11 @@ jobs:
           mkdir -p ./smoke/
           gh release download "$TAG" \
             --repo "${{ github.repository }}" \
-            --pattern "*debian-trixie*.deb" \
+            --pattern "bambustudio_*_amd64.deb" \
             --dir ./smoke/
           DEB=$(find ./smoke/ -name "*.deb" | head -1)
           if [[ -z "$DEB" ]]; then
-            echo "::error::No debian-trixie .deb found in release $TAG"
+            echo "::error::No bambustudio .deb found in release $TAG"
             exit 1
           fi
           echo "DEB=$DEB" >> "$GITHUB_ENV"
