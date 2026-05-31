@@ -12,6 +12,11 @@ on:
         type: string
 
 permissions: read-all
+
+concurrency:
+  group: cd-deploy-aur
+  cancel-in-progress: false
+
 jobs:
   aur-update:
     name: Update AUR PKGBUILD

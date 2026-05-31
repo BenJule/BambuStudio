@@ -12,6 +12,11 @@ on:
         type: string
 
 permissions: read-all
+
+concurrency:
+  group: cd-deploy-homebrew
+  cancel-in-progress: false
+
 jobs:
   homebrew-update:
     name: Update Homebrew Cask

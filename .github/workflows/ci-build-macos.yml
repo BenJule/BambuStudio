@@ -1,13 +1,13 @@
-name: Build Linux
-run-name: "Build Linux — ${{ github.actor }}"
+name: Build Mac
+run-name: "Build Mac — ${{ github.actor }}"
 
 on:
   workflow_dispatch:
-    inputs:
-      build-deps-only:
-          description: 'Only build dependencies (bypasses caching)'
-          type: boolean
-          default: false
+      inputs:
+        build-deps-only:
+            description: 'Only build dependencies (bypasses caching)'
+            type: boolean
+            default: false
 
 permissions: read-all
 concurrency:
@@ -16,16 +16,16 @@ concurrency:
 
 jobs:
   build_all:
-    name: Build Linux
+    name: Build Mac
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-24.04
-          - os: ubuntu-24.04-arm
-    uses: ./.github/workflows/build_check_cache.yml
+          - os: macos-15-intel
+            arch: x86_64
+    uses: ./.github/workflows/_build-cached.yml
     with:
       os: ${{ matrix.os }}
+      arch: ${{ matrix.arch }}
       build-deps-only: ${{ inputs.build-deps-only || false }}
     secrets: inherit

@@ -13,6 +13,10 @@ on:
 
 permissions: read-all
 
+concurrency:
+  group: cd-deploy-apt
+  cancel-in-progress: false
+
 jobs:
   update-apt-repo:
     name: Update APT Repository
@@ -119,6 +123,6 @@ jobs:
           knock -d 200 "${{ secrets.VPS_HOST }}" 7000 8000 9000
           sleep 1
           rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
             pool dists \
             "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/srv/apt-repo/"

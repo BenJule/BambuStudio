@@ -61,7 +61,7 @@ jobs:
   build_deps:
     name: Build Deps
     needs: [check_cache]
-    uses: ./.github/workflows/build_deps.yml
+    uses: ./.github/workflows/_build-deps.yml
     with:
       cache-key:       ${{ needs.check_cache.outputs.cache-key }}
       cache-path:      ${{ needs.check_cache.outputs.cache-path }}

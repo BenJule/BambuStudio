@@ -219,7 +219,7 @@ jobs:
     name: Build BambuStudio
     needs: [build_deps]
     if: ${{ !cancelled() && !inputs.build-deps-only && (inputs.valid-cache == true && needs.build_deps.result == 'skipped') || (inputs.valid-cache != true && success()) }}
-    uses: ./.github/workflows/build_bambu.yml
+    uses: ./.github/workflows/_build-core.yml
     with:
       cache-key:  ${{ inputs.cache-key }}
       cache-path: ${{ inputs.cache-path }}

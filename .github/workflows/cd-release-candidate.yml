@@ -17,7 +17,7 @@ jobs:
   # ── 1. Distribution packages (Debian .deb, Fedora .rpm, self-hosted) ──────
   build_packages:
     name: Build distribution packages
-    uses: ./.github/workflows/build_packages.yml
+    uses: ./.github/workflows/cd-packages.yml
     with:
       retention-days: 30
     secrets: inherit
@@ -47,7 +47,7 @@ jobs:
           - os: macos-15
             arch: universal
             name: macOS / macOS 15 ARM Universal
-    uses: ./.github/workflows/build_check_cache.yml
+    uses: ./.github/workflows/_build-cached.yml
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
