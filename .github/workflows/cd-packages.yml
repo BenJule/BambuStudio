@@ -82,14 +82,36 @@ jobs:
       - name: Fix permissions
         run: chown -R "$(id -u):$(id -g)" ./
 
+      - name: Restore ccache
+        id: ccache-restore
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-debian-trixie-${{ hashFiles('src/**/*.cpp', 'src/**/*.h', 'src/**/*.hpp') }}
+          restore-keys: |
+            ccache-debian-trixie-
+
       - name: Build deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: ./BuildLinux.sh -dfr
 
       - name: Build BambuStudio
         run: |
+          apt-get install -y --no-install-recommends ccache
+          export PATH="/usr/lib/ccache:$PATH"
+          export CCACHE_DIR="$HOME/.ccache"
+          export CCACHE_MAXSIZE="5G"
+          ccache --zero-stats
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
+          ccache --show-stats
+
+      - name: Save ccache
+        if: always() && steps.ccache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-debian-trixie-${{ hashFiles('src/**/*.cpp', 'src/**/*.h', 'src/**/*.hpp') }}
 
       - name: Build package
         run: ./BuildLinux.sh -pr
