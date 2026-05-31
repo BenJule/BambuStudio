@@ -1,4 +1,4 @@
-name: clang-format Check
+name: 'CI: clang-format'
 run-name: "Format check — PR #${{ github.event.pull_request.number }}"
 
 on:

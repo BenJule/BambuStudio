@@ -1,4 +1,4 @@
-name: PR Auto-Labeler
+name: 'Automation: Label PRs'
 run-name: "Label PR #${{ github.event.pull_request.number }}"
 
 on:

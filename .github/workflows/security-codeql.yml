@@ -1,4 +1,4 @@
-name: CodeQL Security Scan
+name: 'Security: CodeQL'
 run-name: "CodeQL — ${{ github.ref_name }}"
 
 on:

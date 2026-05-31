@@ -1,4 +1,4 @@
-name: Close stale issues and PRs
+name: 'Maintenance: Stale'
 run-name: "Stale check — ${{ github.run_number }}"
 
 on:

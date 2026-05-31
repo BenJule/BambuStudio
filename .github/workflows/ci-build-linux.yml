@@ -1,4 +1,4 @@
-name: Build Linux
+name: 'CI: Build Linux'
 run-name: "Build Linux — ${{ github.actor }}"
 
 on:

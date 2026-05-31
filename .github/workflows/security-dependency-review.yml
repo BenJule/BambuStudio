@@ -1,4 +1,4 @@
-name: Dependency Review
+name: 'Security: Dependency Review'
 run-name: "Dependency review — PR #${{ github.event.pull_request.number }}"
 
 on:

@@ -1,4 +1,4 @@
-name: Release Candidate Build
+name: 'CD: Release Candidate'
 run-name: "RC — ${{ github.ref_name }}"
 
 on:

@@ -1,4 +1,4 @@
-name: Build Mac
+name: 'CI: Build Mac'
 run-name: "Build Mac — ${{ github.actor }}"
 
 on:

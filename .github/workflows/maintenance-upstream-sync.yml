@@ -1,4 +1,4 @@
-name: Upstream Sync
+name: 'Maintenance: Upstream Sync'
 run-name: "Upstream sync — ${{ github.run_number }}"
 
 on:

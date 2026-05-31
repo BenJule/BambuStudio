@@ -1,4 +1,4 @@
-name: Build all
+name: 'CI: Build All'
 run-name: "Build all — ${{ github.actor }}"
 
 on:

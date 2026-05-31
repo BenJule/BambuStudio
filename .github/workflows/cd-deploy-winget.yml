@@ -1,4 +1,4 @@
-name: Publish to WinGet
+name: 'CD: WinGet'
 run-name: "WinGet update — ${{ github.event.release.tag_name || inputs.version }}"
 on:
   workflow_dispatch:

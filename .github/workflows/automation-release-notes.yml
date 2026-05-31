@@ -1,4 +1,4 @@
-name: Release Drafter
+name: 'Automation: Release Notes'
 run-name: "Draft release notes — ${{ github.ref_name }}"
 
 on:

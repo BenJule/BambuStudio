@@ -1,4 +1,4 @@
-name: Version Bump
+name: 'Maintenance: Version Bump'
 run-name: "Bump ${{ inputs.custom || inputs.part }} — ${{ github.actor }}"
 
 on:
