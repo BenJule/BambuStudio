@@ -420,13 +420,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           TAG="${{ needs.publish.outputs.tag }}"
           mkdir -p ./smoke/
           gh release download "$TAG" \
             --repo "${{ github.repository }}" \
             --pattern "bambustudio_*_amd64.deb" \
-            --dir ./smoke/
+            --dir ./smoke/ || true
           DEB=$(find ./smoke/ -name "*.deb" | head -1)
           if [[ -z "$DEB" ]]; then
             echo "::error::No bambustudio_*_amd64.deb found in release $TAG"
