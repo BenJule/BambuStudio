@@ -40,6 +40,7 @@ jobs:
         shell: bash
         env:
           INPUT_OS:   ${{ inputs.os }}
+          INPUT_ARCH: ${{ inputs.arch }}
           DEPS_HASH:  ${{ hashFiles('deps/**') }}
           # OS-specific subfolder inside deps/build that gets cached
           DEP_FOLDER: ${{ startsWith(inputs.os, 'windows-') && '/BambuStudio_dep'
@@ -47,7 +48,8 @@ jobs:
             || '/destdir' }}
         run: |
           set -euo pipefail
-          echo "cache-key=${INPUT_OS}-cache-bambustudio_deps-build-${DEPS_HASH}" >> "$GITHUB_OUTPUT"
+          arch_suffix="${INPUT_ARCH:+-${INPUT_ARCH}}"
+          echo "cache-key=${INPUT_OS}${arch_suffix}-cache-bambustudio_deps-build-${DEPS_HASH}" >> "$GITHUB_OUTPUT"
           echo "cache-path=${GITHUB_WORKSPACE}/deps/build${DEP_FOLDER}"          >> "$GITHUB_OUTPUT"
 
       - name: Lookup cache (no restore)
