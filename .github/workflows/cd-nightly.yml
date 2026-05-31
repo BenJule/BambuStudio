@@ -443,7 +443,7 @@ jobs:
           FILE_COUNT=$(wc -l < /tmp/deb_contents.txt)
           echo "Total files: $FILE_COUNT"
           if [[ "$FILE_COUNT" -lt 10 ]]; then
-            echo "::error::.deb contains only $FILE_COUNT entries — package is likely corrupt (expected >10)"
+            echo "::error::.deb contains only $FILE_COUNT entries — package is likely corrupt (expected >=10)"
             exit 1
           fi
 
