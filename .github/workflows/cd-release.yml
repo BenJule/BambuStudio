@@ -72,8 +72,13 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
-          git tag -s "$TAG" -m "BambuStudio $TAG"
-          git push origin "$TAG"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists locally — pushing to remote if needed"
+            git push origin "refs/tags/$TAG" 2>/dev/null || echo "Tag already on remote"
+          else
+            git tag -s "$TAG" -m "BambuStudio $TAG"
+            git push origin "$TAG"
+          fi
 
       - name: Show tag
         run: echo "Releasing ${{ steps.tag.outputs.tag }}"
