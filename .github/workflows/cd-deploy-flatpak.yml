@@ -79,7 +79,7 @@ jobs:
           # Primary: use GitHub API to find ubuntu-24.04 AppImage (handles any filename format)
           ASSET_URL=$(gh release view "${TAG}" --repo "${{ github.repository }}" \
             --json assets --jq \
-            '[.assets[] | select(.name | test("ubuntu-24\\.04.*\\.AppImage$"; "i"))] | .[0].browser_download_url // ""')
+            '[.assets[] | select(.name | test("^BambuStudio_ubuntu-24\\.04_amd64_.*\\.AppImage$"; "i"))] | .[0].browser_download_url // ""')
           if [[ -n "${ASSET_URL}" ]]; then
             echo "Downloading: ${ASSET_URL}"
             curl -L -o BambuStudio.AppImage "${ASSET_URL}"
