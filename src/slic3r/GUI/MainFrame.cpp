@@ -491,19 +491,21 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
 #endif // WIN32
     // BBS
 #ifdef __WXGTK__
-    // Defer SetSizeHints/SetSize/Layout until the window is realized by the
-    // Wayland compositor (wxEVT_SHOW + CallAfter via on_window_geometry).
-    // on_window_geometry does not unbind on Linux, so guard with a shared flag
-    // to ensure the initialisation block runs only on the first show event.
-    auto init_done = std::make_shared<bool>(false);
-    on_window_geometry(this, [this, init_done]() {
-        if (*init_done) return;
-        *init_done = true;
+    // SetSize/SetMinSize with explicit positive values are safe before Wayland
+    // realization. Apply the default geometry now — before persist_window_geometry
+    // restores any saved size — so the restore/sanitize callbacks run after.
+    const wxSize min_size = wxGetApp().get_min_size();
+    SetMinSize(min_size);
+    SetSize(wxSize(FromDIP(1200), FromDIP(800)));
+    Layout();
+    // SetSizeHints computes the sizer's minimum size and may call gtk_window_resize
+    // with a zero extent before the window is realized. Defer it to the first
+    // wxEVT_SHOW via on_window_geometry, guarded so it runs only once.
+    auto hint_done = std::make_shared<bool>(false);
+    on_window_geometry(this, [this, hint_done]() {
+        if (*hint_done) return;
+        *hint_done = true;
         if (auto* s = GetSizer()) s->SetSizeHints(this);
-        const wxSize min_size = wxGetApp().get_min_size();
-        SetMinSize(min_size);
-        SetSize(wxSize(FromDIP(1200), FromDIP(800)));
-        Layout();
     });
 #else
     Fit();
