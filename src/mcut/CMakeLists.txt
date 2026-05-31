@@ -189,6 +189,17 @@ function(create_library_target LIBRARY_TYPE)
 	set_property(TARGET ${target_name} PROPERTY VERSION ${project_build_version_string})
 	set_property(TARGET ${target_name} PROPERTY SOVERSION ${project_API_version_string})
 
+	if (MSVC)
+		# Prevent CMake from adding /Fd<target>.pdb to the compile command.
+		# With sccache as compiler launcher, sccache tries to package the PDB as an
+		# output file; but /Z7 (embedded debug info) means no PDB is written, so
+		# sccache crashes with "failed to open file: mcut.pdb".
+		set_target_properties(${target_name} PROPERTIES
+			COMPILE_PDB_NAME ""
+			COMPILE_PDB_OUTPUT_DIRECTORY ""
+		)
+	endif()
+
 	get_target_property(target_type ${target_name} TYPE)
 
 	if ("${target_type}" STREQUAL "SHARED")
