@@ -108,7 +108,12 @@ jobs:
           ccache --zero-stats
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
-          ccache --show-stats
+
+      - name: ccache statistics
+        if: always()
+        run: |
+          echo "### ccache statistics" >> "$GITHUB_STEP_SUMMARY"
+          ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Save ccache
         if: steps.build-bambu.outcome == 'success' && steps.ccache-restore.outputs.cache-hit != 'true'
