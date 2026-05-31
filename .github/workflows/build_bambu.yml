@@ -266,19 +266,39 @@ jobs:
         shell: bash
         run: sudo chown $USER -R ./
 
+      - name: Restore ccache (Linux)
+        if: runner.os == 'Linux'
+        id: ccache-restore-linux
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-${{ inputs.os }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.h', 'src/**/*.hpp') }}
+          restore-keys: |
+            ccache-${{ inputs.os }}-
+
       - name: Build slicer Linux
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          # Dynamische Cache-Prüfung für Linux-Abhängigkeiten
+          sudo apt-get install -y --no-install-recommends ccache
+          export PATH="/usr/lib/ccache:$PATH"
+          export CCACHE_DIR="$HOME/.ccache"
+          export CCACHE_MAXSIZE="5G"
+          ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/destdir" ]; then
-            echo "Kein Linux-Cache gefunden! Kompiliere Third-Party-Abhängigkeiten komplett neu..."
+            echo "No Linux cache found. Building deps + slicer..."
             ./BuildLinux.sh -idfr
           fi
-          
-          # Jetzt steht die destdir bereit, wir bauen den Slicer
           ./BuildLinux.sh -isfr
+          ccache --show-stats
           mv -n ./build/BambuStudio_ubu64.AppImage ./build/Bambu_Studio_${{ inputs.os }}_${{ env.ver }}.AppImage
+
+      - name: Save ccache (Linux)
+        if: runner.os == 'Linux' && steps.ccache-restore-linux.outputs.cache-hit != 'true'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-${{ inputs.os }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.h', 'src/**/*.hpp') }}
 
       - name: Set Linux arch label
         if: runner.os == 'Linux'

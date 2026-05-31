@@ -83,7 +83,7 @@ fi
 CCACHE_CMAKE_FLAGS=""
 if command -v ccache >/dev/null 2>&1; then
   CCACHE_CMAKE_FLAGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
-  export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-2G}"
+  export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-5G}"
   echo "ccache detected — compiler launcher enabled (CCACHE_DIR=${CCACHE_DIR:-~/.ccache})"
 fi
 

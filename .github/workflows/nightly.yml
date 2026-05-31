@@ -15,6 +15,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ── 0. Detect whether C++ sources changed (only relevant on push trigger) ──
+  detect_changes:
+    name: Detect C++ changes
+    runs-on: ubuntu-24.04
+    outputs:
+      cpp: ${{ steps.check.outputs.cpp }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          fetch-depth: 2
+      - name: Check for C++ / CMake changes
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" != "push" ]]; then
+            echo "cpp=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only HEAD~1 HEAD \
+              | grep -qE '\.(cpp|h|hpp|mm|c)$|CMakeLists\.txt|version\.inc'; then
+            echo "cpp=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "cpp=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # ── 1. Distribution packages (Debian .deb, Fedora .rpm, self-hosted) ──────
   build_packages:
     name: Build distribution packages
@@ -23,7 +45,7 @@ jobs:
       retention-days: 3
     secrets: inherit
 
-  # ── 2. GitHub-hosted platforms (Ubuntu AppImage, Windows, macOS) ──────────
+  # ── 2a. Fast platforms: Linux + Windows ───────────────────────────────────
   build_platforms:
     name: ${{ matrix.name }}
     strategy:
@@ -42,15 +64,28 @@ jobs:
           - os: windows-11-arm
             arch: arm64
             name: Windows / windows-11-arm (arm64)
+    uses: ./.github/workflows/build_check_cache.yml
+    with:
+      os: ${{ matrix.os }}
+      arch: ${{ matrix.arch }}
+      build-deps-only: false
+    secrets: inherit
+
+  # ── 2b. Slow platforms: macOS (skipped on push with no C++ changes) ────────
+  build_platforms_mac:
+    name: ${{ matrix.name }}
+    needs: [detect_changes]
+    if: needs.detect_changes.outputs.cpp == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
           - os: macos-15-intel
             arch: x86_64
             name: macOS / macOS 15 Intel
           - os: macos-15
             arch: universal
             name: macOS / macOS 15 ARM Universal
-          - os: macos-26
-            arch: universal
-            name: macOS / macOS 26 ARM Universal
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ matrix.os }}
@@ -144,7 +179,7 @@ jobs:
   # ── 4. Publish — after all builds, requires at least one artifact ─────────
   publish:
     name: Publish nightly pre-release
-    needs: [build_packages, build_platforms, build_flatpak]
+    needs: [build_packages, build_platforms, build_platforms_mac, build_flatpak]
     if: |
       always() &&
       needs.build_platforms.result != 'skipped' &&
@@ -246,8 +281,15 @@ jobs:
             && parts+=("Distribution packages ✅") \
             || parts+=("Distribution packages ⚠️ ${{ needs.build_packages.result }}")
           [[ "${{ needs.build_platforms.result }}" == "success" ]] \
-            && parts+=("GitHub-hosted platforms ✅") \
-            || parts+=("GitHub-hosted platforms ⚠️ ${{ needs.build_platforms.result }}")
+            && parts+=("Linux/Windows platforms ✅") \
+            || parts+=("Linux/Windows platforms ⚠️ ${{ needs.build_platforms.result }}")
+          if [[ "${{ needs.build_platforms_mac.result }}" == "skipped" ]]; then
+            parts+=("macOS ⏭️ skipped (no C++ changes)")
+          elif [[ "${{ needs.build_platforms_mac.result }}" == "success" ]]; then
+            parts+=("macOS ✅")
+          else
+            parts+=("macOS ⚠️ ${{ needs.build_platforms_mac.result }}")
+          fi
           printf '%s\n' "${parts[@]}" > /tmp/status.txt
           echo "notes<<EOF" >> "$GITHUB_OUTPUT"
           cat /tmp/status.txt >> "$GITHUB_OUTPUT"
