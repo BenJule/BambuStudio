@@ -15,19 +15,42 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ── 0. Detect whether C++ sources changed (only relevant on push trigger) ──
+  # ── 0. Detect whether anything changed since the last nightly ───────────────
   detect_changes:
-    name: Detect C++ changes
+    name: Detect changes since last nightly
     runs-on: ubuntu-24.04
     outputs:
       cpp: ${{ steps.check.outputs.cpp }}
+      has_changes: ${{ steps.check.outputs.has_changes }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
-          fetch-depth: 2
-      - name: Check for C++ / CMake changes
+          fetch-depth: 0
+      - name: Check for changes since last nightly
         id: check
         run: |
+          # Manual trigger always builds
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "cpp=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # For scheduled/push: skip if no commits since last nightly tag
+          last_nightly=$(git tag --sort=-version:refname \
+            | grep '^nightly-' | head -1 || echo "")
+          if [[ -z "$last_nightly" ]]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          elif [[ $(git rev-list "${last_nightly}..HEAD" --count) -eq 0 ]]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "## ⏭️ Nightly skipped — no changes since \`${last_nightly}\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "No new commits between \`${last_nightly}\` and HEAD." \
+              "Build will run again tomorrow or when new commits land." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          # C++ change detection (only relevant on push trigger)
           if [[ "${{ github.event_name }}" != "push" ]]; then
             echo "cpp=true" >> "$GITHUB_OUTPUT"
           elif git diff --name-only HEAD~1 HEAD \
@@ -40,6 +63,8 @@ jobs:
   # ── 1. Distribution packages (Debian .deb, Fedora .rpm, self-hosted) ──────
   build_packages:
     name: Build distribution packages
+    needs: [detect_changes]
+    if: needs.detect_changes.outputs.has_changes == 'true'
     uses: ./.github/workflows/cd-packages.yml
     with:
       retention-days: 3
@@ -48,6 +73,8 @@ jobs:
   # ── 2a. Fast platforms: Linux + Windows ───────────────────────────────────
   build_platforms:
     name: ${{ matrix.name }}
+    needs: [detect_changes]
+    if: needs.detect_changes.outputs.has_changes == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -75,7 +102,7 @@ jobs:
   build_platforms_mac:
     name: ${{ matrix.name }}
     needs: [detect_changes]
-    if: needs.detect_changes.outputs.cpp == 'true'
+    if: needs.detect_changes.outputs.has_changes == 'true' && needs.detect_changes.outputs.cpp == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -98,7 +125,7 @@ jobs:
   build_flatpak:
     name: Flatpak (x86_64)
     needs: [build_platforms]
-    if: always() && needs.build_platforms.result != 'cancelled'
+    if: always() && needs.build_platforms.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
