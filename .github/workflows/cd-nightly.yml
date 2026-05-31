@@ -253,8 +253,7 @@ jobs:
         run: |
           set -euo pipefail
           current_tag="${{ steps.ver.outputs.tag }}"
-          last_nightly=$(git tag --sort=-version:refname \
-            | grep '^nightly-' \
+          last_nightly=$(git tag --list 'nightly-*' --sort=-creatordate \
             | grep -v "^${current_tag}$" \
             | head -1 || true)
           if [[ -n "$last_nightly" ]]; then
@@ -406,6 +405,7 @@ jobs:
     if: needs.publish.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    continue-on-error: true
     permissions:
       contents: read
 
