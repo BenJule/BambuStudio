@@ -148,6 +148,9 @@ jobs:
   build_fast:
     name: Build ${{ matrix.os }}
     needs: [prepare]
+    # windows-11-arm deps are rebuilt after the cache-key arch fix — allow
+    # it to fail so a broken ARM64 deps build doesn't block the whole release.
+    continue-on-error: ${{ matrix.os == 'windows-11-arm' }}
     strategy:
       fail-fast: false
       matrix:
