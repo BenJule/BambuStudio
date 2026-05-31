@@ -54,7 +54,7 @@ jobs:
           UPSTREAM_VER="${VER%-fork.*}"    # strip fork suffix for filename
           BASE="https://github.com/${{ github.repository }}/releases/download/${TAG}"
           URL=""
-          # Primary: use GitHub API — handles any filename format (version includes commit count)
+          # Primary: find the GitHub-hosted ubuntu-24.04 amd64 AppImage via API (name pattern: BambuStudio_ubuntu-24.04_amd64_*.AppImage, excluding _selfhosted)
           URL=$(gh release view "${TAG}" --repo "${{ github.repository }}" --json assets \
             --jq '[.assets[] | select((.name | test("^BambuStudio_ubuntu-24\\.04_amd64_.*\\.AppImage$"; "i")) and (.name | test("_selfhosted\\.AppImage$"; "i") | not))] | .[0].browser_download_url // ""')
           # Legacy fallback: explicit patterns for older releases

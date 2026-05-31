@@ -76,7 +76,7 @@ jobs:
           TAG="${{ steps.tag.outputs.tag }}"
           VER="${TAG#v}"                    # 02.07.00.55-fork.1
           UPSTREAM_VER="${VER%-fork.*}"    # 02.07.00.55  (filename only uses upstream ver)
-          # Primary: use GitHub API to find ubuntu-24.04 AppImage (handles any filename format)
+          # Primary: find the GitHub-hosted ubuntu-24.04 amd64 AppImage via API (name pattern: BambuStudio_ubuntu-24.04_amd64_*.AppImage, excluding _selfhosted)
           ASSET_URL=$(gh release view "${TAG}" --repo "${{ github.repository }}" \
             --json assets --jq \
             '[.assets[] | select((.name | test("^BambuStudio_ubuntu-24\\.04_amd64_.*\\.AppImage$"; "i")) and (.name | test("_selfhosted\\.AppImage$"; "i") | not))] | .[0].browser_download_url // ""')
