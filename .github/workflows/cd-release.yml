@@ -4,6 +4,7 @@ run-name: "Release ${{ github.ref_name || inputs.tag }}"
 on:
   push:
     tags:
+      - 'v[0-9]*.[0-9]*.[0-9]*.[0-9]*-bj.[0-9]*'
       - 'v[0-9]*.[0-9]*.[0-9]*.[0-9]*-dev'
   workflow_dispatch:
     inputs:
@@ -49,7 +50,7 @@ jobs:
           else
             base=$(grep 'set(SLIC3R_VERSION_BASE' version.inc | cut -d '"' -f2)
             count=$(git rev-list --count HEAD)
-            tag="v${base}.${count}-dev"
+            tag="v${base}.${count}-bj.0"
           fi
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           # Exclude the new tag itself (may not exist yet for workflow_dispatch)

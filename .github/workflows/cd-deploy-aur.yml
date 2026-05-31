@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (stable: v2.7.0.55-bj.1 / nightly: nightly-20260531-abc1234)'
+        description: 'Release tag (stable: v02.07.00.55-bj.1 / nightly: nightly-20260531-abc1234)'
         required: false
         type: string
       channel:
