@@ -82,6 +82,7 @@ jobs:
     needs: [prepare]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    continue-on-error: true
     permissions:
       contents: read
 
@@ -98,14 +99,9 @@ jobs:
       - name: Install Claude CLI
         run: npm install -g @anthropic-ai/claude-code@2.1.152
 
-      - name: Restore Claude credentials
-        run: |
-          mkdir -p ~/.claude
-          echo '${{ secrets.CLAUDE_CREDENTIALS }}' > ~/.claude/.credentials.json
-          chmod 600 ~/.claude/.credentials.json
-
       - name: Generate changelog
         env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TAG: ${{ needs.prepare.outputs.tag }}
           PREV_TAG: ${{ needs.prepare.outputs.prev_tag }}
         run: |
