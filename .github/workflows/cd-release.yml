@@ -148,9 +148,6 @@ jobs:
   build_fast:
     name: Build ${{ matrix.os }}
     needs: [prepare]
-    # windows-11-arm deps are rebuilt after the cache-key arch fix — allow
-    # it to fail so a broken ARM64 deps build doesn't block the whole release.
-    continue-on-error: ${{ matrix.os == 'windows-11-arm' }}
     strategy:
       fail-fast: false
       matrix:
@@ -160,8 +157,6 @@ jobs:
           - os: ubuntu-24.04-arm
           - os: windows-2022
             arch: x64
-          - os: windows-11-arm
-            arch: arm64
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: ${{ matrix.os }}
@@ -182,6 +177,8 @@ jobs:
             arch: universal
           - os: macos-26
             arch: universal
+          - os: windows-11-arm
+            arch: arm64
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: ${{ matrix.os }}
