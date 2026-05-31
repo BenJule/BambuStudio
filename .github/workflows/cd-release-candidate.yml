@@ -145,6 +145,8 @@ jobs:
       always() &&
       needs.build_platforms.result != 'skipped' &&
       needs.build_flatpak.result != 'skipped'
+    outputs:
+      tag: ${{ steps.ver.outputs.tag }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -174,6 +176,32 @@ jobs:
           echo "tag=${rc_suffix}-rc.${sha}" >> "$GITHUB_OUTPUT"
           echo "title=BambuStudio ${rc_suffix} RC (${sha})" >> "$GITHUB_OUTPUT"
           echo "date=$(date -u +'%Y-%m-%d %H:%M UTC')" >> "$GITHUB_OUTPUT"
+
+      - name: Generate commit changelog
+        run: |
+          set -euo pipefail
+          current_tag="${{ steps.ver.outputs.tag }}"
+          # Base: last stable release tag (no nightly-*, no -rc.)
+          prev_stable=$(git tag --list 'v*' --sort=-creatordate \
+            | grep -v '\-rc\.' \
+            | grep -v "^${current_tag}$" \
+            | head -1 || true)
+          if [[ -n "$prev_stable" ]]; then
+            SINCE="since \`${prev_stable}\`"
+            LOG=$(git log --oneline --no-merges "${prev_stable}..HEAD" 2>/dev/null | head -100 || true)
+          else
+            SINCE="(full history)"
+            LOG=$(git log --oneline --no-merges -50 2>/dev/null || true)
+          fi
+          {
+            printf '## Changes %s\n\n' "$SINCE"
+            if [[ -n "$LOG" ]]; then
+              echo "$LOG" | sed 's/^/- /'
+            else
+              printf '_No new commits_\n'
+            fi
+          } > /tmp/changelog.md
+          cat /tmp/changelog.md
 
       - name: Import GPG signing key
         uses: ./.github/actions/setup-gpg
@@ -226,14 +254,98 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mapfile -d '' FILES < <(find artifacts/ -maxdepth 1 -type f -print0 | sort -z)
-          printf 'Release Candidate built from branch `%s`, commit [`%s`](https://github.com/%s/commit/%s).\n\n' \
-            "${{ github.ref_name }}" \
-            "${GITHUB_SHA:0:7}" \
-            "${{ github.repository }}" \
-            "${{ github.sha }}" > /tmp/release-notes.md
+          {
+            printf 'Release Candidate built from branch `%s`, commit [`%s`](https://github.com/%s/commit/%s).\n\n' \
+              "${{ github.ref_name }}" \
+              "${GITHUB_SHA:0:7}" \
+              "${{ github.repository }}" \
+              "${{ github.sha }}"
+            cat /tmp/changelog.md
+          } > /tmp/release-notes.md
           gh release create "${{ steps.ver.outputs.tag }}" \
             --repo "${{ github.repository }}" \
             --title "${{ steps.ver.outputs.title }}" \
             --notes-file /tmp/release-notes.md \
             --prerelease \
             "${FILES[@]}"
+
+  # ── 5. Post-publish smoke test (warning only, no rollback) ───────────────
+  smoke_test:
+    name: Smoke test .deb (RC)
+    needs: [publish]
+    if: needs.publish.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    continue-on-error: true
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Download .deb from RC release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ needs.publish.outputs.tag }}"
+          mkdir -p ./smoke/
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern "*debian-trixie*.deb" \
+            --dir ./smoke/
+          DEB=$(find ./smoke/ -name "*.deb" | head -1)
+          if [[ -z "$DEB" ]]; then
+            echo "::error::No debian-trixie .deb found in release $TAG"
+            exit 1
+          fi
+          echo "DEB=$DEB" >> "$GITHUB_ENV"
+
+      - name: Verify .deb integrity
+        run: |
+          set -euo pipefail
+          echo "=== Package info ==="
+          dpkg-deb --info "$DEB"
+          echo "=== Package contents ==="
+          dpkg-deb --contents "$DEB" | tee /tmp/deb_contents.txt
+          FILE_COUNT=$(wc -l < /tmp/deb_contents.txt)
+          echo "Total files: $FILE_COUNT"
+          if [[ "$FILE_COUNT" -lt 10 ]]; then
+            echo "::error::.deb contains only $FILE_COUNT entries — package is likely corrupt (expected >=10)"
+            exit 1
+          fi
+
+      - name: Install .deb
+        run: |
+          sudo apt-get install -f -y
+          sudo dpkg -i "$DEB" || { sudo apt-get install -f -y && sudo dpkg -i "$DEB"; }
+
+      - name: Verify binary present
+        run: |
+          if command -v bambustudio &>/dev/null; then
+            echo "OK: $(which bambustudio)"
+          elif [[ -f /usr/lib/bambustudio/bin/bambu-studio ]]; then
+            echo "OK: /usr/lib/bambustudio/bin/bambu-studio"
+            file /usr/lib/bambustudio/bin/bambu-studio
+          else
+            echo "::error::bambustudio binary not found after dpkg install"
+            dpkg -L bambustudio 2>/dev/null | head -30 || true
+            exit 1
+          fi
+
+      - name: Post warning on failure
+        if: failure()
+        run: |
+          TAG="${{ needs.publish.outputs.tag }}"
+          {
+            echo "## ⚠️ RC Smoke Test Failed"
+            echo ""
+            echo "The post-publish smoke test failed for RC release \`${TAG}\`."
+            echo "The release was **not** deleted — investigate the packaging issue before promoting to stable."
+            echo ""
+            echo "- Release: https://github.com/${{ github.repository }}/releases/tag/${TAG}"
+            echo "- Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> "$GITHUB_STEP_SUMMARY"
