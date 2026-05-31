@@ -6,7 +6,7 @@ on:
     branches:
       - main
       - develop
-      - master  # temporary: until master is renamed to main
+      - master
     paths:
       - 'deps/**'
       - 'src/**'
@@ -21,6 +21,7 @@ on:
       - ".github/workflows/ci-build-macos.yml"
       - ".github/workflows/ci-pull-request.yml"
       - 'BuildLinux.sh'
+      - 'BuildMac.sh'
       - 'build_win.bat'
 
 permissions: read-all
@@ -29,8 +30,75 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ── Detect which platforms are affected by the changed files ───────────────
+  detect:
+    name: Detect affected platforms
+    runs-on: ubuntu-24.04
+    outputs:
+      debian: ${{ steps.check.outputs.debian }}
+      fedora: ${{ steps.check.outputs.fedora }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          fetch-depth: 0
+
+      - name: Classify changed files
+        id: check
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # C++ / build-system changes affect all platforms
+          HAS_CPP=false
+          echo "$CHANGED" | grep -qE '^(src/|deps/|(.*/)?CMakeLists\.txt$|version\.inc$)' \
+            && HAS_CPP=true
+
+          # Debian-specific: packaging script or debian metadata
+          HAS_DEB=false
+          echo "$CHANGED" | grep -qE '^(scripts/build_deb\.sh$|linux\.d/debian/)' \
+            && HAS_DEB=true
+
+          # Fedora-specific: RPM packaging script or fedora metadata
+          HAS_RPM=false
+          echo "$CHANGED" | grep -qE '^(scripts/build_rpm\.sh$|linux\.d/fedora/)' \
+            && HAS_RPM=true
+
+          # Workflow change → run Debian as sanity check
+          HAS_WF=false
+          echo "$CHANGED" | grep -qE '^\.github/workflows/' && HAS_WF=true
+
+          # Build Fedora only for pure RPM changes (C++ changes are verified by Debian)
+          if [ "$HAS_RPM" = true ] && [ "$HAS_CPP" = false ]; then
+            FEDORA=true
+          else
+            FEDORA=false
+          fi
+
+          # Build Debian for everything except a pure RPM-only change
+          if [ "$FEDORA" = true ] && [ "$HAS_CPP" = false ] && [ "$HAS_DEB" = false ] && [ "$HAS_WF" = false ]; then
+            DEBIAN=false
+          else
+            DEBIAN=true
+          fi
+
+          echo "debian=$DEBIAN" >> "$GITHUB_OUTPUT"
+          echo "fedora=$FEDORA" >> "$GITHUB_OUTPUT"
+          echo "--- Platform decision: debian=$DEBIAN  fedora=$FEDORA ---"
+
+  # ── Debian trixie .deb ─────────────────────────────────────────────────────
   build_debian:
     name: Linux / Debian trixie .deb
+    needs: [detect]
+    if: needs.detect.outputs.debian == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     container: debian:trixie@sha256:4ae67669760b807c19f23902a3fd7c121a6a70cf2ae709035674b23e712e4d62
@@ -85,4 +153,66 @@ jobs:
           name: BambuStudio_debian-trixie_deb_${{ steps.ver.outputs.ver }}_PR${{ github.event.pull_request.number }}
           path: ./build/bambustudio_*.deb
           if-no-files-found: error
+          retention-days: 7
+
+  # ── Fedora 42 .rpm ─────────────────────────────────────────────────────────
+  build_fedora:
+    name: Linux / Fedora 42 .rpm
+    needs: [detect]
+    if: needs.detect.outputs.fedora == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    container: fedora:42@sha256:7c63468daf71fdc5bda3699cd483b169bb995b5137265d5ffe8f04e2ce87fbb8
+    permissions: read-all
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Bootstrap
+        run: dnf install -y sudo git curl git-lfs
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          lfs: 'true'
+          fetch-depth: 0
+
+      - name: Cache deps
+        id: cache-deps
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: deps/build/destdir
+          key: pkg-deps-fedora42_rpm-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
+
+      - name: Install build dependencies
+        run: sudo ./BuildLinux.sh -ur
+
+      - name: Fix permissions
+        run: chown -R "$(id -u):$(id -g)" ./
+
+      - name: Build deps
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: ./BuildLinux.sh -dfr
+
+      - name: Build BambuStudio
+        run: |
+          ./BuildLinux.sh -sfr
+          cd build && ./src/BuildLinuxImage.sh
+
+      - name: Build package
+        run: bash scripts/build_rpm.sh
+
+      - name: Get version
+        id: ver
+        uses: ./.github/actions/get-version
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        with:
+          name: BambuStudio_fedora42_rpm_${{ steps.ver.outputs.ver }}_PR${{ github.event.pull_request.number }}
+          path: ./build/bambustudio-*.rpm
+          if-no-files-found: warn
           retention-days: 7

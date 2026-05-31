@@ -38,6 +38,10 @@ on:
         description: 'Only build dependencies (bypasses caching)'
         type: boolean
         default: false
+      skip-mac:
+        description: 'Skip macOS builds (faster, Linux/Windows only)'
+        type: boolean
+        default: false
 
 permissions: read-all
 
@@ -83,6 +87,7 @@ jobs:
   # ── macOS ──────────────────────────────────────────────────────────────────
   build_macos_intel:
     name: macOS / Intel (${{ matrix.os }})
+    if: ${{ !inputs.skip-mac }}
     strategy:
       fail-fast: false
       matrix:
@@ -97,12 +102,12 @@ jobs:
 
   build_macos_arm:
     name: macOS / ARM Universal (${{ matrix.os }})
+    if: ${{ !inputs.skip-mac }}
     strategy:
       fail-fast: false
       matrix:
         os:
           - macos-15
-          - macos-26
     uses: ./.github/workflows/_build-cached.yml
     with:
       os:              ${{ matrix.os }}
