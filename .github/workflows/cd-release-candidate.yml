@@ -293,18 +293,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -uo pipefail
+          set -euo pipefail
           TAG="${{ needs.publish.outputs.tag }}"
           mkdir -p ./smoke/
           gh release download "$TAG" \
             --repo "${{ github.repository }}" \
             --pattern "bambustudio_*_amd64.deb" \
-            --dir ./smoke/ || true
-          DEB=$(find ./smoke/ -name "*.deb" | head -1)
-          if [[ -z "$DEB" ]]; then
+            --dir ./smoke/ || {
             echo "::error::No bambustudio_*_amd64.deb found in release $TAG"
             exit 1
-          fi
+          }
+          DEB=$(find ./smoke/ -name "*.deb" | head -1)
           echo "DEB=$DEB" >> "$GITHUB_ENV"
 
       - name: Verify .deb integrity
