@@ -14,6 +14,11 @@ on:
 #     types: [released]
 
 permissions: read-all
+
+concurrency:
+  group: cd-deploy-winget
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: windows-2022
