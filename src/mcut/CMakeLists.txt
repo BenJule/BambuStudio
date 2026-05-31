@@ -148,7 +148,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" ST
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
 	list(APPEND compilation_flags w3 -diag-disable:remark)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-	list(APPEND compilation_flags /W4 /wd26812 /bigobj /Z7)
+	list(APPEND compilation_flags /W4 /wd26812 /bigobj /FS)
 	list(APPEND preprocessor_defs -D_CRT_SECURE_NO_WARNINGS)
 endif()
 
@@ -190,13 +190,15 @@ function(create_library_target LIBRARY_TYPE)
 	set_property(TARGET ${target_name} PROPERTY SOVERSION ${project_API_version_string})
 
 	if (MSVC)
-		# Prevent CMake from adding /Fd<target>.pdb to the compile command.
-		# With sccache as compiler launcher, sccache tries to package the PDB as an
-		# output file; but /Z7 (embedded debug info) means no PDB is written, so
-		# sccache crashes with "failed to open file: mcut.pdb".
+		# sccache (CMAKE_CXX_COMPILER_LAUNCHER) cannot handle the shared per-target
+		# PDB that CMake's Ninja+MSVC generator emits (/Fd<target>.pdb): it tries to
+		# package the PDB as a cached output, but /FS keeps the file locked via
+		# mspdbsrv.exe, so sccache crashes with "failed to open file: mcut.pdb".
+		# Disabling the launcher for this target lets cl.exe run directly; /FS then
+		# correctly serializes concurrent PDB writes through mspdbsrv.exe.
 		set_target_properties(${target_name} PROPERTIES
-			COMPILE_PDB_NAME ""
-			COMPILE_PDB_OUTPUT_DIRECTORY ""
+			C_COMPILER_LAUNCHER   ""
+			CXX_COMPILER_LAUNCHER ""
 		)
 	endif()
 
