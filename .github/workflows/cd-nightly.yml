@@ -3,7 +3,7 @@ run-name: "Nightly #${{ github.run_number }}"
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # 02:00 UTC every night
+    - cron: '0 22 * * *'  # 22:00 UTC every night
   push:
     branches: [develop]
   workflow_dispatch: {}   # manual trigger
