@@ -3,387 +3,880 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BenJule/BambuStudio — APT Repository</title>
+  <meta name="description" content="BambuStudio — BenJule's community fork with enhanced CI/CD, Linux packaging, and Wayland support. Enterprise-grade 3D printing slicer.">
+  <title>BambuStudio · BenJule Fork</title>
   <style>
+    /* ── Primer tokens ── */
     :root { color-scheme: light dark; }
 
-    /* ── GitHub Primer: Light ── */
-    [data-color-mode="light"],
-    [data-color-mode="auto"] {
-      --color-canvas-default:   #ffffff;
-      --color-canvas-subtle:    #f6f8fa;
-      --color-border-default:   #d0d7de;
-      --color-border-muted:     #d8dee4;
-      --color-fg-default:       #1f2328;
-      --color-fg-muted:         #656d76;
-      --color-accent-fg:        #0969da;
-      --color-accent-emphasis:  #0969da;
-      --color-accent-subtle:    #ddf4ff;
-      --color-success-fg:       #1a7f37;
-      --color-neutral-muted:    rgba(175,184,193,0.2);
-      --color-header-bg:        #24292f;
-      --color-header-fg:        #ffffff;
-      --color-header-border:    #3d444d;
-      --color-btn-bg:           #f6f8fa;
-      --color-btn-border:       rgba(31,35,40,0.15);
-      --color-btn-hover-bg:     #f3f4f6;
+    [data-color-mode="light"], [data-color-mode="auto"] {
+      --c-bg:           #ffffff;
+      --c-bg-subtle:    #f6f8fa;
+      --c-border:       #d0d7de;
+      --c-border-muted: #d8dee4;
+      --c-fg:           #1f2328;
+      --c-fg-muted:     #656d76;
+      --c-accent:       #0969da;
+      --c-accent-em:    #0969da;
+      --c-accent-sub:   #ddf4ff;
+      --c-success:      #1a7f37;
+      --c-success-sub:  #dafbe1;
+      --c-warn:         #9a6700;
+      --c-warn-sub:     #fff8c5;
+      --c-danger:       #cf222e;
+      --c-danger-sub:   #ffebe9;
+      --c-neutral-m:    rgba(175,184,193,0.2);
+      --c-header:       #24292f;
+      --c-header-fg:    #ffffff;
+      --c-header-bdr:   #3d444d;
+      --c-btn-bg:       #f6f8fa;
+      --c-btn-bdr:      rgba(31,35,40,0.15);
+      --c-btn-hover:    #f3f4f6;
+      --c-btn-pri-bg:   #0969da;
+      --c-btn-pri-hover:#0860ca;
+      --c-pill-bg:      #eaf5ff;
+      --c-pill-fg:      #0969da;
+      --shadow-md:      0 3px 6px rgba(140,149,159,0.15);
     }
 
-    /* ── GitHub Primer: Dark (via OS) ── */
     @media (prefers-color-scheme: dark) {
       [data-color-mode="auto"] {
-        --color-canvas-default:   #0d1117;
-        --color-canvas-subtle:    #161b22;
-        --color-border-default:   #30363d;
-        --color-border-muted:     #21262d;
-        --color-fg-default:       #e6edf3;
-        --color-fg-muted:         #8d96a0;
-        --color-accent-fg:        #58a6ff;
-        --color-accent-emphasis:  #1f6feb;
-        --color-accent-subtle:    rgba(31,111,235,0.15);
-        --color-success-fg:       #3fb950;
-        --color-neutral-muted:    rgba(110,118,129,0.4);
-        --color-header-bg:        #161b22;
-        --color-header-fg:        #e6edf3;
-        --color-header-border:    #30363d;
-        --color-btn-bg:           #21262d;
-        --color-btn-border:       rgba(240,246,252,0.1);
-        --color-btn-hover-bg:     #30363d;
+        --c-bg:           #0d1117;
+        --c-bg-subtle:    #161b22;
+        --c-border:       #30363d;
+        --c-border-muted: #21262d;
+        --c-fg:           #e6edf3;
+        --c-fg-muted:     #8d96a0;
+        --c-accent:       #58a6ff;
+        --c-accent-em:    #1f6feb;
+        --c-accent-sub:   rgba(31,111,235,0.15);
+        --c-success:      #3fb950;
+        --c-success-sub:  rgba(46,160,67,0.15);
+        --c-warn:         #d29922;
+        --c-warn-sub:     rgba(187,128,9,0.15);
+        --c-danger:       #f85149;
+        --c-danger-sub:   rgba(248,81,73,0.15);
+        --c-neutral-m:    rgba(110,118,129,0.4);
+        --c-header:       #161b22;
+        --c-header-fg:    #e6edf3;
+        --c-header-bdr:   #30363d;
+        --c-btn-bg:       #21262d;
+        --c-btn-bdr:      rgba(240,246,252,0.1);
+        --c-btn-hover:    #30363d;
+        --c-btn-pri-bg:   #1f6feb;
+        --c-btn-pri-hover:#388bfd;
+        --c-pill-bg:      rgba(31,111,235,0.15);
+        --c-pill-fg:      #58a6ff;
+        --shadow-md:      0 3px 6px rgba(0,0,0,0.4);
       }
     }
 
-    /* ── GitHub Primer: Dark (manual) ── */
     [data-color-mode="dark"] {
-      --color-canvas-default:   #0d1117;
-      --color-canvas-subtle:    #161b22;
-      --color-border-default:   #30363d;
-      --color-border-muted:     #21262d;
-      --color-fg-default:       #e6edf3;
-      --color-fg-muted:         #8d96a0;
-      --color-accent-fg:        #58a6ff;
-      --color-accent-emphasis:  #1f6feb;
-      --color-accent-subtle:    rgba(31,111,235,0.15);
-      --color-success-fg:       #3fb950;
-      --color-neutral-muted:    rgba(110,118,129,0.4);
-      --color-header-bg:        #161b22;
-      --color-header-fg:        #e6edf3;
-      --color-header-border:    #30363d;
-      --color-btn-bg:           #21262d;
-      --color-btn-border:       rgba(240,246,252,0.1);
-      --color-btn-hover-bg:     #30363d;
+      --c-bg:           #0d1117;
+      --c-bg-subtle:    #161b22;
+      --c-border:       #30363d;
+      --c-border-muted: #21262d;
+      --c-fg:           #e6edf3;
+      --c-fg-muted:     #8d96a0;
+      --c-accent:       #58a6ff;
+      --c-accent-em:    #1f6feb;
+      --c-accent-sub:   rgba(31,111,235,0.15);
+      --c-success:      #3fb950;
+      --c-success-sub:  rgba(46,160,67,0.15);
+      --c-warn:         #d29922;
+      --c-warn-sub:     rgba(187,128,9,0.15);
+      --c-danger:       #f85149;
+      --c-danger-sub:   rgba(248,81,73,0.15);
+      --c-neutral-m:    rgba(110,118,129,0.4);
+      --c-header:       #161b22;
+      --c-header-fg:    #e6edf3;
+      --c-header-bdr:   #30363d;
+      --c-btn-bg:       #21262d;
+      --c-btn-bdr:      rgba(240,246,252,0.1);
+      --c-btn-hover:    #30363d;
+      --c-btn-pri-bg:   #1f6feb;
+      --c-btn-pri-hover:#388bfd;
+      --c-pill-bg:      rgba(31,111,235,0.15);
+      --c-pill-fg:      #58a6ff;
+      --shadow-md:      0 3px 6px rgba(0,0,0,0.4);
     }
 
     *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
 
     body {
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
                    Helvetica, Arial, sans-serif;
-      font-size: 14px;
-      line-height: 1.6;
-      color: var(--color-fg-default);
-      background: var(--color-canvas-default);
+      font-size: 14px; line-height: 1.6;
+      color: var(--c-fg); background: var(--c-bg);
     }
 
-    /* ── Header ── */
-    .gh-header {
-      background: var(--color-header-bg);
-      border-bottom: 1px solid var(--color-header-border);
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .gh-header-brand {
-      color: var(--color-header-fg);
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      opacity: 0.9;
-    }
-    .gh-header-brand:hover { opacity: 1; text-decoration: none; }
-    .gh-header-brand svg { fill: var(--color-header-fg); }
+    a { color: var(--c-accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
 
-    /* ── Theme toggle ── */
+    /* ── Top nav ── */
+    .topnav {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--c-header);
+      border-bottom: 1px solid var(--c-header-bdr);
+      padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 56px;
+    }
+    .topnav-brand {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--c-header-fg); font-weight: 600; font-size: 15px;
+      text-decoration: none; opacity: .9;
+    }
+    .topnav-brand:hover { opacity: 1; text-decoration: none; }
+    .topnav-brand svg { fill: var(--c-header-fg); }
+    .topnav-links { display: flex; align-items: center; gap: 4px; }
+    .topnav-links a {
+      color: var(--c-header-fg); opacity: .7; padding: 6px 12px;
+      border-radius: 6px; font-size: 13px; font-weight: 500;
+      transition: background 80ms, opacity 80ms; text-decoration: none;
+    }
+    .topnav-links a:hover { opacity: 1; background: rgba(255,255,255,0.1); }
     .theme-toggle {
-      background: transparent;
-      border: 1px solid var(--color-header-border);
-      border-radius: 6px;
-      color: var(--color-header-fg);
-      cursor: pointer;
-      font-size: 12px;
-      padding: 4px 10px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: background 80ms;
-      opacity: 0.75;
+      background: transparent; border: 1px solid var(--c-header-bdr);
+      border-radius: 6px; color: var(--c-header-fg); cursor: pointer;
+      font-size: 12px; padding: 4px 10px;
+      display: flex; align-items: center; gap: 6px; opacity: .7;
+      transition: background 80ms; font-family: inherit;
     }
     .theme-toggle:hover { opacity: 1; background: rgba(255,255,255,0.1); }
 
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, var(--c-header) 0%, #1a2332 100%);
+      border-bottom: 1px solid var(--c-header-bdr);
+      padding: 64px 24px 56px; text-align: center;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px; padding: 4px 14px;
+      color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 500;
+      margin-bottom: 20px; letter-spacing: 0.3px;
+    }
+    .hero-eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: #3fb950; }
+    .hero h1 {
+      font-size: 40px; font-weight: 700; margin: 0 0 12px;
+      color: #ffffff; line-height: 1.2; border: none; padding: 0;
+    }
+    .hero-sub {
+      font-size: 16px; color: rgba(255,255,255,0.6);
+      max-width: 560px; margin: 0 auto 28px; line-height: 1.5;
+    }
+    .hero-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 32px; }
+    .hero-badges img { height: 20px; }
+    .hero-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;
+      cursor: pointer; text-decoration: none; border: 1px solid transparent;
+      transition: background 80ms; font-family: inherit;
+    }
+    .btn-primary { background: var(--c-btn-pri-bg); color: #fff; border-color: transparent; }
+    .btn-primary:hover { background: var(--c-btn-pri-hover); text-decoration: none; color: #fff; }
+    .btn-secondary {
+      background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85);
+      border-color: rgba(255,255,255,0.15);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.14); text-decoration: none; color: #fff; }
+
     /* ── Layout ── */
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 32px 16px 64px;
+    .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+    .section { padding: 48px 0; border-bottom: 1px solid var(--c-border-muted); }
+    .section:last-child { border-bottom: none; }
+    .section-label {
+      display: inline-block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--c-accent); margin-bottom: 8px;
     }
-
-    /* ── Repo banner ── */
-    .repo-banner {
-      border: 1px solid var(--color-border-default);
-      border-radius: 6px;
-      padding: 16px 20px;
-      margin-bottom: 28px;
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      background: var(--color-canvas-subtle);
+    h2.section-title {
+      font-size: 22px; font-weight: 700; margin: 0 0 8px;
+      border: none; padding: 0;
     }
-    .repo-banner-icon { fill: var(--color-fg-muted); flex-shrink: 0; margin-top: 2px; }
-    .repo-banner strong { font-size: 16px; display: block; margin-bottom: 4px; }
-    .repo-banner p { margin: 0; color: var(--color-fg-muted); font-size: 13px; }
-
-    /* ── Typography ── */
-    h1 {
-      font-size: 24px;
-      font-weight: 600;
-      border-bottom: 1px solid var(--color-border-muted);
-      padding-bottom: 10px;
-      margin: 0 0 20px;
-    }
-    h2 {
-      font-size: 18px;
-      font-weight: 600;
-      border-bottom: 1px solid var(--color-border-muted);
-      padding-bottom: 8px;
-      margin: 32px 0 16px;
-    }
-    h3 {
-      font-size: 14px;
-      font-weight: 600;
-      margin: 20px 0 8px;
-    }
+    .section-desc { color: var(--c-fg-muted); max-width: 600px; margin: 0 0 28px; font-size: 14px; }
+    h3 { font-size: 15px; font-weight: 600; margin: 24px 0 8px; }
     p { margin: 8px 0; }
 
-    a { color: var(--color-accent-fg); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    /* ── Inline code ── */
-    code {
-      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
-                   "Liberation Mono", monospace;
-      font-size: 85%;
-      background: var(--color-neutral-muted);
-      padding: 0.2em 0.4em;
-      border-radius: 6px;
+    /* ── Stats ── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px; margin-bottom: 32px;
     }
+    .stat-card {
+      background: var(--c-bg-subtle); border: 1px solid var(--c-border);
+      border-radius: 8px; padding: 20px; text-align: center;
+    }
+    .stat-value { font-size: 28px; font-weight: 700; color: var(--c-accent); line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--c-fg-muted); margin-top: 4px; font-weight: 500; }
 
-    /* ── Code blocks ── */
+    /* ── Feature grid ── */
+    .feature-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;
+    }
+    .feature-card {
+      background: var(--c-bg-subtle); border: 1px solid var(--c-border);
+      border-radius: 8px; padding: 20px;
+      transition: border-color 120ms, box-shadow 120ms;
+    }
+    .feature-card:hover { border-color: var(--c-accent-em); box-shadow: var(--shadow-md); }
+    .feature-icon {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: var(--c-accent-sub);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 12px; font-size: 18px;
+    }
+    .feature-card h3 { margin: 0 0 6px; font-size: 14px; }
+    .feature-card p { margin: 0; color: var(--c-fg-muted); font-size: 13px; line-height: 1.5; }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--c-border); margin-bottom: 24px; }
+    .tab-btn {
+      background: none; border: none; border-bottom: 2px solid transparent;
+      padding: 10px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+      color: var(--c-fg-muted); font-family: inherit; margin-bottom: -1px;
+      transition: color 80ms, border-color 80ms;
+    }
+    .tab-btn:hover { color: var(--c-fg); }
+    .tab-btn.active { color: var(--c-accent); border-bottom-color: var(--c-accent); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Code ── */
     pre {
-      position: relative;
-      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
-                   "Liberation Mono", monospace;
-      font-size: 85%;
-      background: var(--color-canvas-subtle);
-      border: 1px solid var(--color-border-default);
-      border-radius: 6px;
-      padding: 16px 48px 16px 16px;
-      overflow-x: auto;
-      line-height: 1.45;
-      margin: 8px 0 16px;
+      position: relative; margin: 8px 0 16px;
+      background: var(--c-bg-subtle); border: 1px solid var(--c-border);
+      border-radius: 6px; padding: 14px 52px 14px 16px;
+      overflow-x: auto; line-height: 1.5;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 13px;
     }
-    pre code {
-      background: none;
-      padding: 0;
-      border-radius: 0;
-      font-size: 100%;
-    }
-
-    /* ── Copy button ── */
     .copy-btn {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: var(--color-btn-bg);
-      border: 1px solid var(--color-btn-border);
-      border-radius: 6px;
-      color: var(--color-fg-muted);
-      cursor: pointer;
-      font-size: 12px;
-      font-family: inherit;
-      padding: 4px 10px;
-      opacity: 0;
-      transition: opacity 80ms, background 80ms;
+      position: absolute; top: 8px; right: 8px;
+      background: var(--c-btn-bg); border: 1px solid var(--c-btn-bdr);
+      border-radius: 6px; padding: 4px 10px; cursor: pointer;
+      font-size: 12px; color: var(--c-fg-muted); font-family: inherit;
+      transition: background 80ms;
     }
-    pre:hover .copy-btn { opacity: 1; }
-    .copy-btn:hover { background: var(--color-btn-hover-bg); color: var(--color-fg-default); }
-    .copy-btn.copied { color: var(--color-success-fg); }
+    .copy-btn:hover { background: var(--c-btn-hover); color: var(--c-fg); }
+    .copy-btn.copied { color: var(--c-success); }
+    code {
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 85%; background: var(--c-neutral-m);
+      padding: 0.2em 0.4em; border-radius: 4px;
+    }
+    pre code { background: none; font-size: inherit; padding: 0; }
 
-    /* ── Note box ── */
-    .note {
-      border: 1px solid var(--color-border-default);
-      border-left: 4px solid var(--color-accent-emphasis);
-      border-radius: 6px;
-      padding: 12px 16px;
-      background: var(--color-accent-subtle);
-      margin: 16px 0;
-      font-size: 13px;
-      color: var(--color-fg-default);
+    /* ── Workflow table ── */
+    .workflow-table { width: 100%; border-collapse: collapse; margin: 0 0 24px; }
+    .workflow-table th {
+      text-align: left; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.6px; color: var(--c-fg-muted);
+      border-bottom: 1px solid var(--c-border); padding: 8px 12px;
     }
-    .note strong { color: var(--color-accent-fg); }
+    .workflow-table td {
+      padding: 10px 12px; border-bottom: 1px solid var(--c-border-muted);
+      font-size: 13px; vertical-align: middle;
+    }
+    .workflow-table tr:last-child td { border-bottom: none; }
+    .workflow-table tr:hover td { background: var(--c-bg-subtle); }
+    .workflow-table img { height: 18px; vertical-align: middle; }
 
-    /* ── Fingerprint ── */
-    .fingerprint {
-      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
-                   "Liberation Mono", monospace;
-      font-size: 13px;
-      letter-spacing: 0.05em;
-      color: var(--color-fg-muted);
-      background: var(--color-canvas-subtle);
-      border: 1px solid var(--color-border-muted);
-      border-radius: 6px;
-      padding: 8px 12px;
-      display: inline-block;
+    /* ── Alerts ── */
+    .alert {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 16px; border-radius: 6px; margin: 16px 0;
+      border-left: 3px solid; font-size: 13px;
     }
+    .alert-info    { background: var(--c-accent-sub);  border-color: var(--c-accent); }
+    .alert-success { background: var(--c-success-sub); border-color: var(--c-success); }
+    .alert-warn    { background: var(--c-warn-sub);    border-color: var(--c-warn); }
+    .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .alert-body p { margin: 0; }
+
+    /* ── Timeline ── */
+    .timeline { list-style: none; padding: 0; margin: 0; position: relative; }
+    .timeline::before {
+      content: ''; position: absolute; left: 7px; top: 4px; bottom: 4px;
+      width: 2px; background: var(--c-border);
+    }
+    .timeline li { padding: 0 0 20px 28px; position: relative; font-size: 13px; }
+    .timeline li::before {
+      content: ''; position: absolute; left: 0; top: 4px;
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid var(--c-accent); background: var(--c-bg);
+    }
+    .timeline li.done::before { background: var(--c-success); border-color: var(--c-success); }
+    .timeline li strong { display: block; margin-bottom: 2px; }
+    .timeline li span { color: var(--c-fg-muted); }
+
+    /* ── Contributing cards ── */
+    .contrib-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;
+    }
+    .contrib-card {
+      border: 1px solid var(--c-border); border-radius: 8px; padding: 18px;
+      background: var(--c-bg-subtle);
+    }
+    .contrib-card .cc-icon { font-size: 24px; margin-bottom: 10px; }
+    .contrib-card h3 { margin: 0 0 6px; font-size: 14px; }
+    .contrib-card p { margin: 0 0 12px; color: var(--c-fg-muted); font-size: 13px; }
+    .contrib-card a { font-size: 13px; font-weight: 500; }
+
+    /* ── APT key box ── */
+    .apt-key-box {
+      background: var(--c-bg-subtle); border: 1px solid var(--c-border);
+      border-radius: 8px; padding: 20px; margin: 16px 0;
+    }
+    .apt-key-box .key-row {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .apt-key-box .key-info strong { display: block; font-size: 13px; }
+    .apt-key-box .key-info span { font-size: 12px; color: var(--c-fg-muted); }
 
     /* ── Footer ── */
-    .gh-footer {
-      margin-top: 48px;
-      padding-top: 16px;
-      border-top: 1px solid var(--color-border-muted);
-      color: var(--color-fg-muted);
-      font-size: 12px;
-      text-align: center;
+    footer {
+      background: var(--c-bg-subtle); border-top: 1px solid var(--c-border);
+      padding: 32px 24px;
     }
-    .gh-footer a { color: var(--color-fg-muted); }
-    .gh-footer a:hover { color: var(--color-accent-fg); text-decoration: underline; }
+    .footer-inner {
+      max-width: 960px; margin: 0 auto;
+      display: flex; flex-wrap: wrap; gap: 24px; justify-content: space-between;
+    }
+    .footer-brand { max-width: 300px; }
+    .footer-brand strong { display: block; margin-bottom: 6px; font-size: 14px; }
+    .footer-brand p { margin: 0; color: var(--c-fg-muted); font-size: 12px; line-height: 1.5; }
+    .footer-links { display: flex; gap: 40px; flex-wrap: wrap; }
+    .footer-col h4 {
+      font-size: 12px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--c-fg-muted); margin: 0 0 10px;
+    }
+    .footer-col a { display: block; font-size: 13px; color: var(--c-fg-muted); margin-bottom: 6px; }
+    .footer-col a:hover { color: var(--c-accent); text-decoration: none; }
+    .footer-bottom {
+      max-width: 960px; margin: 24px auto 0;
+      padding-top: 16px; border-top: 1px solid var(--c-border-muted);
+      display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center;
+    }
+    .footer-bottom span { font-size: 12px; color: var(--c-fg-muted); }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 28px; }
+      .topnav-links { display: none; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .tabs { overflow-x: auto; }
+    }
   </style>
 </head>
 <body>
 
-  <header class="gh-header">
-    <a class="gh-header-brand" href="https://github.com/BenJule/BambuStudio">
-      <svg height="24" width="24" viewBox="0 0 16 16" aria-hidden="true">
-        <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/>
-      </svg>
-      BenJule / BambuStudio
+<!-- Top navigation -->
+<nav class="topnav">
+  <a class="topnav-brand" href="#">
+    <svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+               0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+               -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+               .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+               -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27
+               .68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12
+               .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+               0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+    </svg>
+    BenJule / BambuStudio
+  </a>
+  <div class="topnav-links">
+    <a href="#overview">Overview</a>
+    <a href="#features">Features</a>
+    <a href="#install">Install</a>
+    <a href="#cicd">CI/CD</a>
+    <a href="#contributing">Contributing</a>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+    <span id="theme-icon">☀️</span>
+    <span id="theme-label">Light</span>
+  </button>
+</nav>
+
+<!-- Hero -->
+<header class="hero">
+  <div class="hero-eyebrow">
+    <span class="dot"></span> Active Development &middot; v02.07.00-dev
+  </div>
+  <h1>BambuStudio</h1>
+  <p class="hero-sub">
+    BenJule's community fork — enterprise-grade CI/CD, multi-distro Linux packaging,
+    Wayland support, and hardened security on top of Bambu Lab's slicer.
+  </p>
+  <div class="hero-badges">
+    <a href="https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml" target="_blank">
+      <img src="https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml/badge.svg" alt="Nightly">
     </a>
-    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle color theme" id="theme-btn">
-      <span id="theme-icon">🌙</span>
-      <span id="theme-label">Dark</span>
-    </button>
-  </header>
+    <a href="https://github.com/BenJule/BambuStudio/actions/workflows/cd-release.yml" target="_blank">
+      <img src="https://github.com/BenJule/BambuStudio/actions/workflows/cd-release.yml/badge.svg" alt="Release">
+    </a>
+    <a href="https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml" target="_blank">
+      <img src="https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml/badge.svg" alt="PR Build">
+    </a>
+    <a href="https://securityscorecards.dev/viewer/?uri=github.com/BenJule/BambuStudio" target="_blank">
+      <img src="https://api.securityscorecards.dev/projects/github.com/BenJule/BambuStudio/badge" alt="OpenSSF Scorecard">
+    </a>
+  </div>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="https://github.com/BenJule/BambuStudio/releases/latest" target="_blank">
+      &#8595; Download Latest
+    </a>
+    <a class="btn btn-secondary" href="https://github.com/BenJule/BambuStudio" target="_blank">
+      View on GitHub &rarr;
+    </a>
+    <a class="btn btn-secondary" href="#install">
+      Installation Guide
+    </a>
+  </div>
+</header>
 
-  <div class="container">
+<!-- Main content -->
+<main class="container">
 
-    <div class="repo-banner">
-      <svg class="repo-banner-icon" width="20" height="20" viewBox="0 0 16 16" aria-hidden="true">
-        <path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8Z"/>
-      </svg>
-      <div>
-        <strong>APT Repository</strong>
-        <p>Provides <code>.deb</code> packages for BambuStudio — a community fork of
-          <a href="https://github.com/bambulab/BambuStudio">bambulab/BambuStudio</a>
-          with additional fixes and features.</p>
+  <!-- Overview -->
+  <section class="section" id="overview">
+    <div class="section-label">About</div>
+    <h2 class="section-title">What is this fork?</h2>
+    <p class="section-desc">
+      A community-maintained fork of BambuLab's BambuStudio with a focus on Linux quality,
+      automated packaging, and hardened CI/CD pipelines.
+    </p>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">v02.07</div>
+        <div class="stat-label">Current Branch</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">5+</div>
+        <div class="stat-label">Package Formats</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">6</div>
+        <div class="stat-label">Build Platforms</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Daily</div>
+        <div class="stat-label">Nightly Releases</div>
       </div>
     </div>
 
-    <h1>Installation</h1>
-
-    <h3>One-liner (recommended)</h3>
-    <pre><code>curl -fsSL https://apt.s3-dev.ovh/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/bambustudio.gpg
-echo "deb [signed-by=/etc/apt/trusted.gpg.d/bambustudio.gpg] https://apt.s3-dev.ovh stable main" | sudo tee /etc/apt/sources.list.d/bambustudio.list
-sudo apt update
-sudo apt install bambu-studio</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
-
-    <h3>Upgrade</h3>
-    <pre><code>sudo apt update &amp;&amp; sudo apt upgrade bambu-studio</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
-
-    <h3>Remove</h3>
-    <pre><code>sudo apt remove bambu-studio
-sudo rm /etc/apt/sources.list.d/bambustudio.list /etc/apt/trusted.gpg.d/bambustudio.gpg</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
-
-    <div class="note">
-      <strong>Note:</strong> Packages are built for <strong>Debian 12 Bookworm</strong> and compatible distributions (Ubuntu 22.04+).
+    <div class="alert alert-info">
+      <span class="alert-icon">&#8505;&#65039;</span>
+      <div class="alert-body">
+        <p>This fork tracks <strong>BambuLab/BambuStudio</strong> upstream and adds Linux packaging (APT, AUR, RPM, Flatpak),
+        Wayland fixes, ccache-accelerated builds, and OpenSSF security hardening. All upstream features are preserved.</p>
+      </div>
     </div>
 
-    <h2>GPG Signing Key</h2>
-    <p>All packages are GPG-signed. Fingerprint:</p>
-    <p><span class="fingerprint">1726 EB32 78D7 2464 99B5&nbsp;&nbsp;F2C3 19BC 754B E4AC 6B68</span></p>
-    <p style="margin-top:12px"><a href="KEY.gpg">&#8595; Download KEY.gpg</a></p>
+    <h3>Fork Lineage</h3>
+    <ul class="timeline">
+      <li class="done">
+        <strong>Slic3r</strong>
+        <span>Original open-source slicer by Alessandro Ranellucci (AGPL-3.0)</span>
+      </li>
+      <li class="done">
+        <strong>PrusaSlicer</strong>
+        <span>Prusa Research's fork &mdash; advanced multi-material, supports &amp; infill (AGPL-3.0)</span>
+      </li>
+      <li class="done">
+        <strong>BambuStudio</strong>
+        <span>Bambu Lab's fork &mdash; X1/P1/A1 printer support, cloud features (AGPL-3.0)</span>
+      </li>
+      <li>
+        <strong>BenJule/BambuStudio</strong>
+        <span>This fork &mdash; enhanced Linux support, packaging, Wayland, CI/CD (AGPL-3.0)</span>
+      </li>
+    </ul>
+  </section>
 
-    <h2>Manual setup</h2>
+  <!-- Features -->
+  <section class="section" id="features">
+    <div class="section-label">Capabilities</div>
+    <h2 class="section-title">What this fork adds</h2>
+    <p class="section-desc">Everything from upstream, plus Linux-first improvements and enterprise CI/CD.</p>
 
-    <h3>1. Add the GPG key</h3>
-    <pre><code>curl -fsSL https://apt.s3-dev.ovh/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/bambustudio.gpg</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">&#128230;</div>
+        <h3>Multi-Distro Packaging</h3>
+        <p>Native packages for Debian trixie, Ubuntu 22.04 + 24.04, Fedora 42, openSUSE Tumbleweed, and Arch Linux. APT repository with automatic updates.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#127754;</div>
+        <h3>Wayland Support</h3>
+        <p>Fixes <code>gtk_window_resize</code> assertion on Wayland compositors. Window geometry is safely deferred until the compositor has realized the window.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9889;</div>
+        <h3>ccache Build Acceleration</h3>
+        <p>Debian CI builds use ccache with persistent GitHub Actions cache. Cache hits reduce build time from ~60 min to ~5 min.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128274;</div>
+        <h3>Hardened CI/CD</h3>
+        <p>Pinned action SHAs, Harden Runner (egress audit), OpenSSF Scorecard, Dependency Review, CodeQL, signed commits required on master.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#127769;</div>
+        <h3>Nightly Releases</h3>
+        <p>Automated nightly pre-releases built daily at 02:00 UTC from master. 14-day rolling history keeps the release page clean.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#129302;</div>
+        <h3>Copilot-Reviewed PRs</h3>
+        <p>Every pull request receives a GitHub Copilot code review before merge. Medium and high findings must be resolved before landing.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#127912;</div>
+        <h3>Splash Screen Fix</h3>
+        <p>Application name and version displayed on separate lines in the splash screen for improved readability at any resolution.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#127959;&#65039;</div>
+        <h3>Branch Protection</h3>
+        <p>Master requires CI green, signed commits, conversation resolution, and enforces rules on admins too &mdash; nothing broken can land.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128187;</div>
+        <h3>All Upstream Features</h3>
+        <p>Multi-plate management, remote control, tree/normal/hybrid supports, multi-material painting, STEP format, arc paths (G2/G3), and more.</p>
+      </div>
+    </div>
+  </section>
 
-    <h3>2. Add the repository</h3>
-    <pre><code>echo "deb [signed-by=/etc/apt/trusted.gpg.d/bambustudio.gpg] https://apt.s3-dev.ovh stable main" | sudo tee /etc/apt/sources.list.d/bambustudio.list</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+  <!-- Installation -->
+  <section class="section" id="install">
+    <div class="section-label">Installation</div>
+    <h2 class="section-title">Get BambuStudio</h2>
+    <p class="section-desc">Choose your platform. APT and AUR provide automatic updates via your package manager.</p>
 
-    <h3>3. Install</h3>
-    <pre><code>sudo apt update &amp;&amp; sudo apt install bambu-studio</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab(event,'tab-apt')">&#127819; Debian / Ubuntu</button>
+      <button class="tab-btn" onclick="switchTab(event,'tab-aur')">&#127919; Arch Linux</button>
+      <button class="tab-btn" onclick="switchTab(event,'tab-appimage')">&#128192; AppImage</button>
+      <button class="tab-btn" onclick="switchTab(event,'tab-mac')">&#127822; macOS</button>
+      <button class="tab-btn" onclick="switchTab(event,'tab-win')">&#129695; Windows</button>
+    </div>
 
-    <h2>Links</h2>
-    <p>
-      <a href="https://github.com/BenJule/BambuStudio">GitHub Repository</a>
-      &nbsp;&nbsp;·&nbsp;&nbsp;
-      <a href="https://github.com/BenJule/BambuStudio/releases">Releases</a>
-      &nbsp;&nbsp;·&nbsp;&nbsp;
-      <a href="https://github.com/BenJule/BambuStudio/issues">Issues</a>
-    </p>
+    <div id="tab-apt" class="tab-panel active">
+      <h3>APT Repository (recommended &mdash; automatic updates)</h3>
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>curl -fsSL https://apt.s3-dev.ovh/KEY.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/bambustudio.gpg
+echo "deb [signed-by=/etc/apt/trusted.gpg.d/bambustudio.gpg] https://apt.s3-dev.ovh stable main" \
+  | sudo tee /etc/apt/sources.list.d/bambustudio.list
+sudo apt update &amp;&amp; sudo apt install bambu-studio</pre>
+      <p style="color:var(--c-fg-muted);font-size:13px;">Updates via <code>sudo apt upgrade</code>. Supports Debian 12+, Ubuntu 22.04, Ubuntu 24.04.</p>
 
-    <footer class="gh-footer">
-      <p>
-        Built from <a href="https://github.com/bambulab/BambuStudio">bambulab/BambuStudio</a>
-        &nbsp;·&nbsp;
-        <a href="https://github.com/BenJule/BambuStudio/blob/master/LICENSE">AGPL-3.0</a>
-      </p>
-    </footer>
+      <h3>Direct .deb download</h3>
+      <p>Download the latest <code>.deb</code> from the <a href="https://github.com/BenJule/BambuStudio/releases/latest" target="_blank">releases page</a> and install:</p>
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>sudo dpkg -i bambustudio_*.deb &amp;&amp; sudo apt-get install -f</pre>
+    </div>
 
+    <div id="tab-aur" class="tab-panel">
+      <h3>AUR (Arch User Repository)</h3>
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>yay -S bambu-studio-bin</pre>
+      <p style="color:var(--c-fg-muted);font-size:13px;">Works with any AUR helper: <code>paru</code>, <code>trizen</code>, etc. Updates via <code>yay -Syu</code>.</p>
+      <div class="alert alert-info">
+        <span class="alert-icon">&#8505;&#65039;</span>
+        <div class="alert-body"><p>The AUR package is <code>bambu-studio-bin</code> &mdash; pre-built binary, no compilation required.</p></div>
+      </div>
+    </div>
+
+    <div id="tab-appimage" class="tab-panel">
+      <h3>AppImage (portable &mdash; any Linux distro)</h3>
+      <p>Download the latest AppImage from the <a href="https://github.com/BenJule/BambuStudio/releases/latest" target="_blank">releases page</a>:</p>
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>chmod +x BambuStudio_*.AppImage &amp;&amp; ./BambuStudio_*.AppImage</pre>
+      <p style="color:var(--c-fg-muted);font-size:13px;">No installation required. Works on any modern 64-bit Linux. Ubuntu 22.04 and 24.04 AppImages are produced nightly.</p>
+    </div>
+
+    <div id="tab-mac" class="tab-panel">
+      <h3>Homebrew (recommended)</h3>
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>brew tap BenJule/homebrew-tap
+brew install --cask bambu-studio</pre>
+      <p style="color:var(--c-fg-muted);font-size:13px;">Updates via <code>brew upgrade --cask bambu-studio</code>. Supports macOS 13+ (Intel &amp; Apple Silicon).</p>
+      <h3>Direct download</h3>
+      <p>Download the <code>.dmg</code> installer from the <a href="https://github.com/BenJule/BambuStudio/releases/latest" target="_blank">releases page</a>.</p>
+    </div>
+
+    <div id="tab-win" class="tab-panel">
+      <h3>winget</h3>
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>winget install BenJule.BambuStudio</pre>
+      <p style="color:var(--c-fg-muted);font-size:13px;">Updates via <code>winget upgrade</code>. Requires Windows 10 or later.</p>
+      <h3>Installer</h3>
+      <p>Download the <code>.exe</code> installer for x64 or ARM64 from the <a href="https://github.com/BenJule/BambuStudio/releases/latest" target="_blank">releases page</a>.</p>
+    </div>
+  </section>
+
+  <!-- CI/CD -->
+  <section class="section" id="cicd">
+    <div class="section-label">Pipelines</div>
+    <h2 class="section-title">CI/CD &amp; Build Status</h2>
+    <p class="section-desc">Fully automated pipelines from PR through nightly to production release. Every merge to master is signed, tested, and packaged.</p>
+
+    <table class="workflow-table">
+      <thead>
+        <tr><th>Workflow</th><th>Trigger</th><th>Platforms</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>CI: PR Build</strong></td>
+          <td>Every pull request</td>
+          <td>Debian, Fedora</td>
+          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml/badge.svg" alt="PR Build"></a></td>
+        </tr>
+        <tr>
+          <td><strong>CI: Linux Build</strong></td>
+          <td>PR / push</td>
+          <td>Ubuntu 22.04, 24.04, ARM</td>
+          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/ci-build-linux.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/ci-build-linux.yml/badge.svg" alt="Linux"></a></td>
+        </tr>
+        <tr>
+          <td><strong>CI: macOS Build</strong></td>
+          <td>PR / push</td>
+          <td>macOS 15 Intel + ARM</td>
+          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/ci-build-macos.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/ci-build-macos.yml/badge.svg" alt="macOS"></a></td>
+        </tr>
+        <tr>
+          <td><strong>CD: Nightly</strong></td>
+          <td>Daily 02:00 UTC</td>
+          <td>All platforms</td>
+          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml/badge.svg" alt="Nightly"></a></td>
+        </tr>
+        <tr>
+          <td><strong>CD: Release</strong></td>
+          <td>Version tag push</td>
+          <td>All platforms</td>
+          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/cd-release.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/cd-release.yml/badge.svg" alt="Release"></a></td>
+        </tr>
+        <tr>
+          <td><strong>CD: Packages</strong></td>
+          <td>Manual / release</td>
+          <td>Debian, Fedora, Ubuntu</td>
+          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/cd-packages.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/cd-packages.yml/badge.svg" alt="Packages"></a></td>
+        </tr>
+        <tr>
+          <td><strong>Security: CodeQL</strong></td>
+          <td>Push / PR / weekly</td>
+          <td>C++, JavaScript</td>
+          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/security-codeql.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/security-codeql.yml/badge.svg" alt="CodeQL"></a></td>
+        </tr>
+        <tr>
+          <td><strong>OpenSSF Scorecard</strong></td>
+          <td>Weekly / push</td>
+          <td>&mdash;</td>
+          <td><a href="https://securityscorecards.dev/viewer/?uri=github.com/BenJule/BambuStudio" target="_blank"><img src="https://api.securityscorecards.dev/projects/github.com/BenJule/BambuStudio/badge" alt="Scorecard"></a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Release Pipeline</h3>
+    <ul class="timeline">
+      <li class="done">
+        <strong>Pull Request opened</strong>
+        <span>CI builds Debian + Fedora; Copilot reviews code; dependency security check runs automatically</span>
+      </li>
+      <li class="done">
+        <strong>PR merged to master</strong>
+        <span>Signed commit required; all status checks must be green; all conversations must be resolved</span>
+      </li>
+      <li class="done">
+        <strong>Nightly build (02:00 UTC)</strong>
+        <span>All platforms built and tested; pre-release published with 14-day rolling history</span>
+      </li>
+      <li>
+        <strong>Release triggered</strong>
+        <span>Version tag pushed &rarr; full platform matrix &rarr; APT, AUR, Homebrew, winget, and Flatpak deployed</span>
+      </li>
+    </ul>
+
+    <h3>Master Branch Protection</h3>
+    <div class="feature-grid" style="margin-top:8px;">
+      <div class="feature-card">
+        <h3>&#9989; Required Status Checks</h3>
+        <p><code>Detect affected platforms</code>, <code>Linux / Debian trixie .deb</code>, and <code>Review dependency changes</code> must pass before any merge.</p>
+      </div>
+      <div class="feature-card">
+        <h3>&#9989; Signed Commits</h3>
+        <p>All commits to master must be GPG-signed. Force push and branch deletion are permanently blocked.</p>
+      </div>
+      <div class="feature-card">
+        <h3>&#9989; Conversation Resolution</h3>
+        <p>All PR review comments must be resolved before merge is permitted &mdash; even for admins.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contributing -->
+  <section class="section" id="contributing">
+    <div class="section-label">Get Involved</div>
+    <h2 class="section-title">Contributing</h2>
+    <p class="section-desc">Contributions are welcome. Every change follows the Issue &rarr; Branch &rarr; PR &rarr; Review &rarr; Merge workflow.</p>
+
+    <div class="alert alert-warn">
+      <span class="alert-icon">&#9888;&#65039;</span>
+      <div class="alert-body">
+        <p><strong>Never push directly to master.</strong> Open a PR for every change &mdash; even trivial ones. This ensures CI runs and Copilot reviews every commit.</p>
+      </div>
+    </div>
+
+    <h3>Contribution Workflow</h3>
+    <ul class="timeline">
+      <li><strong>1. Open an Issue</strong><span>Describe the bug or feature. Assign milestone and label.</span></li>
+      <li><strong>2. Create a branch</strong><span>Use <code>fix/short-description</code> or <code>feat/short-description</code>.</span></li>
+      <li><strong>3. Open a Pull Request</strong><span>Reference the issue with <code>Closes #N</code>. CI runs automatically.</span></li>
+      <li><strong>4. Copilot Review</strong><span>Request Copilot review in the GitHub UI. Address medium/high findings.</span></li>
+      <li><strong>5. Squash Merge</strong><span>All checks green + conversations resolved &rarr; squash-merge to master.</span></li>
+    </ul>
+
+    <div class="contrib-grid" style="margin-top:24px;">
+      <div class="contrib-card">
+        <div class="cc-icon">&#128027;</div>
+        <h3>Report a Bug</h3>
+        <p>Use the bug report or crash report template.</p>
+        <a href="https://github.com/BenJule/BambuStudio/issues/new/choose" target="_blank">Open issue &rarr;</a>
+      </div>
+      <div class="contrib-card">
+        <div class="cc-icon">&#128161;</div>
+        <h3>Request a Feature</h3>
+        <p>Describe the use case and expected behaviour.</p>
+        <a href="https://github.com/BenJule/BambuStudio/issues/new/choose" target="_blank">Open issue &rarr;</a>
+      </div>
+      <div class="contrib-card">
+        <div class="cc-icon">&#128274;</div>
+        <h3>Security Vulnerability</h3>
+        <p>Do not open a public issue. Use the security policy.</p>
+        <a href="https://github.com/BenJule/BambuStudio/security/policy" target="_blank">Security policy &rarr;</a>
+      </div>
+      <div class="contrib-card">
+        <div class="cc-icon">&#128218;</div>
+        <h3>Build from Source</h3>
+        <p>Linux, macOS, and Windows compile guides available.</p>
+        <a href="https://github.com/bambulab/BambuStudio/wiki" target="_blank">Build guide &rarr;</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- APT Repository -->
+  <section class="section" id="apt">
+    <div class="section-label">APT Repository</div>
+    <h2 class="section-title">Linux Package Repository</h2>
+    <p class="section-desc">A signed APT repository is hosted at <code>apt.s3-dev.ovh</code> for Debian and Ubuntu users.</p>
+
+    <div class="apt-key-box">
+      <div class="key-row">
+        <div class="key-info">
+          <strong>Repository signing key</strong>
+          <span>GPG public key for package verification</span>
+        </div>
+        <a class="btn btn-primary" href="/BambuStudio/KEY.gpg" download>&#8595; KEY.gpg</a>
+      </div>
+    </div>
+
+    <h3>Repository details</h3>
+    <table class="workflow-table">
+      <tr><th>Field</th><th>Value</th></tr>
+      <tr><td>Base URL</td><td><code>https://apt.s3-dev.ovh</code></td></tr>
+      <tr><td>Distribution</td><td><code>stable</code></td></tr>
+      <tr><td>Component</td><td><code>main</code></td></tr>
+      <tr><td>Package name</td><td><code>bambu-studio</code></td></tr>
+      <tr><td>Architecture</td><td><code>amd64</code></td></tr>
+    </table>
+
+    <h3>One-liner setup</h3>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>curl -fsSL https://apt.s3-dev.ovh/KEY.gpg \
+  | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/bambustudio.gpg &amp;&amp; \
+echo "deb [signed-by=/etc/apt/trusted.gpg.d/bambustudio.gpg] https://apt.s3-dev.ovh stable main" \
+  | sudo tee /etc/apt/sources.list.d/bambustudio.list &amp;&amp; \
+sudo apt update &amp;&amp; sudo apt install bambu-studio</pre>
+  </section>
+
+</main>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <strong>BenJule / BambuStudio</strong>
+      <p>Community fork of BambuLab's BambuStudio slicer. Licensed under the
+         GNU Affero General Public License v3.0. Based on PrusaSlicer by Prusa Research
+         and Slic3r by Alessandro Ranellucci.</p>
+    </div>
+    <div class="footer-links">
+      <div class="footer-col">
+        <h4>Repository</h4>
+        <a href="https://github.com/BenJule/BambuStudio" target="_blank">GitHub</a>
+        <a href="https://github.com/BenJule/BambuStudio/releases" target="_blank">Releases</a>
+        <a href="https://github.com/BenJule/BambuStudio/actions" target="_blank">Actions</a>
+        <a href="https://github.com/BenJule/BambuStudio/issues" target="_blank">Issues</a>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <a href="https://github.com/BenJule/BambuStudio/blob/master/CONTRIBUTING.md" target="_blank">Contributing</a>
+        <a href="https://github.com/BenJule/BambuStudio/security/policy" target="_blank">Security</a>
+        <a href="https://github.com/BenJule/BambuStudio/blob/master/LICENSE" target="_blank">License (AGPL-3.0)</a>
+        <a href="https://github.com/bambulab/BambuStudio/wiki" target="_blank">Upstream Wiki</a>
+      </div>
+      <div class="footer-col">
+        <h4>Packages</h4>
+        <a href="#apt">APT Repository</a>
+        <a href="https://aur.archlinux.org/packages/bambu-studio-bin" target="_blank">AUR</a>
+        <a href="https://flathub.org/apps/com.bambulab.BambuStudio" target="_blank">Flathub</a>
+        <a href="https://formulae.brew.sh/" target="_blank">Homebrew</a>
+      </div>
+    </div>
   </div>
+  <div class="footer-bottom">
+    <span>&copy; 2024&ndash;2026 BenJule &middot; AGPL-3.0 &middot; Upstream &copy; Bambu Lab</span>
+    <a href="https://securityscorecards.dev/viewer/?uri=github.com/BenJule/BambuStudio" target="_blank">
+      <img src="https://api.securityscorecards.dev/projects/github.com/BenJule/BambuStudio/badge"
+           alt="OpenSSF" style="height:16px;vertical-align:middle;">
+    </a>
+  </div>
+</footer>
 
-  <script>
-    const html = document.documentElement;
-    const STORAGE_KEY = 'bs-color-mode';
+<script>
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-color-mode', t);
+    document.getElementById('theme-icon').textContent  = t === 'dark' ? '🌙' : '☀️';
+    document.getElementById('theme-label').textContent = t === 'dark' ? 'Dark' : 'Light';
+    localStorage.setItem('theme', t);
+  }
+  function toggleTheme() {
+    applyTheme(document.documentElement.getAttribute('data-color-mode') === 'dark' ? 'light' : 'dark');
+  }
+  (function () {
+    const saved = localStorage.getItem('theme');
+    applyTheme(saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  })();
 
-    function resolvedIsDark(mode) {
-      if (mode === 'dark') return true;
-      if (mode === 'light') return false;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
+  function switchTab(e, id) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    e.target.classList.add('active');
+    document.getElementById(id).classList.add('active');
+  }
 
-    function applyTheme(mode) {
-      html.setAttribute('data-color-mode', mode);
-      localStorage.setItem(STORAGE_KEY, mode);
-      const dark = resolvedIsDark(mode);
-      document.getElementById('theme-icon').textContent  = dark ? '☀️' : '🌙';
-      document.getElementById('theme-label').textContent = dark ? 'Light' : 'Dark';
-    }
-
-    function toggleTheme() {
-      const current = html.getAttribute('data-color-mode');
-      applyTheme(resolvedIsDark(current) ? 'light' : 'dark');
-    }
-
-    applyTheme(localStorage.getItem(STORAGE_KEY) || 'auto');
-
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      if (html.getAttribute('data-color-mode') === 'auto') applyTheme('auto');
+  function copyCode(btn) {
+    const text = btn.parentElement.textContent.replace('Copy', '').replace('Copied!', '').trim();
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
     });
-
-    function copyCode(btn) {
-      const text = btn.previousElementSibling.innerText;
-      navigator.clipboard.writeText(text).then(() => {
-        btn.textContent = 'Copied!';
-        btn.classList.add('copied');
-        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-      });
-    }
-  </script>
-
+  }
+</script>
 </body>
 </html>
