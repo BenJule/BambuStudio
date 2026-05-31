@@ -109,6 +109,49 @@ jobs:
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
 
+      - name: Smoke test
+        if: steps.build-bambu.outcome == 'success'
+        run: |
+          apt-get install -y --no-install-recommends xvfb
+
+          # Start a virtual framebuffer so GTK/OpenGL init code runs fully
+          Xvfb :99 -screen 0 1280x800x24 &
+          sleep 2
+
+          # Run bambustudio headlessly for up to 20s and capture all output
+          DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 \
+            timeout 20 ./build/src/bambu-studio > /tmp/smoke.log 2>&1
+          EXIT=$?
+
+          kill %1 2>/dev/null || true   # stop Xvfb
+
+          # EXIT 124 = timeout killed it after 20s (ran without crashing) → pass
+          # EXIT 0   = exited cleanly on its own → pass
+          # anything else = crash → fail
+          if [ "$EXIT" -ne 0 ] && [ "$EXIT" -ne 124 ]; then
+            echo "::error::bambustudio crashed on startup (exit $EXIT)"
+            cat /tmp/smoke.log
+            exit 1
+          fi
+
+          # Fail the build if a known GTK regression is detected
+          if grep -q "gtk_window_resize: assertion" /tmp/smoke.log; then
+            echo "::error::GTK regression detected: gtk_window_resize assertion 'width > 0' failed"
+            grep "Gtk-CRITICAL" /tmp/smoke.log | head -10
+            exit 1
+          fi
+
+          # Report any remaining GTK warnings as informational
+          GTK_WARNS=$(grep -c "Gtk-CRITICAL" /tmp/smoke.log || true)
+
+          echo "### Smoke test" >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ Started headless (Xvfb), ran 20s without crash" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$GTK_WARNS" -gt 0 ]; then
+            echo "⚠️ $GTK_WARNS other Gtk-CRITICAL warning(s) — review log" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "✅ No GTK-CRITICAL warnings" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: ccache statistics
         if: always()
         run: |
