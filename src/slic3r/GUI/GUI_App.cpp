@@ -348,24 +348,23 @@ public:
         int top_margin = FromDIP(75 * m_scale);
         int width = bmp.GetWidth();
 
-        // draw title and version
-        int text_padding = FromDIP(3 * m_scale);
+        // draw title centered, then version centered below it
+        // GetTextExtent does not handle '\n', so the old side-by-side split_width layout
+        // broke when the version string became multiline (commit count + dev timestamp).
+        int text_padding = FromDIP(4 * m_scale);
         memDc.SetFont(m_constant_text.title_font);
         int title_height = memDc.GetTextExtent(m_constant_text.title).GetHeight();
-        int title_width = memDc.GetTextExtent(m_constant_text.title).GetWidth();
-        memDc.SetFont(m_constant_text.version_font);
-        int version_height = memDc.GetTextExtent(m_constant_text.version).GetHeight();
-        int version_width = memDc.GetTextExtent(m_constant_text.version).GetWidth();
-        int split_width = (width + title_width - version_width) / 2;
-        wxRect title_rect(wxPoint(0, top_margin), wxPoint(split_width - text_padding, top_margin + title_height));
+        wxRect title_rect(wxPoint(0, top_margin), wxPoint(width, top_margin + title_height));
         memDc.SetTextForeground(StateColor::darkModeColorFor(wxColour(38, 46, 48)));
-        memDc.SetFont(m_constant_text.title_font);
-        memDc.DrawLabel(m_constant_text.title, title_rect, wxALIGN_RIGHT | wxALIGN_BOTTOM);
-        //BBS align bottom of title and version text
-        wxRect version_rect(wxPoint(split_width + text_padding, top_margin), wxPoint(width, top_margin + title_height - text_padding));
+        memDc.DrawLabel(m_constant_text.title, title_rect, wxALIGN_CENTER | wxALIGN_TOP);
+        // version below title; account for multiline (dev timestamp adds \n)
         memDc.SetFont(m_constant_text.version_font);
+        int version_line_height = memDc.GetTextExtent("A").GetHeight();
+        int version_lines = (int)m_constant_text.version.Freq('\n') + 1;
+        wxRect version_rect(wxPoint(0, top_margin + title_height + text_padding),
+                            wxPoint(width, top_margin + title_height + text_padding + version_lines * version_line_height));
         memDc.SetTextForeground(StateColor::darkModeColorFor(wxColor(134, 134, 134)));
-        memDc.DrawLabel(m_constant_text.version, version_rect, wxALIGN_LEFT | wxALIGN_BOTTOM);
+        memDc.DrawLabel(m_constant_text.version, version_rect, wxALIGN_CENTER | wxALIGN_TOP);
 
 #if BBL_INTERNAL_TESTING
         wxString versionText = BBL_INTERNAL_TESTING == 1 ? _L("Internal Version") : _L("Beta Version");
