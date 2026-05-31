@@ -52,6 +52,7 @@
 #include <string_view>
 
 #include "GUI_App.hpp"
+#include "GUI_Utils.hpp"
 #include "UnsavedChangesDialog.hpp"
 #include "MsgDialog.hpp"
 #include "Notebook.hpp"
@@ -446,7 +447,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     // On Wayland the window is not yet realized during construction.
     // SetSizerAndFit/SetSizeHints both call gtk_window_resize before the
     // compositor has mapped the window, triggering the 'width > 0' assertion.
-    // Use SetSizer (no implicit Fit) and defer all size operations to CallAfter.
+    // Use SetSizer (no implicit Fit) and defer all size operations to on_window_geometry.
     SetMinClientSize(wxSize(400, 300));
     SetSizer(sizer);
 #else
@@ -489,9 +490,9 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
 #endif // WIN32
     // BBS
 #ifdef __WXGTK__
-    // Defer SetSizeHints/SetSize/Layout until the event loop starts so the
-    // Wayland compositor has realized the window before any resize calls.
-    CallAfter([this]() {
+    // Defer SetSizeHints/SetSize/Layout until the window is realized by the
+    // Wayland compositor (wxEVT_SHOW + CallAfter via on_window_geometry).
+    on_window_geometry(this, [this]() {
         if (auto* s = GetSizer()) s->SetSizeHints(this);
         const wxSize min_size = wxGetApp().get_min_size();
         SetMinSize(min_size);
