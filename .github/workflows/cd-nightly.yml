@@ -64,7 +64,7 @@ jobs:
           - os: windows-11-arm
             arch: arm64
             name: Windows / windows-11-arm (arm64)
-    uses: ./.github/workflows/build_check_cache.yml
+    uses: ./.github/workflows/_build-cached.yml
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
