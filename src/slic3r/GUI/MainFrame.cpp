@@ -442,6 +442,14 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
 
 
     sizer->Add(m_main_sizer, 1, wxEXPAND);
+#ifdef __WXGTK__
+    // On Wayland the window is not yet realized when the constructor runs.
+    // BBLTopbar::GetBestSize() can return width 0 before realization, which
+    // triggers GTK's hard assertion 'gtk_window_resize: width > 0'. Setting a
+    // minimum client size here prevents Fit() (called inside SetSizerAndFit)
+    // from collapsing the window geometry to an invalid size.
+    SetMinClientSize(wxSize(400, 300));
+#endif
     SetSizerAndFit(sizer);
     // initialize layout from config
     update_layout();
@@ -477,6 +485,17 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     });
 #endif // WIN32
     // BBS
+#ifdef __WXGTK__
+    // Defer the final Fit/SetSize/Layout until the event loop starts and the
+    // Wayland compositor has realized the window, avoiding further
+    // 'gtk_window_resize: width > 0' assertions.
+    CallAfter([this]() {
+        const wxSize min_size = wxGetApp().get_min_size();
+        SetMinSize(min_size);
+        SetSize(wxSize(FromDIP(1200), FromDIP(800)));
+        Layout();
+    });
+#else
     Fit();
 
     const wxSize min_size = wxGetApp().get_min_size(); //wxSize(76*wxGetApp().em_unit(), 49*wxGetApp().em_unit());
@@ -485,6 +504,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     SetSize(wxSize(FromDIP(1200), FromDIP(800)));
 
     Layout();
+#endif
 
     update_title();
 
