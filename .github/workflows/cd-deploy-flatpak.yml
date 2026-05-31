@@ -74,8 +74,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
-          VER="${TAG#v}"                    # 02.07.00.55-fork.1
-          UPSTREAM_VER="${VER%-fork.*}"    # 02.07.00.55  (filename only uses upstream ver)
+          VER="${TAG#v}"                  # 02.07.00.55-bj.2
+          UPSTREAM_VER="${VER%-bj.*}"    # 02.07.00.55  (filename only uses upstream ver)
           # Primary: find the GitHub-hosted ubuntu-24.04 amd64 AppImage via API (name pattern: BambuStudio_ubuntu-24.04_amd64_*.AppImage, excluding _selfhosted)
           ASSET_URL=$(gh release view "${TAG}" --repo "${{ github.repository }}" \
             --json assets --jq \
