@@ -169,13 +169,22 @@ jobs:
             APP_PATH="${{ github.workspace }}/build/universal/BambuStudio/BambuStudio.app"
           fi
           DMG_NAME="BambuStudio_${{ inputs.os }}_${{ inputs.arch }}_${{ env.ver }}.dmg"
-          mkdir -p /tmp/dmg-staging
-          cp -R "$APP_PATH" /tmp/dmg-staging/BambuStudio.app
-          ln -s /Applications /tmp/dmg-staging/Applications
-          hdiutil create -volname "BambuStudio ${{ env.ver }}" \
-            -srcfolder /tmp/dmg-staging \
-            -ov -format UDZO \
-            "${{ github.workspace }}/$DMG_NAME"
+          STAGING=$(mktemp -d)
+          RW_DMG="$STAGING/rw.dmg"
+          MOUNT_DIR=$(mktemp -d)
+          # Size: app + 50 MB headroom
+          APP_SIZE=$(du -sm "$APP_PATH" | cut -f1)
+          hdiutil create -size "$((APP_SIZE + 50))m" \
+            -volname "BambuStudio ${{ env.ver }}" \
+            -fs HFS+ -format UDRW "$RW_DMG"
+          hdiutil attach "$RW_DMG" -mountpoint "$MOUNT_DIR" -noautoopen -nobrowse
+          cp -R "$APP_PATH" "$MOUNT_DIR/BambuStudio.app"
+          # Symlink inside the volume (not pointing at the live host /Applications)
+          ln -s /Applications "$MOUNT_DIR/Applications"
+          hdiutil detach "$MOUNT_DIR"
+          hdiutil convert "$RW_DMG" -format UDZO \
+            -o "${{ github.workspace }}/$DMG_NAME"
+          rm -rf "$STAGING"
 
       - name: Upload artifacts mac
         if: runner.os == 'macOS'
