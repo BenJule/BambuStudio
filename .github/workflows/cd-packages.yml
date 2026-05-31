@@ -45,37 +45,14 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # ── Container builds — Debian .deb and Fedora .rpm ───────────────────────
-  build_container:
-    name: Linux / ${{ matrix.name }}
-    # Skip individual matrix entries based on skip-* inputs.
-    # Logic: run unless this entry's specific skip flag is set.
-    if: |
-      (matrix.artifact_suffix != 'debian-trixie_deb' || !inputs.skip-debian) &&
-      (matrix.artifact_suffix != 'fedora42_rpm'      || !inputs.skip-fedora)
+  # ── Debian trixie .deb ───────────────────────────────────────────────────
+  build_debian:
+    name: Linux / Debian trixie .deb
+    if: ${{ !inputs.skip-debian }}
     runs-on: ubuntu-24.04
     timeout-minutes: 150
-    container: ${{ matrix.container }}
+    container: debian:trixie@sha256:4ae67669760b807c19f23902a3fd7c121a6a70cf2ae709035674b23e712e4d62
     permissions: read-all
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Debian trixie .deb
-            container: debian:trixie@sha256:4ae67669760b807c19f23902a3fd7c121a6a70cf2ae709035674b23e712e4d62
-            bootstrap: apt-get update -qq && apt-get install -y sudo git curl git-lfs
-            pkg_cmd: ./BuildLinux.sh -pr
-            artifact_suffix: debian-trixie_deb
-            artifact_glob: ./build/bambustudio_*.deb
-            if_no_files: error
-
-          - name: Fedora 42 .rpm
-            container: fedora:42@sha256:7c63468daf71fdc5bda3699cd483b169bb995b5137265d5ffe8f04e2ce87fbb8
-            bootstrap: dnf install -y sudo git curl git-lfs
-            pkg_cmd: bash scripts/build_rpm.sh
-            artifact_suffix: fedora42_rpm
-            artifact_glob: ./build/bambustudio-*.rpm
-            if_no_files: warn
 
     steps:
       - name: Harden Runner
@@ -84,7 +61,7 @@ jobs:
           egress-policy: audit
 
       - name: Bootstrap
-        run: ${{ matrix.bootstrap }}
+        run: apt-get update -qq && apt-get install -y sudo git curl git-lfs
 
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
@@ -97,7 +74,7 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: deps/build/destdir
-          key: pkg-deps-${{ matrix.artifact_suffix }}-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
+          key: pkg-deps-debian-trixie_deb-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
 
       - name: Install build dependencies
         run: sudo ./BuildLinux.sh -ur
@@ -115,7 +92,7 @@ jobs:
           cd build && ./src/BuildLinuxImage.sh
 
       - name: Build package
-        run: ${{ matrix.pkg_cmd }}
+        run: ./BuildLinux.sh -pr
 
       - name: Get version
         id: ver
@@ -124,9 +101,70 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
-          name: BambuStudio_${{ matrix.artifact_suffix }}_${{ steps.ver.outputs.ver }}
-          path: ${{ matrix.artifact_glob }}
-          if-no-files-found: ${{ matrix.if_no_files }}
+          name: BambuStudio_debian-trixie_deb_${{ steps.ver.outputs.ver }}
+          path: ./build/bambustudio_*.deb
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention-days || 14 }}
+
+  # ── Fedora 42 .rpm ────────────────────────────────────────────────────────
+  build_fedora:
+    name: Linux / Fedora 42 .rpm
+    if: ${{ !inputs.skip-fedora }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    container: fedora:42@sha256:7c63468daf71fdc5bda3699cd483b169bb995b5137265d5ffe8f04e2ce87fbb8
+    permissions: read-all
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Bootstrap
+        run: dnf install -y sudo git curl git-lfs
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          lfs: 'true'
+          fetch-depth: 0
+
+      - name: Cache deps
+        id: cache-deps
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: deps/build/destdir
+          key: pkg-deps-fedora42_rpm-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
+
+      - name: Install build dependencies
+        run: sudo ./BuildLinux.sh -ur
+
+      - name: Fix permissions
+        run: chown -R "$(id -u):$(id -g)" ./
+
+      - name: Build deps
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: ./BuildLinux.sh -dfr
+
+      - name: Build BambuStudio
+        run: |
+          ./BuildLinux.sh -sfr
+          cd build && ./src/BuildLinuxImage.sh
+
+      - name: Build package
+        run: bash scripts/build_rpm.sh
+
+      - name: Get version
+        id: ver
+        uses: ./.github/actions/get-version
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        with:
+          name: BambuStudio_fedora42_rpm_${{ steps.ver.outputs.ver }}
+          path: ./build/bambustudio-*.rpm
+          if-no-files-found: warn
           retention-days: ${{ inputs.retention-days || 14 }}
 
   # ── Self-hosted distro runners — non-blocking ─────────────────────────────
