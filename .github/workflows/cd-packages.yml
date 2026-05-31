@@ -49,20 +49,13 @@ jobs:
   build_debian:
     name: Linux / Debian trixie .deb
     if: ${{ !inputs.skip-debian }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 150
-    container: debian:trixie@sha256:4ae67669760b807c19f23902a3fd7c121a6a70cf2ae709035674b23e712e4d62
+    runs-on: [self-hosted, debian-trixie]
+    timeout-minutes: 90
     permissions: read-all
+    env:
+      CCACHE_DIR: /var/cache/github-runner-debian/ccache
 
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
-        with:
-          egress-policy: audit
-
-      - name: Bootstrap
-        run: apt-get update -qq && apt-get install -y sudo git curl git-lfs
-
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
@@ -74,29 +67,15 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: deps/build/destdir
-          key: pkg-deps-debian-trixie_deb-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
+          key: pkg-deps-debian-trixie-selfhosted-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
 
       - name: Install build dependencies
         run: sudo ./BuildLinux.sh -ur
 
-      - name: Fix permissions
-        run: chown -R "$(id -u):$(id -g)" ./
-
-      - name: Install and configure ccache
+      - name: Configure ccache
         run: |
-          apt-get install -y --no-install-recommends ccache
           echo "/usr/lib/ccache" >> "$GITHUB_PATH"
-          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
-          echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
-
-      - name: Restore ccache
-        id: ccache-restore
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
-        with:
-          path: ~/.ccache
-          key: ccache-debian-trixie-${{ hashFiles('src/**/*.cpp', 'src/**/*.c', 'src/**/*.h', 'src/**/*.hpp') }}
-          restore-keys: |
-            ccache-debian-trixie-
+          ccache --zero-stats
 
       - name: Build deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -105,7 +84,6 @@ jobs:
       - name: Build BambuStudio
         id: build-bambu
         run: |
-          ccache --zero-stats
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
 
@@ -158,13 +136,6 @@ jobs:
         run: |
           echo "### ccache statistics" >> "$GITHUB_STEP_SUMMARY"
           ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
-
-      - name: Save ccache
-        if: steps.build-bambu.outcome == 'success' && steps.ccache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
-        with:
-          path: ~/.ccache
-          key: ccache-debian-trixie-${{ hashFiles('src/**/*.cpp', 'src/**/*.c', 'src/**/*.h', 'src/**/*.hpp') }}
 
       - name: Build package
         run: ./BuildLinux.sh -pr
