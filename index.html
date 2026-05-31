@@ -623,12 +623,20 @@ sudo apt update &amp;&amp; sudo apt install bambu-studio</pre>
     </div>
 
     <div id="tab-aur" class="tab-panel">
-      <h3>AUR (Arch User Repository)</h3>
+      <h3>AUR Helper (recommended)</h3>
       <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>yay -S bambu-studio-bin</pre>
       <p style="color:var(--c-fg-muted);font-size:13px;">Works with any AUR helper: <code>paru</code>, <code>trizen</code>, etc. Updates via <code>yay -Syu</code>.</p>
+
+      <h3>Manual installation</h3>
+      <p>Download the snapshot directly from the <a href="https://aur.archlinux.org/packages/bambu-studio-bin" target="_blank">AUR package page</a>, then build and install:</p>
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>git clone https://aur.archlinux.org/bambu-studio-bin.git
+cd bambu-studio-bin
+makepkg -si</pre>
+      <p style="color:var(--c-fg-muted);font-size:13px;">Update manually by pulling the latest PKGBUILD and running <code>makepkg -si</code> again, or use the <a href="https://aur.archlinux.org/packages/bambu-studio-bin" target="_blank">AUR package page</a> to download the snapshot.</p>
+
       <div class="alert alert-info">
         <span class="alert-icon">&#8505;&#65039;</span>
-        <div class="alert-body"><p>The AUR package is <code>bambu-studio-bin</code> &mdash; pre-built binary, no compilation required.</p></div>
+        <div class="alert-body"><p>The <code>bambu-studio-bin</code> package installs the pre-built binary — no compilation required. It is maintained by <strong>BenLue</strong> and updated automatically after each release.</p></div>
       </div>
     </div>
 
