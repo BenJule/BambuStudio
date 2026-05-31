@@ -29,6 +29,7 @@ jobs:
       prev_tag: ${{ steps.tag.outputs.prev_tag }}
     permissions:
       contents: write
+      workflows: write
 
     steps:
       - name: Harden Runner
