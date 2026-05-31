@@ -56,7 +56,7 @@ jobs:
           URL=""
           # Primary: use GitHub API — handles any filename format (version includes commit count)
           URL=$(gh release view "${TAG}" --repo "${{ github.repository }}" --json assets \
-            --jq '[.assets[] | select(.name | test("^BambuStudio_ubuntu-24\\.04_amd64_.*\\.AppImage$"; "i"))] | .[0].browser_download_url // ""')
+            --jq '[.assets[] | select((.name | test("^BambuStudio_ubuntu-24\\.04_amd64_.*\\.AppImage$"; "i")) and (.name | test("_selfhosted\\.AppImage$"; "i") | not))] | .[0].browser_download_url // ""')
           # Legacy fallback: explicit patterns for older releases
           if [[ -z "$URL" ]]; then
             for PATTERN in \
