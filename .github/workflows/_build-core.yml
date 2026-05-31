@@ -264,6 +264,8 @@ jobs:
             -DCMAKE_CXX_COMPILER=cl.exe `
             -DCMAKE_C_COMPILER_LAUNCHER=sccache `
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
+            "-DCMAKE_POLICY_DEFAULT_CMP0141=NEW" `
+            "-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded" `
             -DBBL_RELEASE_TO_PUBLIC=1 -DBBL_INTERNAL_TESTING=0 `
             -DCMAKE_PREFIX_PATH="$depPath\usr\local" `
             -DCMAKE_INSTALL_PREFIX="../install-dir" `
