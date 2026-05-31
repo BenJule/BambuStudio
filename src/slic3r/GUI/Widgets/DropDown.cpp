@@ -541,7 +541,10 @@ void DropDown::messureSize()
     rowSize = szContent;
     if (limit_max_content_width) {
         wxSize parent_size = GetParent()->GetSize();
-        if (rowSize.x > parent_size.x * 2) {
+        // Guard: skip the limit when the parent has not been realized yet (size = 0).
+        // Clamping to 2*0 = 0 would produce an invalid popup size and trigger the
+        // GTK assertion "gtk_window_resize: assertion 'width > 0' failed".
+        if (parent_size.x > 0 && rowSize.x > parent_size.x * 2) {
             rowSize.x = 2 * parent_size.x;
             szContent = rowSize;
         }
@@ -550,8 +553,10 @@ void DropDown::messureSize()
     szContent.y += items.size() > 15 ? rowSize.y / 2 : 0;
     wxWindow::SetSize(szContent);
 #ifdef __WXGTK__
-    // Gtk has a wrapper window for popup widget
-    gtk_window_resize (GTK_WINDOW (m_widget), szContent.x, szContent.y);
+    // Gtk has a wrapper window for popup widget.
+    // Guard against non-positive dimensions: gtk_window_resize asserts width > 0.
+    if (szContent.x > 0 && szContent.y > 0)
+        gtk_window_resize(GTK_WINDOW(m_widget), szContent.x, szContent.y);
 #endif
     if (!groups.empty() && subDropDown == nullptr) {
         subDropDown = new DropDown(items);
