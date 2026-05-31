@@ -82,6 +82,13 @@ jobs:
       - name: Fix permissions
         run: chown -R "$(id -u):$(id -g)" ./
 
+      - name: Install and configure ccache
+        run: |
+          apt-get install -y --no-install-recommends ccache
+          echo "/usr/lib/ccache" >> "$GITHUB_PATH"
+          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
+
       - name: Restore ccache
         id: ccache-restore
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
@@ -98,10 +105,6 @@ jobs:
       - name: Build BambuStudio
         id: build-bambu
         run: |
-          apt-get install -y --no-install-recommends ccache
-          export PATH="/usr/lib/ccache:$PATH"
-          export CCACHE_DIR="$HOME/.ccache"
-          export CCACHE_MAXSIZE="5G"
           ccache --zero-stats
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
