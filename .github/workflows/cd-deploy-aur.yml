@@ -45,6 +45,8 @@ jobs:
 
       - name: Get release asset checksums
         id: checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           TAG="v${{ steps.version.outputs.version }}"
@@ -52,17 +54,22 @@ jobs:
           UPSTREAM_VER="${VER%-fork.*}"    # strip fork suffix for filename
           BASE="https://github.com/${{ github.repository }}/releases/download/${TAG}"
           URL=""
-          # Try our naming patterns (filenames use upstream version, not fork tag)
-          for PATTERN in \
-            "Bambu_Studio_ubuntu-24.04_V${UPSTREAM_VER}.AppImage" \
-            "Bambu_Studio_ubuntu-22.04_V${UPSTREAM_VER}.AppImage" \
-            "BambuStudio_linux_amd64_${TAG}.AppImage"; do
-            CANDIDATE="${BASE}/${PATTERN}"
-            if curl -sIf "$CANDIDATE" >/dev/null 2>&1; then
-              URL="$CANDIDATE"
-              break
-            fi
-          done
+          # Primary: use GitHub API — handles any filename format (version includes commit count)
+          URL=$(gh release view "${TAG}" --repo "${{ github.repository }}" --json assets \
+            --jq '[.assets[] | select(.name | test("ubuntu-24\\.04.*\\.AppImage$"; "i"))] | .[0].browser_download_url // ""')
+          # Legacy fallback: explicit patterns for older releases
+          if [[ -z "$URL" ]]; then
+            for PATTERN in \
+              "Bambu_Studio_ubuntu-24.04_V${UPSTREAM_VER}.AppImage" \
+              "Bambu_Studio_ubuntu-22.04_V${UPSTREAM_VER}.AppImage" \
+              "BambuStudio_linux_amd64_${TAG}.AppImage"; do
+              CANDIDATE="${BASE}/${PATTERN}"
+              if curl -sIf "$CANDIDATE" >/dev/null 2>&1; then
+                URL="$CANDIDATE"
+                break
+              fi
+            done
+          fi
           if [[ -z "$URL" ]]; then
             echo "::error::No AppImage asset found for tag $TAG"
             exit 1

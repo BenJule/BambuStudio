@@ -78,7 +78,7 @@ jobs:
           $date = Get-Date -Format 'yyyyMMdd'
           $count = git rev-list --count HEAD
           if ($env:EVENT_NAME -eq 'pull_request') {
-              $ver = "PR$env:PR_NUMBER"
+              $ver = "PR-$env:PR_NUMBER"
           } else {
               $versionContent = Get-Content version.inc -Raw
               if ($versionContent -match 'set\(SLIC3R_VERSION_BASE "(.*?)"\)') {
