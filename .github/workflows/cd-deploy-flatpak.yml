@@ -76,32 +76,38 @@ jobs:
           TAG="${{ steps.tag.outputs.tag }}"
           VER="${TAG#v}"                    # 02.07.00.55-fork.1
           UPSTREAM_VER="${VER%-fork.*}"    # 02.07.00.55  (filename only uses upstream ver)
-          # Try explicit naming patterns first (versioned releases)
-          for PATTERN in \
-            "Bambu_Studio_ubuntu-24.04_V${UPSTREAM_VER}.AppImage" \
-            "Bambu_Studio_ubuntu-22.04_V${UPSTREAM_VER}.AppImage" \
-            "BambuStudio_linux_x86_64_${TAG}.AppImage" \
-            "BambuStudio_linux_amd64_${TAG}.AppImage" \
-            "BambuStudio-${TAG}-linux-x86_64.AppImage" \
-            "BambuStudio.AppImage"; do
-            URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${PATTERN}"
-            if curl -sIf "$URL" >/dev/null 2>&1; then
-              echo "Downloading: $URL"
-              curl -L -o BambuStudio.AppImage "$URL"
-              echo "url=$URL" >> "$GITHUB_OUTPUT"
-              break
-            fi
-          done
-          # Fallback: pick first ubuntu-24.04 AppImage asset from the release (handles nightly tags)
-          if [[ ! -f BambuStudio.AppImage ]]; then
-            ASSET_URL=$(gh release view "${TAG}" --repo "${{ github.repository }}" \
-              --json assets --jq \
-              '[.assets[] | select(.name | test("ubuntu-24.04[^a-z-].*\\.AppImage$"; "i"))] | .[0].url // ""')
-            if [[ -n "${ASSET_URL}" ]]; then
-              echo "Fallback download: ${ASSET_URL}"
-              curl -L -o BambuStudio.AppImage "${ASSET_URL}"
+          # Primary: find the GitHub-hosted ubuntu-24.04 amd64 AppImage via API (name pattern: BambuStudio_ubuntu-24.04_amd64_*.AppImage, excluding _selfhosted)
+          ASSET_URL=$(gh release view "${TAG}" --repo "${{ github.repository }}" \
+            --json assets --jq \
+            '[.assets[] | select((.name | test("^BambuStudio_ubuntu-24\\.04_amd64_.*\\.AppImage$"; "i")) and (.name | test("_selfhosted\\.AppImage$"; "i") | not))] | .[0].browser_download_url // ""')
+          if [[ -n "${ASSET_URL}" ]]; then
+            echo "Downloading: ${ASSET_URL}"
+            if curl -fL -o BambuStudio.AppImage "${ASSET_URL}"; then
               echo "url=${ASSET_URL}" >> "$GITHUB_OUTPUT"
+            else
+              rm -f BambuStudio.AppImage
             fi
+          fi
+          # Legacy fallback: explicit patterns for older releases
+          if [[ ! -f BambuStudio.AppImage ]]; then
+            for PATTERN in \
+              "Bambu_Studio_ubuntu-24.04_V${UPSTREAM_VER}.AppImage" \
+              "Bambu_Studio_ubuntu-22.04_V${UPSTREAM_VER}.AppImage" \
+              "BambuStudio_linux_x86_64_${TAG}.AppImage" \
+              "BambuStudio_linux_amd64_${TAG}.AppImage" \
+              "BambuStudio-${TAG}-linux-x86_64.AppImage" \
+              "BambuStudio.AppImage"; do
+              URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${PATTERN}"
+              if curl -sIf "$URL" >/dev/null 2>&1; then
+                echo "Fallback download: $URL"
+                if curl -fL -o BambuStudio.AppImage "$URL"; then
+                  echo "url=$URL" >> "$GITHUB_OUTPUT"
+                  break
+                else
+                  rm -f BambuStudio.AppImage
+                fi
+              fi
+            done
           fi
           if [[ ! -f BambuStudio.AppImage ]]; then
             echo "::error::No AppImage found for tag $TAG"

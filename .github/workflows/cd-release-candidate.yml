@@ -75,7 +75,7 @@ jobs:
       - name: Download Ubuntu 24.04 AppImage from this run
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v4
         with:
-          pattern: BambuStudio_Linux_AppImage_ubuntu-24.04_amd64_*
+          pattern: BambuStudio_ubuntu-24.04_amd64_*_appimage
           merge-multiple: true
 
       - name: Install Flatpak toolchain
