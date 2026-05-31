@@ -8,12 +8,36 @@ on:
         description: 'Artifact retention days'
         type: number
         default: 14
+      skip-debian:
+        description: 'Skip Debian trixie .deb build'
+        type: boolean
+        default: false
+      skip-fedora:
+        description: 'Skip Fedora 42 .rpm build'
+        type: boolean
+        default: false
+      skip-ubuntu:
+        description: 'Skip Ubuntu AppImage + .deb builds (self-hosted)'
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       retention-days:
         description: 'Artifact retention days'
         type: number
         default: 14
+      skip-debian:
+        description: 'Skip Debian trixie .deb build'
+        type: boolean
+        default: false
+      skip-fedora:
+        description: 'Skip Fedora 42 .rpm build'
+        type: boolean
+        default: false
+      skip-ubuntu:
+        description: 'Skip Ubuntu AppImage + .deb builds (self-hosted)'
+        type: boolean
+        default: false
 
 permissions: read-all
 concurrency:
@@ -24,6 +48,11 @@ jobs:
   # ── Container builds — Debian .deb and Fedora .rpm ───────────────────────
   build_container:
     name: Linux / ${{ matrix.name }}
+    # Skip individual matrix entries based on skip-* inputs.
+    # Logic: run unless this entry's specific skip flag is set.
+    if: |
+      (matrix.artifact_suffix != 'debian-trixie_deb' || !inputs.skip-debian) &&
+      (matrix.artifact_suffix != 'fedora42_rpm'      || !inputs.skip-fedora)
     runs-on: ubuntu-24.04
     timeout-minutes: 150
     container: ${{ matrix.container }}
@@ -103,6 +132,7 @@ jobs:
   # ── Self-hosted distro runners — non-blocking ─────────────────────────────
   build_selfhosted:
     name: Linux / ${{ matrix.name }}
+    if: ${{ !inputs.skip-ubuntu }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
     continue-on-error: true
