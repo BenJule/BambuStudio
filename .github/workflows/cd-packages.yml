@@ -118,10 +118,11 @@ jobs:
           Xvfb :99 -screen 0 1280x800x24 &
           sleep 2
 
-          # Run bambustudio headlessly for up to 20s and capture all output
+          # Run bambustudio headlessly for up to 20s and capture all output.
+          # Use || to prevent bash -e from exiting on timeout's non-zero code (124).
+          EXIT=0
           DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 \
-            timeout 20 ./build/src/bambu-studio > /tmp/smoke.log 2>&1
-          EXIT=$?
+            timeout 20 ./build/src/bambu-studio > /tmp/smoke.log 2>&1 || EXIT=$?
 
           kill %1 2>/dev/null || true   # stop Xvfb
 
