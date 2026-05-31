@@ -252,7 +252,11 @@ jobs:
       - name: Generate commit changelog
         run: |
           set -euo pipefail
-          last_nightly=$(git tag --sort=-version:refname | grep '^nightly-' | head -1 || true)
+          current_tag="${{ steps.ver.outputs.tag }}"
+          last_nightly=$(git tag --sort=-version:refname \
+            | grep '^nightly-' \
+            | grep -v "^${current_tag}$" \
+            | head -1 || true)
           if [[ -n "$last_nightly" ]]; then
             SINCE="since \`${last_nightly}\`"
             LOG=$(git log --oneline --no-merges "${last_nightly}..HEAD" 2>/dev/null | head -50 || true)
