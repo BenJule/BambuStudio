@@ -182,9 +182,9 @@ jobs:
         run: |
           set -euo pipefail
           current_tag="${{ steps.ver.outputs.tag }}"
-          # Base: last stable release tag (no nightly-*, no -rc.)
-          prev_stable=$(git tag --list 'v*' --sort=-creatordate \
-            | grep -v '\-rc\.' \
+          # Base: last stable release tag (matches -bj.N or -dev, excludes -rc.)
+          prev_stable=$(git tag --sort=-creatordate \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-(bj\.[0-9]+|dev)$' \
             | grep -v "^${current_tag}$" \
             | head -1 || true)
           if [[ -n "$prev_stable" ]]; then
