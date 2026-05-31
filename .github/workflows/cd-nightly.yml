@@ -166,15 +166,19 @@ jobs:
 
       - name: Export Flatpak bundle
         run: |
+          ver=$(grep 'set(SLIC3R_VERSION_BASE' version.inc | cut -d '"' -f2)
+          sha=$(git rev-parse --short=7 HEAD)
+          FLATPAK_NAME="BambuStudio_linux_amd64_${ver}-dev.$(date -u +%Y%m%d)+git.${sha}.flatpak"
+          echo "FLATPAK_NAME=${FLATPAK_NAME}" >> "$GITHUB_ENV"
           flatpak build-bundle \
             --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
-            flatpak-repo BambuStudio_nightly.flatpak com.bambulab.BambuStudio
+            flatpak-repo "${FLATPAK_NAME}" com.bambulab.BambuStudio
 
       - name: Upload Flatpak artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
-          name: BambuStudio_flatpak_nightly
-          path: BambuStudio_nightly.flatpak
+          name: BambuStudio_linux_amd64_flatpak_nightly
+          path: ${{ env.FLATPAK_NAME }}
           retention-days: 3
 
   # ── 4. Publish — after all builds, requires at least one artifact ─────────
