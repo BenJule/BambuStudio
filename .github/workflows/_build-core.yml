@@ -185,7 +185,7 @@ jobs:
           # Symlink inside the volume (not pointing at the live host /Applications)
           ln -s /Applications "$MOUNT_DIR/Applications"
           hdiutil detach "$MOUNT_DIR"
-          hdiutil convert "$RW_DMG" -format UDZO \
+          hdiutil convert "$RW_DMG" -format UDZO -ov \
             -o "${{ github.workspace }}/$DMG_NAME"
 
       - name: Upload artifacts mac
