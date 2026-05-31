@@ -70,14 +70,10 @@ jobs:
 
       - name: Create signed tag (workflow_dispatch only)
         if: github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
           git tag -s "$TAG" -m "BambuStudio $TAG"
-          TAG_SHA=$(git rev-parse "$TAG")
-          gh api repos/${{ github.repository }}/git/refs \
-            -X POST -f ref="refs/tags/${TAG}" -f sha="${TAG_SHA}"
+          git push origin "$TAG"
 
       - name: Show tag
         run: echo "Releasing ${{ steps.tag.outputs.tag }}"
