@@ -168,16 +168,20 @@ jobs:
   build_slow:
     name: Build ${{ matrix.os }}
     needs: [prepare]
+    continue-on-error: ${{ matrix.optional == true }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: macos-15-intel
             arch: x86_64
+            optional: true
           - os: macos-15
             arch: universal
+            optional: true
           - os: macos-26
             arch: universal
+            optional: true
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: ${{ matrix.os }}
