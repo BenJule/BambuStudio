@@ -443,17 +443,20 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
 
     sizer->Add(m_main_sizer, 1, wxEXPAND);
 #ifdef __WXGTK__
-    // On Wayland the window is not yet realized when the constructor runs.
-    // BBLTopbar::GetBestSize() can return width 0 before realization, which
-    // triggers GTK's hard assertion 'gtk_window_resize: width > 0'. Setting a
-    // minimum client size here prevents Fit() (called inside SetSizerAndFit)
-    // from collapsing the window geometry to an invalid size.
+    // On Wayland the window is not yet realized during construction.
+    // SetSizerAndFit/SetSizeHints both call gtk_window_resize before the
+    // compositor has mapped the window, triggering the 'width > 0' assertion.
+    // Use SetSizer (no implicit Fit) and defer all size operations to CallAfter.
     SetMinClientSize(wxSize(400, 300));
-#endif
+    SetSizer(sizer);
+#else
     SetSizerAndFit(sizer);
+#endif
     // initialize layout from config
     update_layout();
+#ifndef __WXGTK__
     sizer->SetSizeHints(this);
+#endif
 
     // BBS: fix taskbar overlay on windows
 #ifdef WIN32
@@ -486,10 +489,10 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
 #endif // WIN32
     // BBS
 #ifdef __WXGTK__
-    // Defer the final SetSize/Layout until the event loop starts and the
-    // Wayland compositor has realized the window, avoiding further
-    // 'gtk_window_resize: width > 0' assertions.
+    // Defer SetSizeHints/SetSize/Layout until the event loop starts so the
+    // Wayland compositor has realized the window before any resize calls.
     CallAfter([this]() {
+        if (auto* s = GetSizer()) s->SetSizeHints(this);
         const wxSize min_size = wxGetApp().get_min_size();
         SetMinSize(min_size);
         SetSize(wxSize(FromDIP(1200), FromDIP(800)));
