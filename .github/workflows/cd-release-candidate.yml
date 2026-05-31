@@ -147,6 +147,7 @@ jobs:
       needs.build_flatpak.result != 'skipped'
     outputs:
       tag: ${{ steps.ver.outputs.tag }}
+      published: ${{ steps.publish_rc.outputs.published }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -190,7 +191,7 @@ jobs:
             SINCE="since \`${prev_stable}\`"
             LOG=$(git log --oneline --no-merges "${prev_stable}..HEAD" 2>/dev/null | head -100 || true)
           else
-            SINCE="(full history)"
+            SINCE="(last 50 commits)"
             LOG=$(git log --oneline --no-merges -50 2>/dev/null || true)
           fi
           {
@@ -249,6 +250,7 @@ jobs:
           git push origin "${{ steps.ver.outputs.tag }}"
 
       - name: Publish RC pre-release
+        id: publish_rc
         if: steps.check.outputs.n > 0
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -268,12 +270,13 @@ jobs:
             --notes-file /tmp/release-notes.md \
             --prerelease \
             "${FILES[@]}"
+          echo "published=true" >> "$GITHUB_OUTPUT"
 
   # ── 5. Post-publish smoke test (warning only, no rollback) ───────────────
   smoke_test:
     name: Smoke test .deb (RC)
     needs: [publish]
-    if: needs.publish.result == 'success'
+    if: needs.publish.result == 'success' && needs.publish.outputs.published == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     continue-on-error: true
