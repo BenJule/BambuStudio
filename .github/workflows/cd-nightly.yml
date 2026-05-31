@@ -167,7 +167,7 @@ jobs:
       - name: Export Flatpak bundle
         run: |
           set -euo pipefail
-          ver=$(grep 'set(SLIC3R_VERSION_BASE' version.inc | cut -d '"' -f2)
+          ver=$(grep -m1 'set(SLIC3R_VERSION_BASE' version.inc | cut -d '"' -f2 || true)
           : "${ver:?Failed to parse SLIC3R_VERSION_BASE from version.inc}"
           sha=$(git rev-parse --short=7 HEAD)
           FLATPAK_NAME="BambuStudio_linux_amd64_${ver}-dev.$(date -u +%Y%m%d)+git.${sha}.flatpak"
