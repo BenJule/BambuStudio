@@ -1,4 +1,4 @@
-name: Homebrew Cask Update
+name: 'CD: Homebrew Cask'
 run-name: "Homebrew update — ${{ github.event.release.tag_name || inputs.version || 'latest' }}"
 
 on:

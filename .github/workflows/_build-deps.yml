@@ -1,3 +1,4 @@
+name: '_: Build Deps'
 on:
   workflow_call:
     inputs:

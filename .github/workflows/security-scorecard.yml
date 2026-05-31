@@ -1,4 +1,4 @@
-name: OpenSSF Scorecard
+name: 'Security: Scorecard'
 run-name: "Scorecard — ${{ github.ref_name }}"
 
 on:

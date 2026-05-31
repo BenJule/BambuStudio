@@ -1,4 +1,4 @@
-name: Check Cache
+name: '_: Check Cache'
 
 on:
   workflow_call:

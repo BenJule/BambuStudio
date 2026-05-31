@@ -1,4 +1,4 @@
-name: Release
+name: 'CD: Release'
 run-name: "Release ${{ github.ref_name || inputs.tag }}"
 
 on:

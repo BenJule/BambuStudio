@@ -1,4 +1,4 @@
-name: Nightly Pre-Release
+name: 'CD: Nightly Pre-Release'
 run-name: "Nightly #${{ github.run_number }}"
 
 on:

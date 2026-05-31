@@ -1,4 +1,4 @@
-name: Build Packages
+name: 'CD: Build Packages'
 run-name: "Build packages — ${{ github.actor }}"
 
 on:

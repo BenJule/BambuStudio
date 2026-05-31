@@ -1,4 +1,4 @@
-name: APT Repository Update
+name: 'CD: APT Repository'
 run-name: "APT update — ${{ github.event.release.tag_name || inputs.tag || 'latest' }}"
 
 on:

@@ -1,4 +1,4 @@
-name: Build BambuStudio
+name: '_: Build BambuStudio'
 
 on:
   workflow_call:
