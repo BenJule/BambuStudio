@@ -486,7 +486,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
 #endif // WIN32
     // BBS
 #ifdef __WXGTK__
-    // Defer the final Fit/SetSize/Layout until the event loop starts and the
+    // Defer the final SetSize/Layout until the event loop starts and the
     // Wayland compositor has realized the window, avoiding further
     // 'gtk_window_resize: width > 0' assertions.
     CallAfter([this]() {
