@@ -2,6 +2,7 @@
 # BambuStudio
 
 [![Nightly Build](https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml/badge.svg)](https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml)
+[![Release](https://github.com/BenJule/BambuStudio/actions/workflows/cd-release.yml/badge.svg)](https://github.com/BenJule/BambuStudio/actions/workflows/cd-release.yml)
 [![PR Build](https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml/badge.svg)](https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/BenJule/BambuStudio/badge)](https://securityscorecards.dev/viewer/?uri=github.com/BenJule/BambuStudio)
 
