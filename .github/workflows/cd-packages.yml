@@ -82,14 +82,40 @@ jobs:
       - name: Fix permissions
         run: chown -R "$(id -u):$(id -g)" ./
 
+      - name: Install and configure ccache
+        run: |
+          apt-get install -y --no-install-recommends ccache
+          echo "/usr/lib/ccache" >> "$GITHUB_PATH"
+          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
+
+      - name: Restore ccache
+        id: ccache-restore
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-debian-trixie-${{ hashFiles('src/**/*.cpp', 'src/**/*.c', 'src/**/*.h', 'src/**/*.hpp') }}
+          restore-keys: |
+            ccache-debian-trixie-
+
       - name: Build deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: ./BuildLinux.sh -dfr
 
       - name: Build BambuStudio
+        id: build-bambu
         run: |
+          ccache --zero-stats
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
+          ccache --show-stats
+
+      - name: Save ccache
+        if: steps.build-bambu.outcome == 'success' && steps.ccache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-debian-trixie-${{ hashFiles('src/**/*.cpp', 'src/**/*.c', 'src/**/*.h', 'src/**/*.hpp') }}
 
       - name: Build package
         run: ./BuildLinux.sh -pr
