@@ -38,6 +38,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           lfs: 'true'
+          fetch-depth: 0
 
       - name: load cached deps
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
@@ -57,10 +58,11 @@ jobs:
         run: |
           set -euo pipefail
           ver_pure=$(grep 'set(SLIC3R_VERSION_BASE' version.inc | cut -d '"' -f2)
+          count=$(git rev-list --count HEAD)
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
             ver="PR-${PR_NUMBER}"
           else
-            ver="V${ver_pure}"
+            ver="V${ver_pure}.${count}"
           fi
           echo "ver=$ver" >> "$GITHUB_ENV"
           echo "ver_pure=$ver_pure" >> "$GITHUB_ENV"
@@ -74,12 +76,13 @@ jobs:
           PR_NUMBER: ${{ github.event.number }}
         run: |
           $date = Get-Date -Format 'yyyyMMdd'
+          $count = git rev-list --count HEAD
           if ($env:EVENT_NAME -eq 'pull_request') {
               $ver = "PR$env:PR_NUMBER"
           } else {
               $versionContent = Get-Content version.inc -Raw
               if ($versionContent -match 'set\(SLIC3R_VERSION_BASE "(.*?)"\)') {
-                  $ver = "V$($matches[1])"
+                  $ver = "V$($matches[1]).$count"
               } else {
                   $ver = "Vunknown"
               }
@@ -266,6 +269,16 @@ jobs:
         shell: bash
         run: sudo chown $USER -R ./
 
+      - name: Set Linux arch label
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          if [[ "$(uname -m)" == "aarch64" ]]; then
+            echo "linux_arch=arm64" >> "$GITHUB_ENV"
+          else
+            echo "linux_arch=amd64" >> "$GITHUB_ENV"
+          fi
+
       - name: Restore ccache (Linux)
         if: runner.os == 'Linux'
         id: ccache-restore-linux
@@ -299,16 +312,6 @@ jobs:
         with:
           path: ~/.ccache
           key: ccache-${{ inputs.os }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.h', 'src/**/*.hpp') }}
-
-      - name: Set Linux arch label
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          if [[ "$(uname -m)" == "aarch64" ]]; then
-            echo "linux_arch=arm64" >> "$GITHUB_ENV"
-          else
-            echo "linux_arch=amd64" >> "$GITHUB_ENV"
-          fi
 
       - name: Upload artifacts Ubuntu AppImage
         if: ${{ ! env.ACT && runner.os == 'Linux' }}
