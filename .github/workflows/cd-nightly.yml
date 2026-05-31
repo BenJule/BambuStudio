@@ -427,7 +427,7 @@ jobs:
             --repo "${{ github.repository }}" \
             --pattern "bambustudio_*_amd64.deb" \
             --dir ./smoke/ || {
-            echo "::error::No bambustudio_*_amd64.deb found in release $TAG"
+            echo "::error::gh release download failed for release $TAG (auth/network error or pattern bambustudio_*_amd64.deb matched no assets)"
             exit 1
           }
           DEB=$(find ./smoke/ -name "*.deb" | head -1)
