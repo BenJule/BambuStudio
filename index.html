@@ -367,6 +367,34 @@
     }
     .footer-bottom span { font-size: 12px; color: var(--c-fg-muted); }
 
+    /* ── Platform pills (hero) ── */
+    .hero-platforms {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      align-items: center; gap: 8px; margin-top: 24px;
+    }
+    .hero-platforms-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
+      text-transform: uppercase; color: rgba(255,255,255,0.4);
+      margin-right: 4px;
+    }
+    .hero-platform-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 20px; padding: 5px 13px;
+      color: rgba(255,255,255,0.82); font-size: 12px; font-weight: 500;
+      text-decoration: none; transition: background 80ms, border-color 80ms;
+      cursor: pointer;
+    }
+    .hero-platform-pill:hover {
+      background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.28);
+      text-decoration: none; color: #fff;
+    }
+    .hp-sub {
+      font-size: 10px; opacity: 0.6; font-weight: 400;
+      background: rgba(255,255,255,0.12); border-radius: 10px;
+      padding: 1px 6px; margin-left: 2px;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 640px) {
       .hero h1 { font-size: 28px; }
@@ -440,6 +468,15 @@
     <a class="btn btn-secondary" href="#install">
       Installation Guide
     </a>
+  </div>
+  <div class="hero-platforms">
+    <span class="hero-platforms-label">Available on</span>
+    <a href="#apt" class="hero-platform-pill">🐧 Debian / Ubuntu <span class="hp-sub">APT</span></a>
+    <a href="#tab-aur" class="hero-platform-pill" onclick="document.getElementById('install').scrollIntoView(); switchTabById('tab-aur')">🎯 Arch Linux <span class="hp-sub">AUR</span></a>
+    <a href="#tab-appimage" class="hero-platform-pill" onclick="document.getElementById('install').scrollIntoView(); switchTabById('tab-appimage')">📀 Linux <span class="hp-sub">AppImage</span></a>
+    <a href="https://flathub.org/apps/com.bambulab.BambuStudio" target="_blank" class="hero-platform-pill">📦 Linux <span class="hp-sub">Flatpak</span></a>
+    <a href="#tab-mac" class="hero-platform-pill" onclick="document.getElementById('install').scrollIntoView(); switchTabById('tab-mac')">🍎 macOS <span class="hp-sub">Homebrew</span></a>
+    <a href="#tab-win" class="hero-platform-pill" onclick="document.getElementById('install').scrollIntoView(); switchTabById('tab-win')">🪟 Windows <span class="hp-sub">winget</span></a>
   </div>
 </header>
 
@@ -867,6 +904,18 @@ sudo apt update &amp;&amp; sudo apt install bambu-studio</pre>
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     e.target.classList.add('active');
     document.getElementById(id).classList.add('active');
+  }
+
+  function switchTabById(id) {
+    const panel = document.getElementById(id);
+    if (!panel) return;
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    panel.classList.add('active');
+    const idx = ['tab-apt','tab-aur','tab-appimage','tab-mac','tab-win'].indexOf(id);
+    const btns = document.querySelectorAll('.tab-btn');
+    if (btns[idx]) btns[idx].classList.add('active');
+    setTimeout(() => document.getElementById('install').scrollIntoView({behavior:'smooth'}), 50);
   }
 
   function copyCode(btn) {
