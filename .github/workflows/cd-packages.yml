@@ -90,10 +90,10 @@ jobs:
         run: |
           # -sfr disables the memory formula (DISABLE_PARALLEL_LIMIT=1) and
           # leaves CMAKE_BUILD_PARALLEL_LEVEL unset → cmake falls back to nproc (8).
-          # 8 × ~3 GB cc1plus peaks exceed available RAM+swap → OOM.
-          # Pre-setting CMAKE_BUILD_PARALLEL_LEVEL caps it at 4 jobs; the -f flag
-          # skips the formula so our value is preserved.
-          export CMAKE_BUILD_PARALLEL_LEVEL=4
+          # Ubuntu AppImage builds run in parallel VMs on the same physical host,
+          # consuming shared RAM. 4 jobs caused OOM when Ubuntu builds were active.
+          # 2 jobs keeps Debian within the 6G cgroup limit even under shared load.
+          export CMAKE_BUILD_PARALLEL_LEVEL=2
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
 
