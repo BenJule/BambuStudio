@@ -50,7 +50,7 @@ jobs:
     name: Linux / Debian trixie .deb
     if: ${{ !inputs.skip-debian }}
     runs-on: [self-hosted, debian-trixie]
-    timeout-minutes: 90
+    timeout-minutes: 150
     permissions: read-all
     env:
       CCACHE_DIR: /var/cache/github-runner-debian/ccache
@@ -84,7 +84,7 @@ jobs:
       - name: Build BambuStudio
         id: build-bambu
         run: |
-          ./BuildLinux.sh -sfr
+          ./BuildLinux.sh -sr
           cd build && ./src/BuildLinuxImage.sh
 
       - name: Smoke test
