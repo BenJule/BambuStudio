@@ -49,9 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           arch_suffix="${INPUT_ARCH:+-${INPUT_ARCH}}"
-          # Strip -N-cores suffix so larger runners share the same deps cache
-          os_base="${INPUT_OS//-[0-9]*-cores/}"
-          echo "cache-key=${os_base}${arch_suffix}-cache-bambustudio_deps-build-${DEPS_HASH}" >> "$GITHUB_OUTPUT"
+          echo "cache-key=${INPUT_OS}${arch_suffix}-cache-bambustudio_deps-build-${DEPS_HASH}" >> "$GITHUB_OUTPUT"
           echo "cache-path=${GITHUB_WORKSPACE}/deps/build${DEP_FOLDER}"          >> "$GITHUB_OUTPUT"
 
       - name: Lookup cache (no restore)
