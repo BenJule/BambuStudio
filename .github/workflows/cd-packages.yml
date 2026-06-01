@@ -50,7 +50,7 @@ jobs:
     name: Linux / Debian trixie .deb
     if: ${{ !inputs.skip-debian }}
     runs-on: [self-hosted, debian-trixie]
-    timeout-minutes: 150
+    timeout-minutes: 180
     permissions: read-all
     env:
       CCACHE_DIR: /var/cache/github-runner-debian/ccache
