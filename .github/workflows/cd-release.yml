@@ -264,6 +264,57 @@ jobs:
             --latest \
             "${ASSETS[@]}"
 
+  # ── Attach macOS + ARM64 Windows after slow builds finish ───────────────────
+  attach_slow:
+    name: Attach macOS + ARM64 Windows to release
+    needs: [prepare, create_release, build_slow]
+    if: always() && needs.create_release.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Download macOS artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v4
+        with:
+          path: slow-assets/
+          pattern: BambuStudio_macos-*
+          merge-multiple: true
+
+      - name: Download Windows ARM64 artifact
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v4
+        with:
+          path: slow-assets/
+          pattern: BambuStudio_windows_arm64_*
+          merge-multiple: true
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ needs.prepare.outputs.tag }}"
+          mapfile -t FILES < <(find slow-assets/ -type f 2>/dev/null | sort)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No slow-build artifacts found — nothing to attach"
+            exit 0
+          fi
+          echo "Attaching ${#FILES[@]} file(s) to release $TAG:"
+          printf '  %s\n' "${FILES[@]}"
+          gh release upload "$TAG" "${FILES[@]}" \
+            --repo "${{ github.repository }}" \
+            --clobber
+          echo "### Slow-build assets attached to release" >> "$GITHUB_STEP_SUMMARY"
+          printf -- '- %s\n' "${FILES[@]##*/}" >> "$GITHUB_STEP_SUMMARY"
+
   smoke_test:
     name: Smoke test .deb
     needs: [prepare, create_release]
