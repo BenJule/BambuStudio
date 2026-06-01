@@ -206,10 +206,6 @@ jobs:
         with:
           arch: ${{ inputs.arch == 'arm64' && 'amd64_arm64' || 'amd64' }}
 
-      - name: Setup sccache
-        if: runner.os == 'Windows'
-        uses: mozilla-actions/sccache-action@d651010b8da762cde178750d8eda7b5febfe147a  # v0.0.9
-
       - name: Install nsis and pkgconfig
         if: runner.os == 'Windows'
         shell: pwsh
@@ -221,7 +217,15 @@ jobs:
           if (-not (Test-Path "$msys2Root\usr\bin\pacman.exe")) {
             $msys2Root = "C:\tools\msys64"
             if (-not (Test-Path "$msys2Root\usr\bin\pacman.exe")) {
-              choco install msys2 -y --no-progress
+              # Retry up to 3 times — Chocolatey community feed occasionally returns 504
+              $installed = $false
+              for ($attempt = 1; $attempt -le 3; $attempt++) {
+                Write-Host "Installing MSYS2 via Chocolatey (attempt $attempt/3)..."
+                choco install msys2 -y --no-progress
+                if (Test-Path "$msys2Root\usr\bin\pacman.exe") { $installed = $true; break }
+                if ($attempt -lt 3) { Start-Sleep -Seconds 30 }
+              }
+              if (-not $installed) { throw "Failed to install MSYS2 after 3 attempts (Chocolatey feed unavailable)" }
             }
           }
           & "$msys2Root\usr\bin\pacman.exe" -S --noconfirm mingw-w64-x86_64-pkgconf
@@ -262,22 +266,12 @@ jobs:
           cmake .. -G Ninja `
             -DCMAKE_C_COMPILER=cl.exe `
             -DCMAKE_CXX_COMPILER=cl.exe `
-            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
-            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
-            "-DCMAKE_POLICY_DEFAULT_CMP0141=NEW" `
-            "-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded" `
             -DBBL_RELEASE_TO_PUBLIC=1 -DBBL_INTERNAL_TESTING=0 `
             -DCMAKE_PREFIX_PATH="$depPath\usr\local" `
             -DCMAKE_INSTALL_PREFIX="../install-dir" `
             -DCMAKE_BUILD_TYPE=Release
           cmake --build . --target install
           Pop-Location
-
-      - name: sccache statistics
-        if: always() && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          sccache --show-stats | Tee-Object -Append -FilePath $env:GITHUB_STEP_SUMMARY
 
       - name: Pack app Win
         if: runner.os == 'Windows'
