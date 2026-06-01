@@ -84,7 +84,7 @@ jobs:
       - name: Build BambuStudio
         id: build-bambu
         run: |
-          ./BuildLinux.sh -sr
+          ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
 
       - name: Smoke test
