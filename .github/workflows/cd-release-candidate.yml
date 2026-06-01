@@ -29,13 +29,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-22.04-4-cores
             name: Linux / Ubuntu 22.04
-          - os: ubuntu-24.04
+          - os: ubuntu-24.04-4-cores
             name: Linux / Ubuntu 24.04
           - os: ubuntu-24.04-arm
             name: Linux / Ubuntu 24.04 ARM
-          - os: windows-2022
+          - os: windows-2022-4-cores
             arch: x64
             name: Windows / windows-2022 (x64)
           - os: windows-11-arm
