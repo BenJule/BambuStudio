@@ -28,7 +28,7 @@ jobs:
       tag: ${{ steps.tag.outputs.tag }}
       prev_tag: ${{ steps.tag.outputs.prev_tag }}
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Harden Runner
@@ -53,32 +53,12 @@ jobs:
             tag="v${base}.${count}-bj.0"
           fi
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
-          # Exclude the new tag itself (may not exist yet for workflow_dispatch)
+          # Exclude the new tag itself (does not exist yet for workflow_dispatch)
           prev_tag=$(git tag --sort=-version:refname \
             | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-(bj\.[0-9]+|dev)$' \
             | grep -v "^${tag}$" \
             | head -1 || echo "")
           echo "prev_tag=${prev_tag}" >> "$GITHUB_OUTPUT"
-
-      - name: Import GPG key
-        if: github.event_name == 'workflow_dispatch'
-        uses: ./.github/actions/setup-gpg
-        with:
-          signing-key: ${{ secrets.GIT_SIGNING_KEY }}
-          signing-key-passphrase: ${{ secrets.GIT_SIGNING_KEY_PASSPHRASE }}
-          signing-key-id: ${{ secrets.GIT_SIGNING_KEY_ID }}
-
-      - name: Create signed tag (workflow_dispatch only)
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          TAG="${{ steps.tag.outputs.tag }}"
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists locally — pushing to remote if needed"
-            git push origin "refs/tags/$TAG" 2>/dev/null || echo "Tag already on remote"
-          else
-            git tag -s "$TAG" -m "BambuStudio $TAG"
-            git push origin "$TAG"
-          fi
 
       - name: Show tag
         run: echo "Releasing ${{ steps.tag.outputs.tag }}"
@@ -220,6 +200,31 @@ jobs:
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
         with:
           egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          fetch-depth: 0
+
+      - name: Import GPG key
+        if: github.event_name == 'workflow_dispatch'
+        uses: ./.github/actions/setup-gpg
+        with:
+          signing-key: ${{ secrets.GIT_SIGNING_KEY }}
+          signing-key-passphrase: ${{ secrets.GIT_SIGNING_KEY_PASSPHRASE }}
+          signing-key-id: ${{ secrets.GIT_SIGNING_KEY_ID }}
+
+      - name: Create signed tag
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          TAG="${{ needs.prepare.outputs.tag }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists — pushing to remote if needed"
+            git push origin "refs/tags/$TAG" 2>/dev/null || echo "Already on remote"
+          else
+            git tag -s "$TAG" -m "BambuStudio $TAG"
+            git push origin "$TAG"
+          fi
 
       - name: Download all build artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v4
