@@ -55,6 +55,7 @@ jobs:
     env:
       CCACHE_DIR: /var/cache/github-runner-debian/ccache
       CCACHE_MAXSIZE: 5G
+      CCACHE_SLOPPINESS: pch_defines,time_macros
 
     steps:
       - name: Checkout
@@ -204,6 +205,7 @@ jobs:
           echo "/usr/lib64/ccache" >> "$GITHUB_PATH"
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
           echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
+          echo "CCACHE_SLOPPINESS=pch_defines,time_macros" >> "$GITHUB_ENV"
 
       - name: Restore ccache
         id: ccache-restore
@@ -325,6 +327,7 @@ jobs:
           echo "/usr/lib/ccache" >> "$GITHUB_PATH"
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
           echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
+          echo "CCACHE_SLOPPINESS=pch_defines,time_macros" >> "$GITHUB_ENV"
 
       - name: Restore ccache
         id: ccache-restore
