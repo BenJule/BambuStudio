@@ -196,6 +196,8 @@ jobs:
       - name: Setup MSVC developer environment
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@a102174a2b586eec2ea151a69e6fd14404a8ce7c  # v1.13.0
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
         with:
           arch: ${{ inputs.arch == 'arm64' && 'amd64_arm64' || 'amd64' }}
 
@@ -342,4 +344,5 @@ jobs:
         with:
           name: BambuStudio_${{ env.os_label }}_${{ env.linux_arch }}_${{ env.ver }}_appimage
           path: './build/BambuStudio_${{ env.os_label }}_${{ env.linux_arch }}_${{ env.ver }}.AppImage'
+
 
