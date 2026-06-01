@@ -54,6 +54,7 @@ jobs:
     permissions: read-all
     env:
       CCACHE_DIR: /var/cache/github-runner-debian/ccache
+      CCACHE_MAXSIZE: 5G
 
     steps:
       - name: Checkout
@@ -75,6 +76,8 @@ jobs:
       - name: Configure ccache
         run: |
           echo "/usr/lib/ccache" >> "$GITHUB_PATH"
+          ccache --max-size "$CCACHE_MAXSIZE"
+          echo "Cache size before build: $(ccache --show-stats | grep 'Cache size')"
           ccache --zero-stats
 
       - name: Build deps
