@@ -84,6 +84,12 @@ jobs:
       - name: Build BambuStudio
         id: build-bambu
         run: |
+          # -sfr disables the memory formula (DISABLE_PARALLEL_LIMIT=1) and
+          # leaves CMAKE_BUILD_PARALLEL_LEVEL unset → cmake falls back to nproc (8).
+          # 8 × ~3 GB cc1plus peaks exceed available RAM+swap → OOM.
+          # Pre-setting CMAKE_BUILD_PARALLEL_LEVEL caps it at 4 jobs; the -f flag
+          # skips the formula so our value is preserved.
+          export CMAKE_BUILD_PARALLEL_LEVEL=4
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
 
