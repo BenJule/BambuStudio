@@ -130,9 +130,18 @@ jobs:
           path: changelog.md
           retention-days: 7
 
+  build_packages:
+    name: Build Debian .deb + Fedora .rpm
+    needs: [prepare]
+    uses: ./.github/workflows/cd-packages.yml
+    with:
+      retention-days: 90
+    secrets: inherit
+
   build_fast:
     name: Build ${{ matrix.os }}
-    needs: [prepare]
+    needs: [prepare, build_packages]
+    if: needs.build_packages.result == 'success'
     strategy:
       fail-fast: false
       matrix:
@@ -151,7 +160,8 @@ jobs:
 
   build_slow:
     name: Build ${{ matrix.os }}
-    needs: [prepare]
+    needs: [prepare, build_packages]
+    if: needs.build_packages.result == 'success'
     strategy:
       fail-fast: false
       matrix:
@@ -169,15 +179,6 @@ jobs:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
       build-deps-only: false
-    secrets: inherit
-
-  build_packages:
-    name: Build Debian .deb + Fedora .rpm
-    needs: [prepare, build_fast]
-    if: needs.build_fast.result == 'success'
-    uses: ./.github/workflows/cd-packages.yml
-    with:
-      retention-days: 90
     secrets: inherit
 
   create_release:
