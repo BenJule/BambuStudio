@@ -97,10 +97,21 @@ jobs:
       build-deps-only: false
     secrets: inherit
 
+  rc_macos_26:
+    name: macOS / macOS 26
+    needs: [build_packages]
+    if: needs.build_packages.result == 'success'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: macos-26
+      arch: universal
+      build-deps-only: false
+    secrets: inherit
+
   # ── 3. Flatpak ────────────────────────────────────────────────────────────
   build_flatpak:
     name: Flatpak (x86_64)
-    needs: [rc_ubuntu_2204, rc_ubuntu_2404, rc_ubuntu_2404_arm, rc_windows_x64, rc_windows_arm, rc_macos_intel, rc_macos_15]
+    needs: [rc_ubuntu_2204, rc_ubuntu_2404, rc_ubuntu_2404_arm, rc_windows_x64, rc_windows_arm, rc_macos_intel, rc_macos_15, rc_macos_26]
     if: always() && needs.rc_ubuntu_2404.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -183,7 +194,7 @@ jobs:
   # ── 4. Publish RC release ─────────────────────────────────────────────────
   publish:
     name: Publish release candidate
-    needs: [build_packages, rc_ubuntu_2204, rc_ubuntu_2404, rc_ubuntu_2404_arm, rc_windows_x64, rc_windows_arm, rc_macos_intel, rc_macos_15, build_flatpak]
+    needs: [build_packages, rc_ubuntu_2204, rc_ubuntu_2404, rc_ubuntu_2404_arm, rc_windows_x64, rc_windows_arm, rc_macos_intel, rc_macos_15, rc_macos_26, build_flatpak]
     if: |
       always() &&
       needs.build_packages.result != 'skipped' &&
@@ -281,10 +292,14 @@ jobs:
 
       - name: Create signed RC tag
         if: steps.check.outputs.n > 0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.ver.outputs.tag }}"
           git tag -s "$TAG" -m "Release candidate ${{ steps.ver.outputs.date }}" HEAD
-          git push origin "$TAG"
+          TAG_SHA=$(git rev-parse "$TAG")
+          gh api repos/${{ github.repository }}/git/refs \
+            -X POST -f ref="refs/tags/${TAG}" -f sha="${TAG_SHA}"
 
       - name: Publish RC pre-release
         id: publish_rc
