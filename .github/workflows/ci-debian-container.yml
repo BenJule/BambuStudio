@@ -44,6 +44,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lowercase owner
+        run: echo "IMAGE_OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
       - name: Build and push
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
         with:
@@ -51,8 +54,8 @@ jobs:
           file: docker/Dockerfile.debian-trixie
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/bambu-debian-trixie:trixie
-            ghcr.io/${{ github.repository_owner }}/bambu-debian-trixie:latest
+            ghcr.io/${{ env.IMAGE_OWNER }}/bambu-debian-trixie:trixie
+            ghcr.io/${{ env.IMAGE_OWNER }}/bambu-debian-trixie:latest
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
