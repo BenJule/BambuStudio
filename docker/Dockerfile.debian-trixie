@@ -1,0 +1,10 @@
+FROM debian:trixie
+
+LABEL org.opencontainers.image.source="https://github.com/BenJule/BambuStudio"
+LABEL org.opencontainers.image.description="Debian trixie build environment for BambuStudio CI"
+LABEL org.opencontainers.image.licenses="AGPL-3.0"
+
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends \
+        sudo git curl git-lfs ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
