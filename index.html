@@ -574,7 +574,7 @@
       <div class="feature-card">
         <div class="feature-icon">&#127769;</div>
         <h3>Nightly Releases</h3>
-        <p>Automated nightly pre-releases built daily at 02:00 UTC from master. 14-day rolling history keeps the release page clean.</p>
+        <p>Automated nightly pre-releases built daily at 22:00 UTC from master. 14-day rolling history keeps the release page clean.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">&#129302;</div>
@@ -683,48 +683,66 @@ brew install --cask bambu-studio</pre>
         <tr>
           <td><strong>CI: PR Build</strong></td>
           <td>Every pull request</td>
-          <td>Debian, Fedora</td>
+          <td>Debian trixie, Fedora 42</td>
           <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml/badge.svg" alt="PR Build"></a></td>
         </tr>
         <tr>
           <td><strong>CI: Linux Build</strong></td>
           <td>PR / push</td>
-          <td>Ubuntu 22.04, 24.04, ARM</td>
+          <td>Ubuntu 22.04, 24.04, 24.04 ARM</td>
           <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/ci-build-linux.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/ci-build-linux.yml/badge.svg" alt="Linux"></a></td>
         </tr>
         <tr>
           <td><strong>CI: macOS Build</strong></td>
           <td>PR / push</td>
-          <td>macOS 15 Intel + ARM</td>
+          <td>macOS 15 Intel, macOS 15 ARM, macOS 26</td>
           <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/ci-build-macos.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/ci-build-macos.yml/badge.svg" alt="macOS"></a></td>
         </tr>
         <tr>
+          <td><strong>CI: Debian Container</strong></td>
+          <td>Weekly / Dockerfile change</td>
+          <td>ghcr.io debian:trixie image</td>
+          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/ci-debian-container.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/ci-debian-container.yml/badge.svg" alt="Debian Container"></a></td>
+        </tr>
+        <tr>
           <td><strong>CD: Nightly</strong></td>
-          <td>Daily 02:00 UTC</td>
-          <td>All platforms</td>
+          <td>Daily 22:00 UTC</td>
+          <td>All platforms + Flatpak</td>
           <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml/badge.svg" alt="Nightly"></a></td>
         </tr>
         <tr>
+          <td><strong>CD: Release Candidate</strong></td>
+          <td>Push to <code>release/**</code></td>
+          <td>All platforms + Flatpak</td>
+          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/cd-release-candidate.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/cd-release-candidate.yml/badge.svg" alt="Release Candidate"></a></td>
+        </tr>
+        <tr>
           <td><strong>CD: Release</strong></td>
-          <td>Version tag push</td>
-          <td>All platforms</td>
+          <td>Version tag / manual</td>
+          <td>All platforms + SBOM + Attestation</td>
           <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/cd-release.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/cd-release.yml/badge.svg" alt="Release"></a></td>
         </tr>
         <tr>
-          <td><strong>CD: Packages</strong></td>
+          <td><strong>CD: Build Packages</strong></td>
           <td>Manual / release</td>
-          <td>Debian, Fedora, Ubuntu</td>
+          <td>Debian trixie, Fedora 42</td>
           <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/cd-packages.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/cd-packages.yml/badge.svg" alt="Packages"></a></td>
         </tr>
         <tr>
           <td><strong>Security: CodeQL</strong></td>
-          <td>Push / PR / weekly</td>
-          <td>C++, JavaScript</td>
+          <td>Push to master / PR / weekly</td>
+          <td>C++</td>
           <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/security-codeql.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/security-codeql.yml/badge.svg" alt="CodeQL"></a></td>
         </tr>
         <tr>
+          <td><strong>Security: Dependency Review</strong></td>
+          <td>Every pull request</td>
+          <td>&mdash;</td>
+          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/security-dependency-review.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/security-dependency-review.yml/badge.svg" alt="Dependency Review"></a></td>
+        </tr>
+        <tr>
           <td><strong>OpenSSF Scorecard</strong></td>
-          <td>Weekly / push</td>
+          <td>Push to master / weekly</td>
           <td>&mdash;</td>
           <td><a href="https://securityscorecards.dev/viewer/?uri=github.com/BenJule/BambuStudio" target="_blank"><img src="https://api.securityscorecards.dev/projects/github.com/BenJule/BambuStudio/badge" alt="Scorecard"></a></td>
         </tr>
@@ -742,7 +760,7 @@ brew install --cask bambu-studio</pre>
         <span>Signed commit required; all status checks must be green; all conversations must be resolved</span>
       </li>
       <li class="done">
-        <strong>Nightly build (02:00 UTC)</strong>
+        <strong>Nightly build (22:00 UTC)</strong>
         <span>All platforms built and tested; pre-release published with 14-day rolling history</span>
       </li>
       <li>
