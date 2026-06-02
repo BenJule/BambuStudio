@@ -22,45 +22,86 @@ jobs:
       retention-days: 30
     secrets: inherit
 
-  # ── 2. GitHub-hosted platforms (Ubuntu AppImage, Windows, macOS) ──────────
-  build_platforms:
-    name: ${{ matrix.name }}
+  # ── 2. GitHub-hosted platforms — separate named jobs for independent re-runs
+  rc_ubuntu_2204:
+    name: Linux / Ubuntu 22.04
     needs: [build_packages]
     if: needs.build_packages.result == 'success'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            name: Linux / Ubuntu 22.04
-          - os: ubuntu-24.04
-            name: Linux / Ubuntu 24.04
-          - os: ubuntu-24.04-arm
-            name: Linux / Ubuntu 24.04 ARM
-          - os: windows-2022
-            arch: x64
-            name: Windows / windows-2022 (x64)
-          - os: windows-11-arm
-            arch: arm64
-            name: Windows / windows-11-arm (arm64)
-          - os: macos-15-intel
-            arch: x86_64
-            name: macOS / macOS 15 Intel
-          - os: macos-15
-            arch: universal
-            name: macOS / macOS 15 ARM Universal
     uses: ./.github/workflows/_build-cached.yml
     with:
-      os: ${{ matrix.os }}
-      arch: ${{ matrix.arch }}
+      os: ubuntu-22.04
+      build-deps-only: false
+    secrets: inherit
+
+  rc_ubuntu_2404:
+    name: Linux / Ubuntu 24.04
+    needs: [build_packages]
+    if: needs.build_packages.result == 'success'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: ubuntu-24.04
+      build-deps-only: false
+    secrets: inherit
+
+  rc_ubuntu_2404_arm:
+    name: Linux / Ubuntu 24.04 ARM
+    needs: [build_packages]
+    if: needs.build_packages.result == 'success'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: ubuntu-24.04-arm
+      build-deps-only: false
+    secrets: inherit
+
+  rc_windows_x64:
+    name: Windows / windows-2022 (x64)
+    needs: [build_packages]
+    if: needs.build_packages.result == 'success'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: windows-2022
+      arch: x64
+      build-deps-only: false
+    secrets: inherit
+
+  rc_windows_arm:
+    name: Windows / windows-11-arm (arm64)
+    needs: [build_packages]
+    if: needs.build_packages.result == 'success'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: windows-11-arm
+      arch: arm64
+      build-deps-only: false
+    secrets: inherit
+
+  rc_macos_intel:
+    name: macOS / macOS 15 Intel
+    needs: [build_packages]
+    if: needs.build_packages.result == 'success'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: macos-15-intel
+      arch: x86_64
+      build-deps-only: false
+    secrets: inherit
+
+  rc_macos_15:
+    name: macOS / macOS 15 ARM Universal
+    needs: [build_packages]
+    if: needs.build_packages.result == 'success'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: macos-15
+      arch: universal
       build-deps-only: false
     secrets: inherit
 
   # ── 3. Flatpak ────────────────────────────────────────────────────────────
   build_flatpak:
     name: Flatpak (x86_64)
-    needs: [build_platforms]
-    if: always() && needs.build_platforms.result != 'skipped'
+    needs: [rc_ubuntu_2204, rc_ubuntu_2404, rc_ubuntu_2404_arm, rc_windows_x64, rc_windows_arm, rc_macos_intel, rc_macos_15]
+    if: always() && needs.rc_ubuntu_2404.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
@@ -142,10 +183,10 @@ jobs:
   # ── 4. Publish RC release ─────────────────────────────────────────────────
   publish:
     name: Publish release candidate
-    needs: [build_packages, build_platforms, build_flatpak]
+    needs: [build_packages, rc_ubuntu_2204, rc_ubuntu_2404, rc_ubuntu_2404_arm, rc_windows_x64, rc_windows_arm, rc_macos_intel, rc_macos_15, build_flatpak]
     if: |
       always() &&
-      needs.build_platforms.result != 'skipped' &&
+      needs.build_packages.result != 'skipped' &&
       needs.build_flatpak.result != 'skipped'
     outputs:
       tag: ${{ steps.ver.outputs.tag }}
