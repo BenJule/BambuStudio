@@ -34,12 +34,61 @@ runs:
       shell: bash
       run: |
         if command -v bambustudio &>/dev/null; then
-          echo "OK: $(which bambustudio)"
+          BINARY=$(which bambustudio)
         elif [ -f /usr/lib/bambustudio/bin/bambu-studio ]; then
-          echo "OK: /usr/lib/bambustudio/bin/bambu-studio"
-          file /usr/lib/bambustudio/bin/bambu-studio
+          BINARY=/usr/lib/bambustudio/bin/bambu-studio
         else
           echo "::error::bambustudio binary not found after dpkg install"
           dpkg -L bambu-studio 2>/dev/null | head -30 || true
           exit 1
+        fi
+        echo "OK: $BINARY"
+        file "$BINARY"
+        echo "BAMBU_BINARY=$BINARY" >> "$GITHUB_ENV"
+
+    - name: Verify shared libraries
+      shell: bash
+      run: |
+        MISSING=$(ldd "$BAMBU_BINARY" 2>/dev/null | grep "not found" || true)
+        if [[ -n "$MISSING" ]]; then
+          echo "::error::Missing shared libraries in $BAMBU_BINARY:"
+          echo "$MISSING"
+          exit 1
+        fi
+        LIB_COUNT=$(ldd "$BAMBU_BINARY" 2>/dev/null | wc -l)
+        echo "OK: all $LIB_COUNT shared libraries resolved"
+
+    - name: Verify resources
+      shell: bash
+      run: |
+        RESOURCE_DIR=""
+        for d in /usr/lib/bambustudio/resources /usr/share/bambustudio/resources; do
+          [[ -d "$d" ]] && RESOURCE_DIR="$d" && break
+        done
+        if [[ -z "$RESOURCE_DIR" ]]; then
+          echo "::error::Resources directory not found under /usr/lib or /usr/share"
+          exit 1
+        fi
+        echo "Resource dir: $RESOURCE_DIR"
+        if [[ ! -d "$RESOURCE_DIR/profiles" ]]; then
+          echo "::error::Profiles directory missing from $RESOURCE_DIR"
+          exit 1
+        fi
+        PROFILE_COUNT=$(find "$RESOURCE_DIR/profiles" -name "*.json" 2>/dev/null | wc -l)
+        echo "OK: $PROFILE_COUNT printer profile files found"
+        IMAGE_COUNT=$(find "$RESOURCE_DIR" \( -name "*.svg" -o -name "*.png" \) 2>/dev/null | wc -l)
+        echo "OK: $IMAGE_COUNT image assets found"
+
+    - name: Check version string
+      shell: bash
+      run: |
+        PKG_VERSION=$(dpkg-query -W -f='${Version}' bambu-studio 2>/dev/null \
+          || dpkg-query -W -f='${Version}' bambustudio 2>/dev/null || true)
+        CLI_VERSION=$("$BAMBU_BINARY" --version 2>/dev/null | head -1 || true)
+        if [[ -n "$CLI_VERSION" ]]; then
+          echo "CLI version:     $CLI_VERSION"
+        fi
+        echo "Package version: ${PKG_VERSION:-(unknown)}"
+        if [[ -z "$PKG_VERSION" && -z "$CLI_VERSION" ]]; then
+          echo "::warning::Could not determine version from CLI or dpkg"
         fi
