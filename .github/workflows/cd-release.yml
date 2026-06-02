@@ -34,7 +34,10 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
@@ -158,25 +161,44 @@ jobs:
       build-deps-only: false
     secrets: inherit
 
-  build_slow:
-    name: Build ${{ matrix.os }}
+  # ── Slow builds: separate named jobs for independent re-runs ────────────────
+  build_macos_intel:
+    name: Build macos-15-intel
     needs: [prepare]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-15-intel
-            arch: x86_64
-          - os: macos-15
-            arch: universal
-          - os: macos-26
-            arch: universal
-          - os: windows-11-arm
-            arch: arm64
     uses: ./.github/workflows/_build-cached.yml
     with:
-      os: ${{ matrix.os }}
-      arch: ${{ matrix.arch }}
+      os: macos-15-intel
+      arch: x86_64
+      build-deps-only: false
+    secrets: inherit
+
+  build_macos_15:
+    name: Build macos-15
+    needs: [prepare]
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: macos-15
+      arch: universal
+      build-deps-only: false
+    secrets: inherit
+
+  build_macos_26:
+    name: Build macos-26
+    needs: [prepare]
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: macos-26
+      arch: universal
+      build-deps-only: false
+    secrets: inherit
+
+  build_windows_arm:
+    name: Build windows-11-arm
+    needs: [prepare]
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: windows-11-arm
+      arch: arm64
       build-deps-only: false
     secrets: inherit
 
@@ -190,6 +212,7 @@ jobs:
       needs.build_packages.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    environment: production
     permissions:
       contents: write
       id-token: write
@@ -224,12 +247,7 @@ jobs:
         run: find release-assets/ -type f | sort
 
       - name: Generate checksums
-        run: |
-          cd release-assets/
-          find . -maxdepth 1 -type f ! -name 'SHA*SUMS' | sort | xargs sha256sum > SHA256SUMS
-          find . -maxdepth 1 -type f ! -name 'SHA*SUMS' | sort | xargs sha512sum > SHA512SUMS
-          echo "=== SHA256SUMS ===" && cat SHA256SUMS
-          echo "=== SHA512SUMS ===" && cat SHA512SUMS
+        run: bash scripts/generate-checksums.sh release-assets/
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
@@ -243,21 +261,30 @@ jobs:
           TAG="${{ needs.prepare.outputs.tag }}"
           COMMIT_SHA=$(git rev-parse HEAD)
           mapfile -d '' ASSETS < <(find release-assets/ -type f -print0)
-          gh release create "$TAG" \
-            --repo "${{ github.repository }}" \
-            --title "BambuStudio $TAG" \
-            --notes-file changelog.md \
-            --target "$COMMIT_SHA" \
-            --latest \
-            "${ASSETS[@]}"
+
+          if gh release view "$TAG" --repo "${{ github.repository }}" &>/dev/null; then
+            echo "Release $TAG already exists — uploading any missing assets"
+            gh release upload "$TAG" "${ASSETS[@]}" \
+              --repo "${{ github.repository }}" \
+              --clobber
+          else
+            gh release create "$TAG" \
+              --repo "${{ github.repository }}" \
+              --title "BambuStudio $TAG" \
+              --notes-file changelog.md \
+              --target "$COMMIT_SHA" \
+              --latest \
+              "${ASSETS[@]}"
+          fi
 
   # ── Attach macOS + ARM64 Windows after slow builds finish ───────────────────
   attach_slow:
     name: Attach macOS + ARM64 Windows to release
-    needs: [prepare, create_release, build_slow]
+    needs: [prepare, create_release, build_macos_intel, build_macos_15, build_macos_26, build_windows_arm]
     if: always() && needs.create_release.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    environment: production
     permissions:
       contents: write
 
@@ -317,54 +344,29 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Download .deb from release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.prepare.outputs.tag }}
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Download Debian .deb artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v4
+        with:
+          path: ./smoke/
+          pattern: BambuStudio_debian-trixie_deb_*
+          merge-multiple: true
+
+      - name: Locate .deb
         run: |
-          gh release download "$TAG" \
-            --repo "${{ github.repository }}" \
-            --pattern "*.deb" \
-            --dir ./smoke/
           DEB=$(find ./smoke/ -name "*.deb" | head -1)
           if [ -z "$DEB" ]; then
-            echo "::error::No .deb asset found in release $TAG"
+            echo "::error::No .deb artifact found"
             exit 1
           fi
           echo "DEB=$DEB" >> "$GITHUB_ENV"
 
-      - name: Verify .deb integrity
-        run: |
-          echo "=== Package info ==="
-          dpkg-deb --info "$DEB"
-          echo "=== Package contents ==="
-          dpkg-deb --contents "$DEB" | tee /tmp/deb_contents.txt
-          FILE_COUNT=$(wc -l < /tmp/deb_contents.txt)
-          echo "Total files: $FILE_COUNT"
-          if [ "$FILE_COUNT" -lt 10 ]; then
-            echo "::error::.deb contains only $FILE_COUNT entries — package is likely corrupt (expected >10)"
-            exit 1
-          fi
-
-      - name: Install .deb
-        run: |
-          sudo apt-get install -f -y
-          sudo dpkg -i "$DEB" || { sudo apt-get install -f -y && sudo dpkg -i "$DEB"; }
-
-      - name: Verify binary present
-        run: |
-          # The package installs a 'bambustudio' wrapper in PATH and
-          # the real binary at /usr/lib/bambustudio/bin/bambu-studio
-          if command -v bambustudio &>/dev/null; then
-            echo "OK: $(which bambustudio)"
-          elif [ -f /usr/lib/bambustudio/bin/bambu-studio ]; then
-            echo "OK: /usr/lib/bambustudio/bin/bambu-studio"
-            file /usr/lib/bambustudio/bin/bambu-studio
-          else
-            echo "::error::bambustudio binary not found after dpkg install"
-            dpkg -L bambu-studio 2>/dev/null | head -30 || true
-            exit 1
-          fi
+      - name: Run smoke test
+        uses: ./.github/actions/smoke-test-deb
+        with:
+          deb-path: ${{ env.DEB }}
 
       - name: Rollback release on failure
         if: failure()

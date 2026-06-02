@@ -88,10 +88,10 @@ jobs:
       - name: Build BambuStudio
         id: build-bambu
         env:
-          CMAKE_BUILD_PARALLEL_LEVEL: 2
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
+          export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
 
