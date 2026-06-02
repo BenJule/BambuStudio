@@ -258,7 +258,7 @@ jobs:
 
   # ── Self-hosted distro runners — non-blocking ─────────────────────────────
   build_selfhosted:
-    name: Linux / ${{ matrix.name }}
+    name: Linux / Self-hosted Ubuntu builds
     needs: [build_debian]
     if: ${{ !inputs.skip-ubuntu && always() }}
     runs-on: ${{ matrix.runner }}
