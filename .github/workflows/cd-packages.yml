@@ -43,7 +43,11 @@ jobs:
     if: ${{ !inputs.skip-debian }}
     runs-on: ubuntu-24.04
     timeout-minutes: 180
-    container: debian:trixie
+    container:
+      image: ghcr.io/benjule/bambu-debian-trixie:trixie
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
     permissions: read-all
 
     steps:
