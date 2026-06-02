@@ -11,7 +11,7 @@ permissions: read-all
 
 concurrency:
   group: release-candidate-${{ github.ref_name }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   # ── 1. Distribution packages (Debian .deb, Fedora .rpm, self-hosted) ──────
@@ -25,6 +25,8 @@ jobs:
   # ── 2. GitHub-hosted platforms (Ubuntu AppImage, Windows, macOS) ──────────
   build_platforms:
     name: ${{ matrix.name }}
+    needs: [build_packages]
+    if: needs.build_packages.result == 'success'
     strategy:
       fail-fast: false
       matrix:
