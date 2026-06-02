@@ -14,4 +14,7 @@ version.inc @BenJule
 
 # Security-sensitive files
 SECURITY.md @BenJule
-/.github/workflows/release.yml @BenJule
+/.github/workflows/cd-release.yml @BenJule
+/.github/workflows/cd-release-candidate.yml @BenJule
+/.github/workflows/cd-nightly.yml @BenJule
+/.github/workflows/cd-packages.yml @BenJule

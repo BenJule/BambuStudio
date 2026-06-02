@@ -11,7 +11,7 @@ on:
 permissions: read-all
 
 concurrency:
-  group: nightly
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -19,10 +19,20 @@ jobs:
   detect_changes:
     name: Detect changes since last nightly
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     outputs:
       cpp: ${{ steps.check.outputs.cpp }}
       has_changes: ${{ steps.check.outputs.has_changes }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           fetch-depth: 0
