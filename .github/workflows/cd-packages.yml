@@ -212,7 +212,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-fedora42-${{ hashFiles('src/**/*.cpp', 'src/**/*.c', 'src/**/*.h', 'src/**/*.hpp') }}
+          key: ccache-fedora42-${{ github.run_id }}
           restore-keys: |
             ccache-fedora42-
 
@@ -234,11 +234,11 @@ jobs:
           ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Save ccache
-        if: steps.build-bambu.outcome == 'success' && steps.ccache-restore.outputs.cache-hit != 'true'
+        if: steps.build-bambu.outcome == 'success'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-fedora42-${{ hashFiles('src/**/*.cpp', 'src/**/*.c', 'src/**/*.h', 'src/**/*.hpp') }}
+          key: ccache-fedora42-${{ github.run_id }}
 
       - name: Build package
         run: bash scripts/build_rpm.sh
@@ -266,7 +266,7 @@ jobs:
     permissions: read-all
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 2
       matrix:
         include:
           - name: Ubuntu 22.04 AppImage + .deb
@@ -335,7 +335,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ matrix.artifact_suffix }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.c', 'src/**/*.h', 'src/**/*.hpp') }}
+          key: ccache-${{ matrix.artifact_suffix }}-${{ github.run_id }}
           restore-keys: |
             ccache-${{ matrix.artifact_suffix }}-
 
@@ -363,11 +363,11 @@ jobs:
           ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Save ccache
-        if: steps.build-bambu.outcome == 'success' && steps.ccache-restore.outputs.cache-hit != 'true'
+        if: steps.build-bambu.outcome == 'success'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ matrix.artifact_suffix }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.c', 'src/**/*.h', 'src/**/*.hpp') }}
+          key: ccache-${{ matrix.artifact_suffix }}-${{ github.run_id }}
 
       - name: Build package
         run: ${{ matrix.pkg_cmd }}

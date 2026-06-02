@@ -136,6 +136,7 @@ jobs:
     uses: ./.github/workflows/cd-packages.yml
     with:
       retention-days: 90
+      skip-ubuntu: true
     secrets: inherit
 
   build_fast:
@@ -160,8 +161,7 @@ jobs:
 
   build_slow:
     name: Build ${{ matrix.os }}
-    needs: [prepare, build_packages]
-    if: needs.build_packages.result == 'success'
+    needs: [prepare]
     strategy:
       fail-fast: false
       matrix:

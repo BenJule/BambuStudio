@@ -73,8 +73,8 @@ jobs:
   # ── 2a. Fast platforms: Linux + Windows ───────────────────────────────────
   build_platforms:
     name: ${{ matrix.name }}
-    needs: [detect_changes]
-    if: needs.detect_changes.outputs.has_changes == 'true'
+    needs: [detect_changes, build_packages]
+    if: needs.detect_changes.outputs.has_changes == 'true' && needs.build_packages.result == 'success'
     strategy:
       fail-fast: false
       matrix:
@@ -101,8 +101,8 @@ jobs:
   # ── 2b. Slow platforms: macOS (skipped on push with no C++ changes) ────────
   build_platforms_mac:
     name: ${{ matrix.name }}
-    needs: [detect_changes]
-    if: needs.detect_changes.outputs.has_changes == 'true' && needs.detect_changes.outputs.cpp == 'true'
+    needs: [detect_changes, build_packages]
+    if: needs.detect_changes.outputs.has_changes == 'true' && needs.build_packages.result == 'success' && needs.detect_changes.outputs.cpp == 'true'
     strategy:
       fail-fast: false
       matrix:
