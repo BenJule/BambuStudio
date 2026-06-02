@@ -41,15 +41,20 @@ jobs:
   build_debian:
     name: Linux / Debian trixie .deb
     if: ${{ !inputs.skip-debian }}
-    runs-on: [self-hosted, debian-trixie]
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
+    container: debian:trixie
     permissions: read-all
-    env:
-      CCACHE_DIR: /var/cache/github-runner-debian/ccache
-      CCACHE_MAXSIZE: 5G
-      CCACHE_SLOPPINESS: pch_defines,time_macros
 
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Bootstrap
+        run: apt-get update -qq && apt-get install -y --no-install-recommends sudo git curl git-lfs
+
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
@@ -61,25 +66,29 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: deps/build/destdir
-          key: pkg-deps-debian-trixie-selfhosted-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
+          key: pkg-deps-debian-trixie-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
 
       - name: Install build dependencies
         run: sudo ./BuildLinux.sh -ur
 
-      - name: Configure ccache
+      - name: Fix permissions
+        run: chown -R "$(id -u):$(id -g)" ./
+
+      - name: Install and configure ccache
         run: |
-          ccache --max-size "$CCACHE_MAXSIZE"
-          echo "Cache size before build: $(ccache --show-stats | grep 'Cache size')"
-          ccache --zero-stats
-          # Inject launcher into existing cmake cache (persists between self-hosted runs).
-          # The PATH wrapper approach fails because cmake stores the absolute compiler
-          # path in CMakeCache.txt and never re-detects it. Using CMAKE_CXX_COMPILER_LAUNCHER
-          # makes cmake call "ccache /usr/bin/c++" regardless of PATH.
-          if [ -f build/CMakeCache.txt ]; then
-            cmake -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-                  -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-                  -B build
-          fi
+          apt-get install -y --no-install-recommends ccache
+          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
+          echo "CCACHE_SLOPPINESS=pch_defines,time_macros" >> "$GITHUB_ENV"
+
+      - name: Restore ccache
+        id: ccache-restore
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-debian-trixie-${{ github.run_id }}
+          restore-keys: |
+            ccache-debian-trixie-
 
       - name: Build deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -90,47 +99,51 @@ jobs:
         env:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
-          # Self-hosted runner is limited to 6 GB RAM; a single cc1plus on heavy
-          # template files uses up to 3 GB, so more than 1 parallel job causes OOM.
-          CMAKE_BUILD_PARALLEL_LEVEL: 1
         run: |
+          ccache --zero-stats
+          export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
+
+      - name: ccache statistics
+        if: always()
+        run: |
+          echo "### ccache statistics (Debian trixie)" >> "$GITHUB_STEP_SUMMARY"
+          ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Save ccache
+        if: steps.build-bambu.outcome == 'success'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/.ccache
+          key: ccache-debian-trixie-${{ github.run_id }}
 
       - name: Smoke test
         if: steps.build-bambu.outcome == 'success'
         run: |
-          sudo apt-get install -y --no-install-recommends xvfb
+          apt-get install -y --no-install-recommends xvfb
 
-          # Start a virtual framebuffer so GTK/OpenGL init code runs fully
           Xvfb :99 -screen 0 1280x800x24 &
           sleep 2
 
-          # Run bambustudio headlessly for up to 20s and capture all output.
-          # Use || to prevent bash -e from exiting on timeout's non-zero code (124).
           EXIT=0
           DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 \
             timeout 20 ./build/src/bambu-studio > /tmp/smoke.log 2>&1 || EXIT=$?
 
-          kill %1 2>/dev/null || true   # stop Xvfb
+          kill %1 2>/dev/null || true
 
-          # EXIT 124 = timeout killed it after 20s (ran without crashing) → pass
-          # EXIT 0   = exited cleanly on its own → pass
-          # anything else = crash → fail
           if [ "$EXIT" -ne 0 ] && [ "$EXIT" -ne 124 ]; then
             echo "::error::bambustudio crashed on startup (exit $EXIT)"
             cat /tmp/smoke.log
             exit 1
           fi
 
-          # Fail the build if a known GTK regression is detected
           if grep -q "gtk_window_resize: assertion" /tmp/smoke.log; then
             echo "::error::GTK regression detected: gtk_window_resize assertion 'width > 0' failed"
             grep "Gtk-CRITICAL" /tmp/smoke.log | head -10
             exit 1
           fi
 
-          # Report any remaining GTK warnings as informational
           GTK_WARNS=$(grep -c "Gtk-CRITICAL" /tmp/smoke.log || true)
 
           echo "### Smoke test" >> "$GITHUB_STEP_SUMMARY"
@@ -140,12 +153,6 @@ jobs:
           else
             echo "✅ No GTK-CRITICAL warnings" >> "$GITHUB_STEP_SUMMARY"
           fi
-
-      - name: ccache statistics
-        if: always()
-        run: |
-          echo "### ccache statistics" >> "$GITHUB_STEP_SUMMARY"
-          ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Build package
         run: ./BuildLinux.sh -pr
