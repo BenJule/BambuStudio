@@ -283,13 +283,30 @@ jobs:
               -DCMAKE_INSTALL_PREFIX="../install-dir"
             cmake --build . --config Release --target install --parallel
           } else {
+            # Verify sccache server is responsive before using it as a compiler launcher.
+            # GHA cache backend can time out on startup; fall back to direct compilation
+            # to avoid breaking the build when sccache is unavailable.
+            $sccacheFlags = @()
+            try {
+              sccache --show-stats 2>&1 | Out-Null
+              if ($LASTEXITCODE -eq 0) {
+                $sccacheFlags = @(
+                  "-DCMAKE_C_COMPILER_LAUNCHER=sccache",
+                  "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
+                )
+                Write-Host "sccache available — compiler cache enabled"
+              } else {
+                Write-Host "sccache unresponsive (exit $LASTEXITCODE) — building without cache"
+              }
+            } catch {
+              Write-Host "sccache not found — building without cache"
+            }
             cmake .. -G Ninja `
               -DCMAKE_C_COMPILER=cl.exe `
               -DCMAKE_CXX_COMPILER=cl.exe `
-              -DCMAKE_C_COMPILER_LAUNCHER=sccache `
-              -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
+              @sccacheFlags `
               -DBBL_RELEASE_TO_PUBLIC=1 -DBBL_INTERNAL_TESTING=0 `
-              -DCMAKE_PREFIX_PATH="$depPath\usr\local" `
+              "-DCMAKE_PREFIX_PATH=$depPath\usr\local" `
               -DCMAKE_INSTALL_PREFIX="../install-dir" `
               -DCMAKE_BUILD_TYPE=Release
             cmake --build . --target install

@@ -125,6 +125,28 @@ jobs:
       - name: Smoke test
         if: steps.build-bambu.outcome == 'success'
         run: |
+          BINARY=./build/src/bambu-studio
+
+          # 1. Shared library check — catch missing .so before packaging
+          MISSING=$(ldd "$BINARY" 2>/dev/null | grep "not found" || true)
+          if [[ -n "$MISSING" ]]; then
+            echo "::error::Missing shared libraries in built binary:"
+            echo "$MISSING"
+            exit 1
+          fi
+          echo "OK: all shared libraries resolved"
+
+          # 2. Resources check — catch missing profiles/images
+          for dir in ./resources/profiles ./resources/images; do
+            if [[ ! -d "$dir" ]]; then
+              echo "::error::Expected resource directory missing: $dir"
+              exit 1
+            fi
+          done
+          PROFILES=$(find ./resources/profiles -name "*.json" 2>/dev/null | wc -l)
+          echo "OK: $PROFILES printer profile files found"
+
+          # 3. Headless startup check
           apt-get install -y --no-install-recommends xvfb
 
           Xvfb :99 -screen 0 1280x800x24 &
@@ -132,7 +154,7 @@ jobs:
 
           EXIT=0
           DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 \
-            timeout 20 ./build/src/bambu-studio > /tmp/smoke.log 2>&1 || EXIT=$?
+            timeout 20 "$BINARY" > /tmp/smoke.log 2>&1 || EXIT=$?
 
           kill %1 2>/dev/null || true
 
