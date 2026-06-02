@@ -206,33 +206,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create tag
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          # RELEASE_PAT (PAT with contents:write) is required because the
-          # GitHub Actions App cannot create refs pointing to commits that
-          # changed workflow files — this restriction applies to both git push
-          # and the REST API when using github.token.
-          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
-        run: |
-          TAG="${{ needs.prepare.outputs.tag }}"
-          # Check remote first — avoids "already exists" race on re-runs
-          if gh api repos/${{ github.repository }}/git/refs/tags/${TAG} >/dev/null 2>&1; then
-            echo "Tag $TAG already exists on remote"
-          else
-            COMMIT_SHA=$(git rev-parse HEAD)
-            TAG_OBJ_SHA=$(gh api repos/${{ github.repository }}/git/tags \
-              -X POST \
-              -f tag="$TAG" \
-              -f message="BambuStudio $TAG" \
-              -f object="$COMMIT_SHA" \
-              -f type="commit" \
-              -q '.sha')
-            gh api repos/${{ github.repository }}/git/refs \
-              -X POST -f ref="refs/tags/$TAG" -f sha="$TAG_OBJ_SHA"
-            echo "Created annotated tag $TAG → $TAG_OBJ_SHA"
-          fi
-
       - name: Download all build artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v4
         with:
@@ -268,11 +241,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ needs.prepare.outputs.tag }}"
+          COMMIT_SHA=$(git rev-parse HEAD)
           mapfile -d '' ASSETS < <(find release-assets/ -type f -print0)
           gh release create "$TAG" \
             --repo "${{ github.repository }}" \
             --title "BambuStudio $TAG" \
             --notes-file changelog.md \
+            --target "$COMMIT_SHA" \
             --latest \
             "${ASSETS[@]}"
 
