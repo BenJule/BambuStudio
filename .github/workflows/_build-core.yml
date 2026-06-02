@@ -99,7 +99,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.h', 'src/**/*.hpp', 'src/**/*.mm') }}
+          key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ github.run_id }}
           restore-keys: |
             ccache-${{ inputs.os }}-${{ inputs.arch }}-
 
@@ -117,6 +117,7 @@ jobs:
           brew link --overwrite cmake@3.31.0 || cmake --version | grep -q "3\.31\." || { echo "cmake@3.31.0 link failed unexpectedly"; exit 1; }
           brew pin cmake@3.31.0
           brew install zstd
+          export CCACHE_SLOPPINESS="pch_defines,time_macros"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/x86_64" ]; then
             echo "No macOS Intel cache found. Building deps + slicer..."
@@ -141,6 +142,7 @@ jobs:
           brew link --overwrite cmake@3.31.0 || cmake --version | grep -q "3\.31\." || { echo "cmake@3.31.0 link failed unexpectedly"; exit 1; }
           brew pin cmake@3.31.0
           brew install zstd
+          export CCACHE_SLOPPINESS="pch_defines,time_macros"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/arm64" ]; then
             echo "No macOS ARM cache found. Building deps + slicer..."
@@ -152,11 +154,11 @@ jobs:
           ccache --show-stats
 
       - name: Save ccache (macOS)
-        if: always() && runner.os == 'macOS' && steps.ccache-restore.outputs.cache-hit != 'true'
+        if: always() && runner.os == 'macOS'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.h', 'src/**/*.hpp', 'src/**/*.mm') }}
+          key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ github.run_id }}
 
       - name: Pack macOS .dmg
         if: runner.os == 'macOS'
@@ -321,7 +323,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ inputs.os }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.h', 'src/**/*.hpp') }}
+          key: ccache-${{ inputs.os }}-${{ github.run_id }}
           restore-keys: |
             ccache-${{ inputs.os }}-
 
@@ -333,6 +335,7 @@ jobs:
           export PATH="/usr/lib/ccache:$PATH"
           export CCACHE_DIR="$HOME/.ccache"
           export CCACHE_MAXSIZE="5G"
+          export CCACHE_SLOPPINESS="pch_defines,time_macros"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/destdir" ]; then
             echo "No Linux cache found. Building deps + slicer..."
@@ -343,11 +346,11 @@ jobs:
           mv -n ./build/BambuStudio_ubu64.AppImage ./build/BambuStudio_${{ env.os_label }}_${{ env.linux_arch }}_${{ env.ver }}.AppImage
 
       - name: Save ccache (Linux)
-        if: runner.os == 'Linux' && steps.ccache-restore-linux.outputs.cache-hit != 'true'
+        if: runner.os == 'Linux'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ inputs.os }}-${{ hashFiles('src/**/*.cpp', 'src/**/*.h', 'src/**/*.hpp') }}
+          key: ccache-${{ inputs.os }}-${{ github.run_id }}
 
       - name: Upload artifacts Ubuntu AppImage
         if: ${{ ! env.ACT && runner.os == 'Linux' }}
