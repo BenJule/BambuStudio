@@ -206,31 +206,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Import GPG key
-        if: github.event_name == 'workflow_dispatch'
-        uses: ./.github/actions/setup-gpg
-        with:
-          signing-key: ${{ secrets.GIT_SIGNING_KEY }}
-          signing-key-passphrase: ${{ secrets.GIT_SIGNING_KEY_PASSPHRASE }}
-          signing-key-id: ${{ secrets.GIT_SIGNING_KEY_ID }}
-
-      - name: Create signed tag
+      - name: Create tag
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ needs.prepare.outputs.tag }}"
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists — ensuring it is on remote"
-            TAG_SHA=$(git rev-parse "$TAG")
-            gh api repos/${{ github.repository }}/git/refs \
-              -X POST -f ref="refs/tags/${TAG}" -f sha="${TAG_SHA}" 2>/dev/null \
-              || echo "Already on remote"
+          # Check remote first — avoids "already exists" race on re-runs
+          if gh api repos/${{ github.repository }}/git/refs/tags/${TAG} >/dev/null 2>&1; then
+            echo "Tag $TAG already exists on remote"
           else
-            git tag -s "$TAG" -m "BambuStudio $TAG"
-            TAG_SHA=$(git rev-parse "$TAG")
+            # Create annotated tag object on GitHub via API.
+            # git tag -s + git push fails because GitHub Apps cannot push tags
+            # pointing to commits that changed workflow files. Creating via API
+            # bypasses that restriction entirely.
+            COMMIT_SHA=$(git rev-parse HEAD)
+            TAG_OBJ_SHA=$(gh api repos/${{ github.repository }}/git/tags \
+              -X POST \
+              -f tag="$TAG" \
+              -f message="BambuStudio $TAG" \
+              -f object="$COMMIT_SHA" \
+              -f type="commit" \
+              -q '.sha')
             gh api repos/${{ github.repository }}/git/refs \
-              -X POST -f ref="refs/tags/${TAG}" -f sha="${TAG_SHA}"
+              -X POST -f ref="refs/tags/$TAG" -f sha="$TAG_OBJ_SHA"
+            echo "Created annotated tag $TAG → $TAG_OBJ_SHA"
           fi
 
       - name: Download all build artifacts
