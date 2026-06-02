@@ -52,6 +52,14 @@ jobs:
         if: startsWith(inputs.os, 'windows-')
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57  # v3
 
+      - name: Install cmake 3.31.x (Windows)
+        if: startsWith(inputs.os, 'windows-')
+        uses: lukka/get-cmake@591817e96fcad43505fb4eae36172462abb3a42e  # v4.3.3
+        with:
+          cmakeVersion: "~3.31.0"
+          useLocalCache: true
+          useCloudCache: true
+
       - name: Get the date on Ubuntu and macOS
         if: ${{ !startsWith(inputs.os, 'windows-') }}
         run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_ENV
@@ -84,11 +92,6 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "pacman failed to install mingw-w64-x86_64-pkgconf (exit $LASTEXITCODE)" }
             $env:PATH = "$msys2Root\mingw64\bin;$env:PATH"
             Add-Content $env:GITHUB_PATH "$msys2Root\mingw64\bin"
-            # Pin cmake to 3.31.x — CMake 4.x removed compatibility with
-            # cmake_minimum_required(VERSION < 3.5) which breaks wxWidgets
-            # cotire_test and other vendored subprojects.
-            choco install cmake --version=3.31.6 --force --allow-downgrade -y
-            $env:PATH = "C:\Program Files\CMake\bin;$env:PATH"
             New-Item -ItemType Directory -Force -Path "deps\build\BambuStudio_dep" | Out-Null
             Push-Location "deps\build"
             cmake ../ -G "Visual Studio 17 2022" -A $vsArch -DDESTDIR="./BambuStudio_dep" -DCMAKE_BUILD_TYPE=Release -DDEP_DEBUG=OFF
@@ -135,18 +138,28 @@ jobs:
           /opt/homebrew/opt/python@3.11/bin/python3.11 -c "import numpy; import numpy.distutils"
           echo "/opt/homebrew/opt/python@3.11/bin" >> "$GITHUB_PATH"
 
+      - name: Install cmake 3.31.x (macOS)
+        if: startsWith(inputs.os, 'macos-')
+        uses: lukka/get-cmake@591817e96fcad43505fb4eae36172462abb3a42e  # v4.3.3
+        with:
+          cmakeVersion: "~3.31.0"
+          useLocalCache: true
+          useCloudCache: true
+
+      - name: Cache Homebrew downloads (macOS)
+        if: startsWith(inputs.os, 'macos-')
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/Library/Caches/Homebrew/downloads
+          key: brew-deps-${{ inputs.os }}-${{ hashFiles('.github/workflows/_build-deps.yml') }}
+          restore-keys: |
+            brew-deps-${{ inputs.os }}-
+
       - name: Build on Mac x86_64
         if: startsWith(inputs.os, 'macos-') && inputs.arch == 'x86_64'
         working-directory: ${{ github.workspace }}
         run: |
             brew install automake texinfo nasm yasm x264
-            brew uninstall --ignore-dependencies zstd || true
-            brew unlink cmake || true
-            brew tap-new $USER/old-cmake || true
-            brew extract --version=3.31.0 cmake $USER/old-cmake
-            brew install $USER/old-cmake/cmake@3.31.0
-            brew link --overwrite cmake@3.31.0 || cmake --version | grep -q "3\.31\." || { echo "cmake@3.31.0 link failed unexpectedly"; exit 1; }
-            brew pin cmake@3.31.0
             ./BuildMac.sh -d -x -a x86_64 -t 10.15 -1
             (cd "${{ github.workspace }}/deps/build/x86_64" && \
             find . -mindepth 1 -maxdepth 1 ! -name 'BambuStudio_deps' -exec rm -rf {} +)
@@ -157,13 +170,6 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
             brew install automake texinfo nasm yasm x264
-            brew uninstall --ignore-dependencies zstd || true
-            brew unlink cmake || true
-            brew tap-new $USER/old-cmake || true
-            brew extract --version=3.31.0 cmake $USER/old-cmake
-            brew install $USER/old-cmake/cmake@3.31.0
-            brew link --overwrite cmake@3.31.0 || cmake --version | grep -q "3\.31\." || { echo "cmake@3.31.0 link failed unexpectedly"; exit 1; }
-            brew pin cmake@3.31.0
             ./BuildMac.sh -d -x -a universal -t 10.15 -1
             for arch in arm64 x86_64; do
                 (cd "${{ github.workspace }}/deps/build/${arch}" && \
