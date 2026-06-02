@@ -3,7 +3,7 @@ run-name: "Scorecard — ${{ github.ref_name }}"
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   schedule:
     - cron: '0 5 * * 1'
   workflow_dispatch:
