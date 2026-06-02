@@ -136,7 +136,6 @@ jobs:
     uses: ./.github/workflows/cd-packages.yml
     with:
       retention-days: 90
-      skip-ubuntu: true
     secrets: inherit
 
   build_fast:
