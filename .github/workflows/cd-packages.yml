@@ -90,6 +90,9 @@ jobs:
         env:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
+          # Self-hosted runner has limited RAM; more than 2 parallel cc1plus
+          # processes cause OOM kills on heavy template instantiations.
+          CMAKE_BUILD_PARALLEL_LEVEL: 2
         run: |
           export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
           ./BuildLinux.sh -sfr
