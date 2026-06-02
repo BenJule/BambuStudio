@@ -195,7 +195,6 @@ jobs:
       contents: write
       id-token: write
       attestations: write
-      workflows: write
 
     steps:
       - name: Harden Runner
@@ -218,14 +217,21 @@ jobs:
 
       - name: Create signed tag
         if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ needs.prepare.outputs.tag }}"
           if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists — pushing to remote if needed"
-            git push origin "refs/tags/$TAG" 2>/dev/null || echo "Already on remote"
+            echo "Tag $TAG already exists — ensuring it is on remote"
+            TAG_SHA=$(git rev-parse "$TAG")
+            gh api repos/${{ github.repository }}/git/refs \
+              -X POST -f ref="refs/tags/${TAG}" -f sha="${TAG_SHA}" 2>/dev/null \
+              || echo "Already on remote"
           else
             git tag -s "$TAG" -m "BambuStudio $TAG"
-            git push origin "$TAG"
+            TAG_SHA=$(git rev-parse "$TAG")
+            gh api repos/${{ github.repository }}/git/refs \
+              -X POST -f ref="refs/tags/${TAG}" -f sha="${TAG_SHA}"
           fi
 
       - name: Download all build artifacts
