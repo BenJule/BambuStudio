@@ -68,10 +68,18 @@ jobs:
 
       - name: Configure ccache
         run: |
-          echo "/usr/lib/ccache" >> "$GITHUB_PATH"
           ccache --max-size "$CCACHE_MAXSIZE"
           echo "Cache size before build: $(ccache --show-stats | grep 'Cache size')"
           ccache --zero-stats
+          # Inject launcher into existing cmake cache (persists between self-hosted runs).
+          # The PATH wrapper approach fails because cmake stores the absolute compiler
+          # path in CMakeCache.txt and never re-detects it. Using CMAKE_CXX_COMPILER_LAUNCHER
+          # makes cmake call "ccache /usr/bin/c++" regardless of PATH.
+          if [ -f build/CMakeCache.txt ]; then
+            cmake -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                  -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                  -B build
+          fi
 
       - name: Build deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -79,13 +87,11 @@ jobs:
 
       - name: Build BambuStudio
         id: build-bambu
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: 2
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
-          # -sfr disables the memory formula (DISABLE_PARALLEL_LIMIT=1) and
-          # leaves CMAKE_BUILD_PARALLEL_LEVEL unset → cmake falls back to nproc (8).
-          # Ubuntu AppImage builds run in parallel VMs on the same physical host,
-          # consuming shared RAM. 4 jobs caused OOM when Ubuntu builds were active.
-          # 2 jobs keeps Debian within the 6G cgroup limit even under shared load.
-          export CMAKE_BUILD_PARALLEL_LEVEL=2
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
 
