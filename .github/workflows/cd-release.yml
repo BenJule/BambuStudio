@@ -271,6 +271,14 @@ jobs:
       - name: List assets
         run: find release-assets/ -type f | sort
 
+      - name: Generate SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610  # v0.24.0
+        with:
+          path: release-assets/
+          format: spdx-json
+          output-file: release-assets/BambuStudio-${{ needs.prepare.outputs.tag }}.sbom.spdx.json
+          upload-artifact: false
+
       - name: Generate checksums
         run: bash scripts/generate-checksums.sh release-assets/
 
