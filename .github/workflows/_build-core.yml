@@ -93,6 +93,23 @@ jobs:
           Write-Host "date: $date version: $ver"
 
 # ── macOS ───────────────────────────────────────────────────────────────────
+      - name: Install cmake 3.31.x (macOS)
+        if: runner.os == 'macOS'
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "~3.31.0"
+          useLocalCache: true
+          useCloudCache: true
+
+      - name: Cache Homebrew downloads (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        with:
+          path: ~/Library/Caches/Homebrew/downloads
+          key: brew-core-${{ inputs.os }}-${{ hashFiles('.github/workflows/_build-core.yml') }}
+          restore-keys: |
+            brew-core-${{ inputs.os }}-
+
       - name: Restore ccache (macOS)
         if: runner.os == 'macOS'
         id: ccache-restore
@@ -108,15 +125,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          brew install automake texinfo nasm yasm ccache
-          brew uninstall --ignore-dependencies zstd || true
-          brew unlink cmake || true
-          brew tap-new $USER/old-cmake || true
-          brew extract --version=3.31.0 cmake $USER/old-cmake
-          brew install $USER/old-cmake/cmake@3.31.0
-          brew link --overwrite cmake@3.31.0 || cmake --version | grep -q "3\.31\." || { echo "cmake@3.31.0 link failed unexpectedly"; exit 1; }
-          brew pin cmake@3.31.0
-          brew install zstd
+          brew install automake texinfo nasm yasm ccache zstd
           export CCACHE_SLOPPINESS="pch_defines,time_macros"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/x86_64" ]; then
@@ -133,15 +142,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          brew install automake texinfo nasm yasm ccache
-          brew uninstall --ignore-dependencies zstd || true
-          brew unlink cmake || true
-          brew tap-new $USER/old-cmake || true
-          brew extract --version=3.31.0 cmake $USER/old-cmake
-          brew install $USER/old-cmake/cmake@3.31.0
-          brew link --overwrite cmake@3.31.0 || cmake --version | grep -q "3\.31\." || { echo "cmake@3.31.0 link failed unexpectedly"; exit 1; }
-          brew pin cmake@3.31.0
-          brew install zstd
+          brew install automake texinfo nasm yasm ccache zstd
           export CCACHE_SLOPPINESS="pch_defines,time_macros"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/arm64" ]; then
