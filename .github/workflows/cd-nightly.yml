@@ -71,61 +71,97 @@ jobs:
     secrets: inherit
 
   # ── 2a. Fast platforms: Linux + Windows ───────────────────────────────────
-  build_platforms:
-    name: ${{ matrix.name }}
+  build_ubuntu_2204:
+    name: Linux / Ubuntu 22.04
     needs: [detect_changes, build_packages]
     if: needs.detect_changes.outputs.has_changes == 'true' && needs.build_packages.result == 'success'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            name: Linux / Ubuntu 22.04
-          - os: ubuntu-24.04
-            name: Linux / Ubuntu 24.04
-          - os: ubuntu-24.04-arm
-            name: Linux / Ubuntu 24.04 ARM
-          - os: windows-2022
-            arch: x64
-            name: Windows / windows-2022 (x64)
-          - os: windows-11-arm
-            arch: arm64
-            name: Windows / windows-11-arm (arm64)
     uses: ./.github/workflows/_build-cached.yml
     with:
-      os: ${{ matrix.os }}
-      arch: ${{ matrix.arch }}
+      os: ubuntu-22.04
+      build-deps-only: false
+    secrets: inherit
+
+  build_ubuntu_2404:
+    name: Linux / Ubuntu 24.04
+    needs: [detect_changes, build_packages]
+    if: needs.detect_changes.outputs.has_changes == 'true' && needs.build_packages.result == 'success'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: ubuntu-24.04
+      build-deps-only: false
+    secrets: inherit
+
+  build_ubuntu_2404_arm:
+    name: Linux / Ubuntu 24.04 ARM
+    needs: [detect_changes, build_packages]
+    if: needs.detect_changes.outputs.has_changes == 'true' && needs.build_packages.result == 'success'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: ubuntu-24.04-arm
+      build-deps-only: false
+    secrets: inherit
+
+  build_windows_x64:
+    name: Windows / windows-2022 (x64)
+    needs: [detect_changes, build_packages]
+    if: needs.detect_changes.outputs.has_changes == 'true' && needs.build_packages.result == 'success'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: windows-2022
+      arch: x64
+      build-deps-only: false
+    secrets: inherit
+
+  build_windows_arm:
+    name: Windows / windows-11-arm (arm64)
+    needs: [detect_changes, build_packages]
+    if: needs.detect_changes.outputs.has_changes == 'true' && needs.build_packages.result == 'success'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: windows-11-arm
+      arch: arm64
       build-deps-only: false
     secrets: inherit
 
   # ── 2b. Slow platforms: macOS (skipped on push with no C++ changes) ────────
-  build_platforms_mac:
-    name: ${{ matrix.name }}
+  build_macos_intel:
+    name: macOS / macOS 15 Intel
     needs: [detect_changes, build_packages]
     if: needs.detect_changes.outputs.has_changes == 'true' && needs.build_packages.result == 'success' && needs.detect_changes.outputs.cpp == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-15-intel
-            arch: x86_64
-            name: macOS / macOS 15 Intel
-          - os: macos-15
-            arch: universal
-            name: macOS / macOS 15 ARM Universal
-
     uses: ./.github/workflows/_build-cached.yml
     with:
-      os: ${{ matrix.os }}
-      arch: ${{ matrix.arch }}
+      os: macos-15-intel
+      arch: x86_64
+      build-deps-only: false
+    secrets: inherit
+
+  build_macos_15:
+    name: macOS / macOS 15 ARM Universal
+    needs: [detect_changes, build_packages]
+    if: needs.detect_changes.outputs.has_changes == 'true' && needs.build_packages.result == 'success' && needs.detect_changes.outputs.cpp == 'true'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: macos-15
+      arch: universal
+      build-deps-only: false
+    secrets: inherit
+
+  build_macos_26:
+    name: macOS / macOS 26
+    needs: [detect_changes, build_packages]
+    if: needs.detect_changes.outputs.has_changes == 'true' && needs.build_packages.result == 'success' && needs.detect_changes.outputs.cpp == 'true'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: macos-26
+      arch: universal
       build-deps-only: false
     secrets: inherit
 
   # ── 3. Flatpak — built from the Ubuntu 24.04 AppImage of this same run ─────
   build_flatpak:
     name: Flatpak (x86_64)
-    needs: [build_platforms]
-    if: always() && needs.build_platforms.result == 'success'
+    needs: [build_ubuntu_2204, build_ubuntu_2404, build_ubuntu_2404_arm, build_windows_x64, build_windows_arm]
+    if: always() && needs.build_ubuntu_2404.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
@@ -213,10 +249,10 @@ jobs:
   # ── 4. Publish — after all builds, requires at least one artifact ─────────
   publish:
     name: Publish nightly pre-release
-    needs: [build_packages, build_platforms, build_platforms_mac, build_flatpak]
+    needs: [build_packages, build_ubuntu_2204, build_ubuntu_2404, build_ubuntu_2404_arm, build_windows_x64, build_windows_arm, build_macos_intel, build_macos_15, build_macos_26, build_flatpak]
     if: |
       always() &&
-      needs.build_platforms.result != 'skipped' &&
+      needs.build_ubuntu_2404.result != 'skipped' &&
       needs.build_flatpak.result != 'skipped'
     outputs:
       tag: ${{ steps.ver.outputs.tag }}
@@ -297,12 +333,7 @@ jobs:
 
       - name: Generate checksums
         if: steps.check.outputs.n > 0
-        run: |
-          cd artifacts/
-          find . -maxdepth 1 -type f ! -name 'SHA*SUMS' | sort | xargs sha256sum > SHA256SUMS
-          find . -maxdepth 1 -type f ! -name 'SHA*SUMS' | sort | xargs sha512sum > SHA512SUMS
-          echo "=== SHA256SUMS ===" && cat SHA256SUMS
-          echo "=== SHA512SUMS ===" && cat SHA512SUMS
+        run: bash scripts/generate-checksums.sh artifacts/
 
       - name: Attest build provenance
         if: steps.check.outputs.n > 0
@@ -344,16 +375,32 @@ jobs:
           [[ "${{ needs.build_packages.result }}" == "success" ]] \
             && parts+=("Distribution packages ✅") \
             || parts+=("Distribution packages ⚠️ ${{ needs.build_packages.result }}")
-          [[ "${{ needs.build_platforms.result }}" == "success" ]] \
-            && parts+=("Linux/Windows platforms ✅") \
-            || parts+=("Linux/Windows platforms ⚠️ ${{ needs.build_platforms.result }}")
-          if [[ "${{ needs.build_platforms_mac.result }}" == "skipped" ]]; then
+
+          # Fast builds: all must succeed
+          fast_results=(
+            "${{ needs.build_ubuntu_2204.result }}"
+            "${{ needs.build_ubuntu_2404.result }}"
+            "${{ needs.build_ubuntu_2404_arm.result }}"
+            "${{ needs.build_windows_x64.result }}"
+            "${{ needs.build_windows_arm.result }}"
+          )
+          fast_ok=true
+          for r in "${fast_results[@]}"; do [[ "$r" != "success" ]] && fast_ok=false; done
+          $fast_ok && parts+=("Linux/Windows ✅") \
+            || parts+=("Linux/Windows ⚠️ (check individual jobs)")
+
+          # macOS: may be skipped on non-C++ push
+          mac_26="${{ needs.build_macos_26.result }}"
+          mac_15="${{ needs.build_macos_15.result }}"
+          mac_intel="${{ needs.build_macos_intel.result }}"
+          if [[ "$mac_26" == "skipped" && "$mac_15" == "skipped" && "$mac_intel" == "skipped" ]]; then
             parts+=("macOS ⏭️ skipped (no C++ changes)")
-          elif [[ "${{ needs.build_platforms_mac.result }}" == "success" ]]; then
+          elif [[ "$mac_26" == "success" && "$mac_15" == "success" && "$mac_intel" == "success" ]]; then
             parts+=("macOS ✅")
           else
-            parts+=("macOS ⚠️ ${{ needs.build_platforms_mac.result }}")
+            parts+=("macOS ⚠️ (check individual jobs)")
           fi
+
           printf '%s\n' "${parts[@]}" > /tmp/status.txt
           echo "notes<<EOF" >> "$GITHUB_OUTPUT"
           cat /tmp/status.txt >> "$GITHUB_OUTPUT"
