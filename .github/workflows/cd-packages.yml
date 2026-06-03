@@ -100,7 +100,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-debian-trixie-${{ github.sha }}
+          key: ccache-debian-trixie-latest
           restore-keys: |
             ccache-debian-trixie-
 
@@ -130,7 +130,7 @@ jobs:
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-debian-trixie-${{ github.sha }}
+          key: ccache-debian-trixie-latest
 
       - name: Smoke test
         if: steps.build-bambu.outcome == 'success'
@@ -258,7 +258,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-fedora42-${{ github.sha }}
+          key: ccache-fedora42-latest
           restore-keys: |
             ccache-fedora42-
 
@@ -284,7 +284,7 @@ jobs:
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-fedora42-${{ github.sha }}
+          key: ccache-fedora42-latest
 
       - name: Build package
         run: bash scripts/build_rpm.sh
@@ -360,7 +360,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-arch-${{ github.sha }}
+          key: ccache-arch-latest
           restore-keys: |
             ccache-arch-
 
@@ -390,7 +390,7 @@ jobs:
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-arch-${{ github.sha }}
+          key: ccache-arch-latest
 
       - name: Build package
         run: bash scripts/build_pkg_arch.sh
