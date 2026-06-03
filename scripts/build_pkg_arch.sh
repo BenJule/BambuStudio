@@ -75,7 +75,15 @@ package() {
 EOF
 
 cd "$PKGDIR"
-makepkg --noextract --nodeps --nocheck -f 2>&1
+# makepkg refuses to run as root. In the GitHub Actions container we run as root,
+# so create a temporary unprivileged user and run makepkg as that user.
+if [[ $EUID -eq 0 ]]; then
+    useradd -m builduser 2>/dev/null || true
+    chown -R builduser "$PKGDIR"
+    su builduser -c "cd '$PKGDIR' && makepkg --noextract --nodeps --nocheck -f" 2>&1
+else
+    makepkg --noextract --nodeps --nocheck -f 2>&1
+fi
 
 PKG=$(find "$PKGDIR" -name "${PKGNAME}-*.pkg.tar.zst" | head -1)
 if [ -z "$PKG" ]; then
