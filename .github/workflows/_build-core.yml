@@ -126,8 +126,9 @@ jobs:
         run: |
           set -euo pipefail
           brew install automake texinfo nasm yasm ccache zstd
-          export CCACHE_SLOPPINESS="pch_defines,time_macros"
+          export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
           export CCACHE_IGNOREOPTIONSREGEX="-DSLIC3R_DEV_TIMESTAMP=.*"
+          export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/x86_64" ]; then
             echo "No macOS Intel cache found. Building deps + slicer..."
@@ -143,8 +144,9 @@ jobs:
         run: |
           set -euo pipefail
           brew install automake texinfo nasm yasm ccache zstd
-          export CCACHE_SLOPPINESS="pch_defines,time_macros"
+          export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
           export CCACHE_IGNOREOPTIONSREGEX="-DSLIC3R_DEV_TIMESTAMP=.*"
+          export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/arm64" ]; then
             echo "No macOS ARM cache found. Building deps + slicer..."
@@ -206,10 +208,6 @@ jobs:
           useLocalCache: true
           useCloudCache: true
 
-      - name: Install sccache (Windows x64)
-        if: runner.os == 'Windows' && inputs.arch != 'arm64'
-        uses: mozilla-actions/sccache-action@1583d6b38d7be47f593cb472781bbb21cab4321e  # v0.0.10
-
       - name: setup MSVC
         if: runner.os == 'Windows'
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57  # v3
@@ -255,7 +253,6 @@ jobs:
         shell: pwsh
         env:
           INPUT_ARCH: ${{ inputs.arch }}
-          SCCACHE_GHA_ENABLED: "true"
         run: |
           $vsArch  = if ($env:INPUT_ARCH -eq "arm64") { "ARM64" } else { "X64" }
           $depPath = "$env:GITHUB_WORKSPACE\deps\build\BambuStudio_dep"
@@ -285,32 +282,17 @@ jobs:
               -DCMAKE_INSTALL_PREFIX="../install-dir"
             cmake --build . --config Release --target install --parallel
           } else {
-            # Verify sccache server is responsive before using it as a compiler launcher.
-            # GHA cache backend can time out on startup; fall back to direct compilation
-            # to avoid breaking the build when sccache is unavailable.
-            $sccacheFlags = @()
-            try {
-              sccache --show-stats 2>&1 | Out-Null
-              if ($LASTEXITCODE -eq 0) {
-                $sccacheFlags = @(
-                  "-DCMAKE_C_COMPILER_LAUNCHER=sccache",
-                  "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
-                )
-                Write-Host "sccache available — compiler cache enabled"
-              } else {
-                Write-Host "sccache unresponsive (exit $LASTEXITCODE) — building without cache"
-              }
-            } catch {
-              Write-Host "sccache not found — building without cache"
-            }
-            # sccache + MSVC: cmake sets /Zi by default which writes a shared .pdb
-            # and causes C1041 when multiple cl.exe run in parallel under Ninja.
-            # Per sccache docs (cmake >= 3.25): use CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
-            # with CMP0141=NEW to embed debug info in .obj files (/Z7) instead.
+            # sccache is not used for Windows x64:
+            # - It produced 0% cache hits in all test runs (sccache GHA cache backend
+            #   initialises after the MSVC toolchain loads and misses the first build)
+            # - sccache + MSVC + Ninja causes C1041 PDB contention even with /FS
+            # The deps cache (165 MB) already avoids the slowest part of the build.
+            # CMP0141=NEW + CMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded embeds debug
+            # info in each .obj (/Z7), which is safe without sccache and required if
+            # sccache is ever re-enabled in the future.
             cmake .. -G Ninja `
               -DCMAKE_C_COMPILER=cl.exe `
               -DCMAKE_CXX_COMPILER=cl.exe `
-              @sccacheFlags `
               -DCMAKE_POLICY_DEFAULT_CMP0141=NEW `
               "-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded" `
               -DBBL_RELEASE_TO_PUBLIC=1 -DBBL_INTERNAL_TESTING=0 `
@@ -375,8 +357,9 @@ jobs:
           export PATH="/usr/lib/ccache:$PATH"
           export CCACHE_DIR="$HOME/.ccache"
           export CCACHE_MAXSIZE="5G"
-          export CCACHE_SLOPPINESS="pch_defines,time_macros"
+          export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
           export CCACHE_IGNOREOPTIONSREGEX="-DSLIC3R_DEV_TIMESTAMP=.*"
+          export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/destdir" ]; then
             echo "No Linux cache found. Building deps + slicer..."
