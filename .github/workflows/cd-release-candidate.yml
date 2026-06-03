@@ -26,7 +26,7 @@ jobs:
   rc_ubuntu_2204:
     name: Linux / Ubuntu 22.04
     needs: [build_packages]
-    if: needs.build_packages.result == 'success'
+    if: needs.build_packages.result != 'failure'
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: ubuntu-22.04
@@ -36,7 +36,7 @@ jobs:
   rc_ubuntu_2404:
     name: Linux / Ubuntu 24.04
     needs: [build_packages]
-    if: needs.build_packages.result == 'success'
+    if: needs.build_packages.result != 'failure'
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: ubuntu-24.04
@@ -46,7 +46,7 @@ jobs:
   rc_ubuntu_2404_arm:
     name: Linux / Ubuntu 24.04 ARM
     needs: [build_packages]
-    if: needs.build_packages.result == 'success'
+    if: needs.build_packages.result != 'failure'
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: ubuntu-24.04-arm
@@ -56,7 +56,7 @@ jobs:
   rc_windows_x64:
     name: Windows / windows-2022 (x64)
     needs: [build_packages]
-    if: needs.build_packages.result == 'success'
+    if: needs.build_packages.result != 'failure'
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: windows-2022
@@ -67,7 +67,7 @@ jobs:
   rc_windows_arm:
     name: Windows / windows-11-arm (arm64)
     needs: [build_packages]
-    if: needs.build_packages.result == 'success'
+    if: needs.build_packages.result != 'failure'
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: windows-11-arm
@@ -78,7 +78,7 @@ jobs:
   rc_macos_intel:
     name: macOS / macOS 15 Intel
     needs: [build_packages]
-    if: needs.build_packages.result == 'success'
+    if: needs.build_packages.result != 'failure'
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: macos-15-intel
@@ -89,7 +89,7 @@ jobs:
   rc_macos_15:
     name: macOS / macOS 15 ARM Universal
     needs: [build_packages]
-    if: needs.build_packages.result == 'success'
+    if: needs.build_packages.result != 'failure'
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: macos-15
@@ -100,7 +100,7 @@ jobs:
   rc_macos_26:
     name: macOS / macOS 26
     needs: [build_packages]
-    if: needs.build_packages.result == 'success'
+    if: needs.build_packages.result != 'failure'
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: macos-26
