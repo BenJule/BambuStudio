@@ -145,7 +145,7 @@ jobs:
   build_ubuntu_2204:
     name: Build ubuntu-22.04
     needs: [prepare, build_packages]
-    if: needs.build_packages.result == 'success'
+    if: needs.build_packages.result != 'failure'
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: ubuntu-22.04
@@ -155,7 +155,7 @@ jobs:
   build_ubuntu_2404:
     name: Build ubuntu-24.04
     needs: [prepare, build_packages]
-    if: needs.build_packages.result == 'success'
+    if: needs.build_packages.result != 'failure'
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: ubuntu-24.04
@@ -165,7 +165,7 @@ jobs:
   build_ubuntu_2404_arm:
     name: Build ubuntu-24.04-arm
     needs: [prepare, build_packages]
-    if: needs.build_packages.result == 'success'
+    if: needs.build_packages.result != 'failure'
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: ubuntu-24.04-arm
@@ -175,7 +175,7 @@ jobs:
   build_windows_x64:
     name: Build windows-2022
     needs: [prepare, build_packages]
-    if: needs.build_packages.result == 'success'
+    if: needs.build_packages.result != 'failure'
     uses: ./.github/workflows/_build-cached.yml
     with:
       os: windows-2022
