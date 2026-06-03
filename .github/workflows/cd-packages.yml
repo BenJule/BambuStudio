@@ -210,7 +210,7 @@ jobs:
     name: Linux / Fedora 42 .rpm
     if: ${{ !inputs.skip-fedora }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 150
+    timeout-minutes: 180
     continue-on-error: true
     container: fedora:42@sha256:7c63468daf71fdc5bda3699cd483b169bb995b5137265d5ffe8f04e2ce87fbb8
     permissions: read-all
@@ -306,7 +306,7 @@ jobs:
     name: Linux / Arch Linux .pkg.tar.zst
     if: ${{ !inputs.skip-arch }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 150
+    timeout-minutes: 180
     continue-on-error: true
     container: archlinux:base@sha256:a9a1e6db522cf5f8018c920d035e2bfbf8e39c485ee737ce0388990898f2f042
     permissions: read-all
