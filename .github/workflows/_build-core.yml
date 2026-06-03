@@ -127,6 +127,7 @@ jobs:
           set -euo pipefail
           brew install automake texinfo nasm yasm ccache zstd
           export CCACHE_SLOPPINESS="pch_defines,time_macros"
+          export CCACHE_IGNOREOPTIONSREGEX="-DSLIC3R_DEV_TIMESTAMP=.*"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/x86_64" ]; then
             echo "No macOS Intel cache found. Building deps + slicer..."
@@ -143,6 +144,7 @@ jobs:
           set -euo pipefail
           brew install automake texinfo nasm yasm ccache zstd
           export CCACHE_SLOPPINESS="pch_defines,time_macros"
+          export CCACHE_IGNOREOPTIONSREGEX="-DSLIC3R_DEV_TIMESTAMP=.*"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/arm64" ]; then
             echo "No macOS ARM cache found. Building deps + slicer..."
@@ -370,6 +372,7 @@ jobs:
           export CCACHE_DIR="$HOME/.ccache"
           export CCACHE_MAXSIZE="5G"
           export CCACHE_SLOPPINESS="pch_defines,time_macros"
+          export CCACHE_IGNOREOPTIONSREGEX="-DSLIC3R_DEV_TIMESTAMP=.*"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/destdir" ]; then
             echo "No Linux cache found. Building deps + slicer..."
