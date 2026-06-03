@@ -1,4 +1,4 @@
-FROM debian:trixie
+FROM debian:trixie@sha256:4ae67669760b807c19f23902a3fd7c121a6a70cf2ae709035674b23e712e4d62
 
 LABEL org.opencontainers.image.source="https://github.com/BenJule/BambuStudio"
 LABEL org.opencontainers.image.description="Debian trixie build environment for BambuStudio CI"
