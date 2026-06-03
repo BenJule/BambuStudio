@@ -26,9 +26,11 @@ runs:
     - name: Install .deb
       shell: bash
       run: |
-        sudo apt-get install -f -y
-        sudo dpkg -i "${{ inputs.deb-path }}" \
-          || { sudo apt-get install -f -y && sudo dpkg -i "${{ inputs.deb-path }}"; }
+        sudo apt-get update -qq
+        sudo dpkg -i "${{ inputs.deb-path }}" || true
+        sudo apt-get install -f -y --fix-missing \
+          || sudo apt-get install -f -y --fix-missing --allow-unauthenticated
+        sudo dpkg -i "${{ inputs.deb-path }}"
 
     - name: Verify binary present
       shell: bash
