@@ -1,43 +1,68 @@
 FOUND_GTK3=$(pacman -Q gtk3 2>/dev/null || true)
 
 REQUIRED_DEV_PACKAGES=(
-    autoconf
-    automake
+    # Build tools
+    base-devel
     cmake
     ninja
-    dbus
-    extra-cmake-modules
-    wayland
-    wayland-protocols
-    file
-    base-devel
-    gettext
-    git
-    perl
-    gst-plugins-base
-    gtk3
-    libsecret
+    autoconf
+    automake
     libtool
-    mesa
-    glu
-    openssl
-    texinfo
-    libxkbcommon
-    wget
-    curl
+    perl
     nasm
     yasm
-    x264
+    git
+    wget
+    curl
+    file
+
+    # UI / GTK
+    gtk3
+    extra-cmake-modules
+    gettext
+
+    # Graphics
+    mesa
+    glu
+    glew
+    eglexternalplatform
+    libxkbcommon
+
+    # Wayland
+    wayland
+    wayland-protocols
+
+    # GStreamer
+    gstreamer
+    gst-plugins-base
+    gst-plugins-good
+
+    # System / libs
+    dbus
+    openssl
+    libsecret
+    libspnav
+    libmspack
+    libunwind
     bzip2
     systemd
-    libunwind
     fuse2
+
+    # Packaging
     namcap
+
+    # Video deps
+    x264
+
+    # webkit (for built-in browser)
+    webkit2gtk-4.1
+
+    # texinfo for dep builds
+    texinfo
 )
 
 if [[ -n "$UPDATE_LIB" ]]
 then
-    REQUIRED_DEV_PACKAGES+=(webkit2gtk-4.1)
     sudo pacman -Syu --noconfirm
     sudo pacman -S --noconfirm --needed ${REQUIRED_DEV_PACKAGES[@]}
     echo -e "done\n"
