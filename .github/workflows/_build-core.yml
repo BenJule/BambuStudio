@@ -303,12 +303,16 @@ jobs:
             } catch {
               Write-Host "sccache not found — building without cache"
             }
+            # sccache + MSVC: cmake sets /Zi by default which writes a shared .pdb
+            # and causes C1041 when multiple cl.exe run in parallel under Ninja.
+            # Per sccache docs (cmake >= 3.25): use CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
+            # with CMP0141=NEW to embed debug info in .obj files (/Z7) instead.
             cmake .. -G Ninja `
               -DCMAKE_C_COMPILER=cl.exe `
               -DCMAKE_CXX_COMPILER=cl.exe `
               @sccacheFlags `
-              "-DCMAKE_CXX_FLAGS_RELEASE=/MD /O2 /Ob2 /DNDEBUG /Z7" `
-              "-DCMAKE_C_FLAGS_RELEASE=/MD /O2 /Ob2 /DNDEBUG /Z7" `
+              -DCMAKE_POLICY_DEFAULT_CMP0141=NEW `
+              "-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded" `
               -DBBL_RELEASE_TO_PUBLIC=1 -DBBL_INTERNAL_TESTING=0 `
               "-DCMAKE_PREFIX_PATH=$depPath\usr\local" `
               -DCMAKE_INSTALL_PREFIX="../install-dir" `
