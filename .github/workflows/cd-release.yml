@@ -301,11 +301,19 @@ jobs:
               --repo "${{ github.repository }}" \
               --clobber
           else
+            # Create the tag at the built commit via the git refs API first.
+            # gh release create --target <sha> returns HTTP 403 "Resource not
+            # accessible by integration" with GITHUB_TOKEN when it has to create
+            # the tag itself (cli/cli#9514). Creating the ref via the API works
+            # with contents:write and points the tag at the exact built commit;
+            # gh release create then reuses the existing tag (no --target needed).
+            gh api "repos/${{ github.repository }}/git/refs" \
+              -X POST -f ref="refs/tags/${TAG}" -f sha="${COMMIT_SHA}" \
+              || echo "Tag ${TAG} may already exist — continuing"
             gh release create "$TAG" \
               --repo "${{ github.repository }}" \
               --title "BambuStudio $TAG" \
               --notes-file changelog.md \
-              --target "$COMMIT_SHA" \
               --latest \
               "${ASSETS[@]}"
           fi
