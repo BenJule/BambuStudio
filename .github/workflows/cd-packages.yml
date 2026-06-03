@@ -377,6 +377,7 @@ jobs:
           ccache --zero-stats
           export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
           ./BuildLinux.sh -sfr
+          cd build && ./src/BuildLinuxImage.sh
 
       - name: ccache statistics
         if: always()
