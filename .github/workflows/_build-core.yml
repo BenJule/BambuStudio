@@ -307,8 +307,8 @@ jobs:
               -DCMAKE_C_COMPILER=cl.exe `
               -DCMAKE_CXX_COMPILER=cl.exe `
               @sccacheFlags `
-              "-DCMAKE_C_FLAGS=/FS" `
-              "-DCMAKE_CXX_FLAGS=/FS" `
+              "-DCMAKE_CXX_FLAGS_RELEASE=/MD /O2 /Ob2 /DNDEBUG /Z7" `
+              "-DCMAKE_C_FLAGS_RELEASE=/MD /O2 /Ob2 /DNDEBUG /Z7" `
               -DBBL_RELEASE_TO_PUBLIC=1 -DBBL_INTERNAL_TESTING=0 `
               "-DCMAKE_PREFIX_PATH=$depPath\usr\local" `
               -DCMAKE_INSTALL_PREFIX="../install-dir" `
