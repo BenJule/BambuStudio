@@ -333,6 +333,13 @@ jobs:
           path: deps/build/destdir
           key: pkg-deps-arch-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
 
+      - name: Install cmake 3.31.x (Arch)
+        uses: lukka/get-cmake@591817e96fcad43505fb4eae36172462abb3a42e  # v4.3.3
+        with:
+          cmakeVersion: "~3.31.0"
+          useLocalCache: true
+          useCloudCache: true
+
       - name: Install build dependencies
         run: sudo ./BuildLinux.sh -ur
 
