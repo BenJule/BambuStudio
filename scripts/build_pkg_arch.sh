@@ -68,6 +68,10 @@ arch=('${ARCH}')
 url="https://bambulab.com"
 license=('AGPL3')
 depends=('gtk3' 'glib2' 'dbus' 'libsecret' 'webkit2gtk-4.1' 'libxkbcommon' 'mesa')
+# !debug: don't split a separate -debug package; !strip: keep the already-built
+# binaries intact (stripping here would split debug symbols out into a tiny
+# second package and the upload step could pick the wrong one).
+options=('!debug' '!strip')
 
 package() {
     cp -r "${STAGING_ABS}/." "\${pkgdir}/"
@@ -85,7 +89,9 @@ else
     makepkg --noextract --nodeps --nocheck -f 2>&1
 fi
 
-PKG=$(find "$PKGDIR" -name "${PKGNAME}-*.pkg.tar.zst" | head -1)
+# Match only the main package (bambustudio-<version>), never bambustudio-debug-*.
+# The version always starts with a digit, so anchor the pattern on that.
+PKG=$(find "$PKGDIR" -name "${PKGNAME}-[0-9]*.pkg.tar.zst" ! -name "${PKGNAME}-debug-*" | head -1)
 if [ -z "$PKG" ]; then
     echo "Error: no .pkg.tar.zst found after makepkg" >&2
     exit 1
