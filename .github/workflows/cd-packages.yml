@@ -58,7 +58,10 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ github.token }}
-    permissions: read-all
+    permissions:
+      contents: read
+      packages: read
+      actions: write  # delete-before-save: evict the platform's old ccache
 
     steps:
       - name: Harden Runner
@@ -106,7 +109,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-debian-trixie-${{ github.run_id }}
+          key: ccache-debian-trixie
           restore-keys: |
             ccache-debian-trixie-
 
@@ -131,12 +134,21 @@ jobs:
           echo "### ccache statistics (Debian trixie)" >> "$GITHUB_STEP_SUMMARY"
           ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: Evict old ccache (keep one per platform)
+        if: steps.build-bambu.outcome == 'success'
+        continue-on-error: true
+        run: |
+          curl -sL -X DELETE \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/actions/caches?key=ccache-debian-trixie" || true
+
       - name: Save ccache
         if: steps.build-bambu.outcome == 'success'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-debian-trixie-${{ github.run_id }}
+          key: ccache-debian-trixie
 
       - name: Smoke test
         if: steps.build-bambu.outcome == 'success'
@@ -219,7 +231,9 @@ jobs:
     timeout-minutes: 180
     continue-on-error: true
     container: fedora:42@sha256:7c63468daf71fdc5bda3699cd483b169bb995b5137265d5ffe8f04e2ce87fbb8
-    permissions: read-all
+    permissions:
+      contents: read
+      actions: write  # delete-before-save: evict the platform's old ccache
 
     steps:
       - name: Harden Runner
@@ -268,7 +282,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-fedora42-${{ github.run_id }}
+          key: ccache-fedora42
           restore-keys: |
             ccache-fedora42-
 
@@ -289,12 +303,21 @@ jobs:
           echo "### ccache statistics (Fedora 42)" >> "$GITHUB_STEP_SUMMARY"
           ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: Evict old ccache (keep one per platform)
+        if: steps.build-bambu.outcome == 'success'
+        continue-on-error: true
+        run: |
+          curl -sL -X DELETE \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/actions/caches?key=ccache-fedora42" || true
+
       - name: Save ccache
         if: steps.build-bambu.outcome == 'success'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-fedora42-${{ github.run_id }}
+          key: ccache-fedora42
 
       - name: Build package
         run: bash scripts/build_rpm.sh
@@ -319,7 +342,9 @@ jobs:
     timeout-minutes: 180
     continue-on-error: true
     container: archlinux:base@sha256:a9a1e6db522cf5f8018c920d035e2bfbf8e39c485ee737ce0388990898f2f042
-    permissions: read-all
+    permissions:
+      contents: read
+      actions: write  # delete-before-save: evict the platform's old ccache
 
     steps:
       - name: Harden Runner
@@ -374,7 +399,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-arch-${{ github.run_id }}
+          key: ccache-arch
           restore-keys: |
             ccache-arch-
 
@@ -399,12 +424,21 @@ jobs:
           echo "### ccache statistics (Arch Linux)" >> "$GITHUB_STEP_SUMMARY"
           ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: Evict old ccache (keep one per platform)
+        if: steps.build-bambu.outcome == 'success'
+        continue-on-error: true
+        run: |
+          curl -sL -X DELETE \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/actions/caches?key=ccache-arch" || true
+
       - name: Save ccache
         if: steps.build-bambu.outcome == 'success'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-arch-${{ github.run_id }}
+          key: ccache-arch
 
       - name: Build package
         run: bash scripts/build_pkg_arch.sh
