@@ -92,7 +92,7 @@ jobs:
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
           echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
           echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime" >> "$GITHUB_ENV"
-          echo "CCACHE_IGNOREOPTIONSREGEX=-DSLIC3R_DEV_TIMESTAMP=.*" >> "$GITHUB_ENV"
+          echo "CCACHE_IGNOREOPTIONS=-DSLIC3R_DEV_TIMESTAMP=*" >> "$GITHUB_ENV"
           echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
 
       - name: Restore ccache
@@ -250,7 +250,7 @@ jobs:
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
           echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
           echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime" >> "$GITHUB_ENV"
-          echo "CCACHE_IGNOREOPTIONSREGEX=-DSLIC3R_DEV_TIMESTAMP=.*" >> "$GITHUB_ENV"
+          echo "CCACHE_IGNOREOPTIONS=-DSLIC3R_DEV_TIMESTAMP=*" >> "$GITHUB_ENV"
           echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
 
       - name: Restore ccache
@@ -352,7 +352,7 @@ jobs:
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
           echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
           echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime" >> "$GITHUB_ENV"
-          echo "CCACHE_IGNOREOPTIONSREGEX=-DSLIC3R_DEV_TIMESTAMP=.*" >> "$GITHUB_ENV"
+          echo "CCACHE_IGNOREOPTIONS=-DSLIC3R_DEV_TIMESTAMP=*" >> "$GITHUB_ENV"
           echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
 
       - name: Restore ccache
