@@ -90,7 +90,7 @@ jobs:
         run: |
           apt-get install -y --no-install-recommends ccache
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
-          echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=2G" >> "$GITHUB_ENV"
           echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime" >> "$GITHUB_ENV"
           echo "CCACHE_IGNOREOPTIONS=-DSLIC3R_DEV_TIMESTAMP=*" >> "$GITHUB_ENV"
           echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
@@ -100,7 +100,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-debian-trixie-latest
+          key: ccache-debian-trixie-${{ github.run_id }}
           restore-keys: |
             ccache-debian-trixie-
 
@@ -130,7 +130,7 @@ jobs:
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-debian-trixie-latest
+          key: ccache-debian-trixie-${{ github.run_id }}
 
       - name: Smoke test
         if: steps.build-bambu.outcome == 'success'
@@ -248,7 +248,7 @@ jobs:
           dnf install -y --setopt=install_weak_deps=False ccache
           echo "/usr/lib64/ccache" >> "$GITHUB_PATH"
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
-          echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=2G" >> "$GITHUB_ENV"
           echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime" >> "$GITHUB_ENV"
           echo "CCACHE_IGNOREOPTIONS=-DSLIC3R_DEV_TIMESTAMP=*" >> "$GITHUB_ENV"
           echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
@@ -258,7 +258,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-fedora42-latest
+          key: ccache-fedora42-${{ github.run_id }}
           restore-keys: |
             ccache-fedora42-
 
@@ -284,7 +284,7 @@ jobs:
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-fedora42-latest
+          key: ccache-fedora42-${{ github.run_id }}
 
       - name: Build package
         run: bash scripts/build_rpm.sh
@@ -350,7 +350,7 @@ jobs:
         run: |
           pacman -S --noconfirm --needed ccache
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
-          echo "CCACHE_MAXSIZE=5G" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=2G" >> "$GITHUB_ENV"
           echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime" >> "$GITHUB_ENV"
           echo "CCACHE_IGNOREOPTIONS=-DSLIC3R_DEV_TIMESTAMP=*" >> "$GITHUB_ENV"
           echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
@@ -360,7 +360,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-arch-latest
+          key: ccache-arch-${{ github.run_id }}
           restore-keys: |
             ccache-arch-
 
@@ -390,7 +390,7 @@ jobs:
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-arch-latest
+          key: ccache-arch-${{ github.run_id }}
 
       - name: Build package
         run: bash scripts/build_pkg_arch.sh
