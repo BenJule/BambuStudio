@@ -129,9 +129,14 @@ jobs:
         run: |
           set -euo pipefail
           brew install automake texinfo nasm yasm ccache zstd
-          export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
+          export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime,locale"
           export CCACHE_IGNOREOPTIONS="-DSLIC3R_DEV_TIMESTAMP=*"
           export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
+          # The launcher was missing → ccache was bypassed entirely (0 hits). macOS does
+          # NOT need CCACHE_COMPILERCHECK=content: the hosted runner's Apple clang is part
+          # of the image and stable across runs (not reinstalled), so the default works.
+          export CMAKE_C_COMPILER_LAUNCHER=ccache
+          export CMAKE_CXX_COMPILER_LAUNCHER=ccache
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/x86_64" ]; then
             echo "No macOS Intel cache found. Building deps + slicer..."
@@ -147,9 +152,14 @@ jobs:
         run: |
           set -euo pipefail
           brew install automake texinfo nasm yasm ccache zstd
-          export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
+          export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime,locale"
           export CCACHE_IGNOREOPTIONS="-DSLIC3R_DEV_TIMESTAMP=*"
           export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
+          # The launcher was missing → ccache was bypassed entirely (0 hits). macOS does
+          # NOT need CCACHE_COMPILERCHECK=content: the hosted runner's Apple clang is part
+          # of the image and stable across runs (not reinstalled), so the default works.
+          export CMAKE_C_COMPILER_LAUNCHER=ccache
+          export CMAKE_CXX_COMPILER_LAUNCHER=ccache
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/arm64" ]; then
             echo "No macOS ARM cache found. Building deps + slicer..."
@@ -360,7 +370,8 @@ jobs:
           export PATH="/usr/lib/ccache:$PATH"
           export CCACHE_DIR="$HOME/.ccache"
           export CCACHE_MAXSIZE="2G"
-          export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
+          export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime,locale"
+          export CCACHE_COMPILERCHECK="content"
           export CCACHE_IGNOREOPTIONS="-DSLIC3R_DEV_TIMESTAMP=*"
           export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
           ccache --zero-stats
