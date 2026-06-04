@@ -128,7 +128,7 @@ jobs:
           set -euo pipefail
           brew install automake texinfo nasm yasm ccache zstd
           export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
-          export CCACHE_IGNOREOPTIONSREGEX="-DSLIC3R_DEV_TIMESTAMP=.*"
+          export CCACHE_IGNOREOPTIONS="-DSLIC3R_DEV_TIMESTAMP=*"
           export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/x86_64" ]; then
@@ -146,7 +146,7 @@ jobs:
           set -euo pipefail
           brew install automake texinfo nasm yasm ccache zstd
           export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
-          export CCACHE_IGNOREOPTIONSREGEX="-DSLIC3R_DEV_TIMESTAMP=.*"
+          export CCACHE_IGNOREOPTIONS="-DSLIC3R_DEV_TIMESTAMP=*"
           export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/arm64" ]; then
@@ -359,7 +359,7 @@ jobs:
           export CCACHE_DIR="$HOME/.ccache"
           export CCACHE_MAXSIZE="5G"
           export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
-          export CCACHE_IGNOREOPTIONSREGEX="-DSLIC3R_DEV_TIMESTAMP=.*"
+          export CCACHE_IGNOREOPTIONS="-DSLIC3R_DEV_TIMESTAMP=*"
           export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
           ccache --zero-stats
           if [ ! -d "${{ github.workspace }}/deps/build/destdir" ]; then
