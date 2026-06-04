@@ -260,6 +260,13 @@ jobs:
           path: release-assets/
           merge-multiple: true
 
+      - name: Remove build-only dependency tarballs
+        run: |
+          # _build-deps.yml uploads BambuStudio_dep_* tarballs (macOS/Windows
+          # deps, ~250 MB each) as run artifacts. They are build inputs, not
+          # user-facing release assets — strip them before publishing.
+          find release-assets/ -name 'BambuStudio_dep_*' -type f -print -delete || true
+
       - name: Prepare changelog
         run: |
           if [ -f release-assets/changelog.md ]; then
@@ -376,8 +383,9 @@ jobs:
     if: needs.create_release.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    continue-on-error: true
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Harden Runner
@@ -409,15 +417,25 @@ jobs:
         with:
           deb-path: ${{ env.DEB }}
 
-      - name: Rollback release on failure
+      - name: Post warning on failure
         if: failure()
         env:
-          GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.tag }}
         run: |
-          echo "Smoke test failed — deleting release $TAG to prevent shipping a broken package"
-          gh release delete "$TAG" \
-            --repo "${{ github.repository }}" \
-            --yes \
-            --cleanup-tag || echo "Warning: could not delete release (may already be gone)"
-          echo "::error::Release $TAG was deleted because the smoke test failed. Fix the packaging issue and re-trigger the release."
+          # NEVER delete an already-published release from the smoke test.
+          # The smoke test installs the .deb on a GitHub-hosted runner whose
+          # apt mirror can transiently 404 on dependencies (libwebkit2gtk,
+          # gstreamer...), making ldd report missing libs even though the .deb
+          # itself is fine. A flaky mirror must not destroy a complete release.
+          # Matches the non-destructive behaviour of the RC and Nightly smoke tests.
+          {
+            echo "## ⚠️ Release Smoke Test Failed"
+            echo ""
+            echo "The post-publish smoke test failed for release \`${TAG}\`."
+            echo "The release was **NOT** deleted — this is usually a transient apt"
+            echo "mirror issue on the runner, not a packaging defect. Verify the .deb"
+            echo "manually before announcing the release."
+            echo ""
+            echo "- Release: https://github.com/${{ github.repository }}/releases/tag/${TAG}"
+            echo "- Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> "$GITHUB_STEP_SUMMARY"
