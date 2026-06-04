@@ -93,7 +93,11 @@ jobs:
           apt-get install -y --no-install-recommends ccache
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
           echo "CCACHE_MAXSIZE=2G" >> "$GITHUB_ENV"
-          echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime" >> "$GITHUB_ENV"
+          echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime,locale" >> "$GITHUB_ENV"
+          # content (not the default mtime): the container reinstalls the compiler
+          # each run via apt/dnf/pacman, changing its mtime even with a pinned image,
+          # which made ccache treat the compiler as different (9-35% hit rate).
+          echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
           echo "CCACHE_IGNOREOPTIONS=-DSLIC3R_DEV_TIMESTAMP=*" >> "$GITHUB_ENV"
           echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
 
@@ -251,7 +255,11 @@ jobs:
           echo "/usr/lib64/ccache" >> "$GITHUB_PATH"
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
           echo "CCACHE_MAXSIZE=2G" >> "$GITHUB_ENV"
-          echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime" >> "$GITHUB_ENV"
+          echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime,locale" >> "$GITHUB_ENV"
+          # content (not the default mtime): the container reinstalls the compiler
+          # each run via apt/dnf/pacman, changing its mtime even with a pinned image,
+          # which made ccache treat the compiler as different (9-35% hit rate).
+          echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
           echo "CCACHE_IGNOREOPTIONS=-DSLIC3R_DEV_TIMESTAMP=*" >> "$GITHUB_ENV"
           echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
 
@@ -353,7 +361,11 @@ jobs:
           pacman -S --noconfirm --needed ccache
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
           echo "CCACHE_MAXSIZE=2G" >> "$GITHUB_ENV"
-          echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime" >> "$GITHUB_ENV"
+          echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime,locale" >> "$GITHUB_ENV"
+          # content (not the default mtime): the container reinstalls the compiler
+          # each run via apt/dnf/pacman, changing its mtime even with a pinned image,
+          # which made ccache treat the compiler as different (9-35% hit rate).
+          echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
           echo "CCACHE_IGNOREOPTIONS=-DSLIC3R_DEV_TIMESTAMP=*" >> "$GITHUB_ENV"
           echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
 
