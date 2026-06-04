@@ -143,7 +143,15 @@ fi
 if ! [[ -n "${DISABLE_PARALLEL_LIMIT}" ]]
 then
     FREE_MEM_GB=$(free -g -t | grep 'Mem' | rev | cut -d" " -f1 | rev)
-    MAX_THREADS=$((FREE_MEM_GB * 10 / 25))
+    # arm64 runners OOM in the GUI compile phase: those translation units peak
+    # higher per thread (and the PCH is often discarded via a changing
+    # SLIC3R_DEV_TIMESTAMP), so use a more conservative ~4GB/thread budget on
+    # aarch64. x86_64 builds fine at ~2.5GB/thread.
+    if [ "$(uname -m)" = "aarch64" ]; then
+        MAX_THREADS=$((FREE_MEM_GB * 10 / 40))
+    else
+        MAX_THREADS=$((FREE_MEM_GB * 10 / 25))
+    fi
     if [ "$MAX_THREADS" -lt 1 ]; then
         export CMAKE_BUILD_PARALLEL_LEVEL=1
     else
