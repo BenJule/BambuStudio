@@ -1,6 +1,5 @@
-# Copyright (c) 2026 BenJule <benjamin.luetker@gmail.com>
-# Licensed under AGPL-3.0. Part of the BenJule/BambuStudio CI dependency-cache
-# strategy. If you reuse this file, this notice must be kept intact (AGPL-3.0 §5a).
+# SPDX-FileCopyrightText: 2026 BenJule <benjamin.luetker@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 name: '_: Check Cache'
 
 on:
