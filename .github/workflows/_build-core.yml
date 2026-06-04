@@ -113,26 +113,12 @@ jobs:
           restore-keys: |
             brew-core-${{ inputs.os }}-
 
-      - name: Restore ccache (macOS)
-        if: runner.os == 'macOS'
-        id: ccache-restore
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
-        with:
-          path: ~/.ccache
-          key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ github.run_id }}
-          restore-keys: |
-            ccache-${{ inputs.os }}-${{ inputs.arch }}-
-
       - name: Build slicer mac (Intel x86_64)
         if: runner.os == 'macOS' && inputs.arch == 'x86_64'
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          brew install automake texinfo nasm yasm ccache zstd
-          export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
-          export CCACHE_IGNOREOPTIONS="-DSLIC3R_DEV_TIMESTAMP=*"
-          export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
-          ccache --zero-stats
+          brew install automake texinfo nasm yasm zstd
           if [ ! -d "${{ github.workspace }}/deps/build/x86_64" ]; then
             echo "No macOS Intel cache found. Building deps + slicer..."
             ./BuildMac.sh -x -a x86_64 -t 10.15
@@ -146,11 +132,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          brew install automake texinfo nasm yasm ccache zstd
-          export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
-          export CCACHE_IGNOREOPTIONS="-DSLIC3R_DEV_TIMESTAMP=*"
-          export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
-          ccache --zero-stats
+          brew install automake texinfo nasm yasm zstd
           if [ ! -d "${{ github.workspace }}/deps/build/arm64" ]; then
             echo "No macOS ARM cache found. Building deps + slicer..."
             ./BuildMac.sh -x -a universal -t 10.15 -1
@@ -158,19 +140,6 @@ jobs:
             echo "Using cached deps..."
             ./BuildMac.sh -s -x -a universal -t 10.15 -1
           fi
-
-      - name: Save ccache (macOS)
-        if: always() && runner.os == 'macOS'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
-        with:
-          path: ~/.ccache
-          key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ github.run_id }}
-
-      - name: ccache statistics (macOS)
-        if: always() && runner.os == 'macOS'
-        run: |
-          echo "### ccache statistics (macOS ${{ inputs.os }} ${{ inputs.arch }})" >> "$GITHUB_STEP_SUMMARY"
-          ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Pack macOS .dmg
         if: runner.os == 'macOS'
