@@ -1,3 +1,7 @@
+# Copyright (c) 2026 BenJule <benjamin.luetker@gmail.com>
+# Licensed under AGPL-3.0. Part of the BenJule/BambuStudio CI: GitHub-hosted
+# platform builds with ccache (Linux/macOS) compiler caching. If you reuse this
+# file, this notice must be kept intact (AGPL-3.0 §5a).
 name: '_: Build BambuStudio'
 
 on:
