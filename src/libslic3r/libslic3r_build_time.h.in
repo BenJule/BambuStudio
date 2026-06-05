@@ -1,0 +1,11 @@
+#ifndef __SLIC3R_BUILD_TIME_H
+#define __SLIC3R_BUILD_TIME_H
+
+// SLIC3R_BUILD_TIME is isolated from libslic3r_version.h on purpose: it changes
+// on every build (timestamp), and the version header is pulled in via the PCH
+// (pchheader.hpp) and libslic3r.h (~69 TUs). Keeping a per-build value there
+// invalidated ccache's Direct-mode for all of them on every build. Only the few
+// files that actually use SLIC3R_BUILD_TIME include this narrow header.
+#define SLIC3R_BUILD_TIME "@SLIC3R_BUILD_TIME@"
+
+#endif /* __SLIC3R_BUILD_TIME_H */

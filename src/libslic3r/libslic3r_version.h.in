@@ -5,7 +5,8 @@
 #define SLIC3R_APP_KEY "@SLIC3R_APP_KEY@"
 #define SLIC3R_VERSION "@SLIC3R_VERSION@"
 #define SLIC3R_BUILD_ID "@SLIC3R_BUILD_ID@"
-#define SLIC3R_BUILD_TIME "@SLIC3R_BUILD_TIME@"
+// SLIC3R_BUILD_TIME moved to libslic3r_build_time.h — it changes every build and
+// this header is included via the PCH + libslic3r.h (~69 TUs), which broke ccache.
 #define SLIC3R_COMPILE_VERSION "@SLIC3R_COMPILE_VERSION@"
 //#define SLIC3R_RC_VERSION "@SLIC3R_VERSION@"
 #define BBL_RELEASE_TO_PUBLIC @BBL_RELEASE_TO_PUBLIC@
