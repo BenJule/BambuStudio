@@ -88,58 +88,16 @@ jobs:
       - name: Fix permissions
         run: chown -R "$(id -u):$(id -g)" ./
 
-      - name: Install and configure ccache
-        run: |
-          apt-get install -y --no-install-recommends ccache
-          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
-          # Weekly-rotating cache key so the cache actually refreshes (a stable key
-          # would freeze it: actions/cache/save skips when the key already exists).
-          echo "CCACHE_WEEK=$(date -u +%Y%U)" >> "$GITHUB_ENV"
-          echo "CCACHE_MAXSIZE=2G" >> "$GITHUB_ENV"
-          echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime,locale" >> "$GITHUB_ENV"
-          # content (not the default mtime): the container reinstalls the compiler
-          # each run via apt/dnf/pacman, changing its mtime even with a pinned image,
-          # which made ccache treat the compiler as different (9-35% hit rate).
-          echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
-          echo "CCACHE_IGNOREOPTIONS=-DSLIC3R_DEV_TIMESTAMP=*" >> "$GITHUB_ENV"
-          echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-
-      - name: Restore ccache
-        id: ccache-restore
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
-        with:
-          path: ~/.ccache
-          key: ccache-debian-trixie-${{ env.CCACHE_WEEK }}
-          restore-keys: |
-            ccache-debian-trixie-
-
       - name: Build deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: ./BuildLinux.sh -dfr
 
       - name: Build BambuStudio
         id: build-bambu
-        env:
-          CMAKE_C_COMPILER_LAUNCHER: ccache
-          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
-          ccache --zero-stats
           export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
-
-      - name: ccache statistics
-        if: always()
-        run: |
-          echo "### ccache statistics (Debian trixie)" >> "$GITHUB_STEP_SUMMARY"
-          ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
-
-      - name: Save ccache
-        if: steps.build-bambu.outcome == 'success'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
-        with:
-          path: ~/.ccache
-          key: ccache-debian-trixie-${{ env.CCACHE_WEEK }}
 
       - name: Smoke test
         if: steps.build-bambu.outcome == 'success'
@@ -252,32 +210,6 @@ jobs:
       - name: Fix permissions
         run: chown -R "$(id -u):$(id -g)" ./
 
-      - name: Install and configure ccache
-        run: |
-          dnf install -y --setopt=install_weak_deps=False ccache
-          echo "/usr/lib64/ccache" >> "$GITHUB_PATH"
-          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
-          # Weekly-rotating cache key so the cache actually refreshes (a stable key
-          # would freeze it: actions/cache/save skips when the key already exists).
-          echo "CCACHE_WEEK=$(date -u +%Y%U)" >> "$GITHUB_ENV"
-          echo "CCACHE_MAXSIZE=2G" >> "$GITHUB_ENV"
-          echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime,locale" >> "$GITHUB_ENV"
-          # content (not the default mtime): the container reinstalls the compiler
-          # each run via apt/dnf/pacman, changing its mtime even with a pinned image,
-          # which made ccache treat the compiler as different (9-35% hit rate).
-          echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
-          echo "CCACHE_IGNOREOPTIONS=-DSLIC3R_DEV_TIMESTAMP=*" >> "$GITHUB_ENV"
-          echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-
-      - name: Restore ccache
-        id: ccache-restore
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
-        with:
-          path: ~/.ccache
-          key: ccache-fedora42-${{ env.CCACHE_WEEK }}
-          restore-keys: |
-            ccache-fedora42-
-
       - name: Build deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: ./BuildLinux.sh -dfr
@@ -285,22 +217,8 @@ jobs:
       - name: Build BambuStudio
         id: build-bambu
         run: |
-          ccache --zero-stats
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
-
-      - name: ccache statistics
-        if: always()
-        run: |
-          echo "### ccache statistics (Fedora 42)" >> "$GITHUB_STEP_SUMMARY"
-          ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
-
-      - name: Save ccache
-        if: steps.build-bambu.outcome == 'success'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
-        with:
-          path: ~/.ccache
-          key: ccache-fedora42-${{ env.CCACHE_WEEK }}
 
       - name: Build package
         run: bash scripts/build_rpm.sh
@@ -362,58 +280,16 @@ jobs:
       - name: Fix permissions
         run: chown -R "$(id -u):$(id -g)" ./
 
-      - name: Install and configure ccache
-        run: |
-          pacman -S --noconfirm --needed ccache
-          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
-          # Weekly-rotating cache key so the cache actually refreshes (a stable key
-          # would freeze it: actions/cache/save skips when the key already exists).
-          echo "CCACHE_WEEK=$(date -u +%Y%U)" >> "$GITHUB_ENV"
-          echo "CCACHE_MAXSIZE=2G" >> "$GITHUB_ENV"
-          echo "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime,locale" >> "$GITHUB_ENV"
-          # content (not the default mtime): the container reinstalls the compiler
-          # each run via apt/dnf/pacman, changing its mtime even with a pinned image,
-          # which made ccache treat the compiler as different (9-35% hit rate).
-          echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
-          echo "CCACHE_IGNOREOPTIONS=-DSLIC3R_DEV_TIMESTAMP=*" >> "$GITHUB_ENV"
-          echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-
-      - name: Restore ccache
-        id: ccache-restore
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
-        with:
-          path: ~/.ccache
-          key: ccache-arch-${{ env.CCACHE_WEEK }}
-          restore-keys: |
-            ccache-arch-
-
       - name: Build deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: ./BuildLinux.sh -dfr
 
       - name: Build BambuStudio
         id: build-bambu
-        env:
-          CMAKE_C_COMPILER_LAUNCHER: ccache
-          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
-          ccache --zero-stats
           export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
           ./BuildLinux.sh -sfr
           cd build && ./src/BuildLinuxImage.sh
-
-      - name: ccache statistics
-        if: always()
-        run: |
-          echo "### ccache statistics (Arch Linux)" >> "$GITHUB_STEP_SUMMARY"
-          ccache --show-stats --verbose | tee -a "$GITHUB_STEP_SUMMARY"
-
-      - name: Save ccache
-        if: steps.build-bambu.outcome == 'success'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
-        with:
-          path: ~/.ccache
-          key: ccache-arch-${{ env.CCACHE_WEEK }}
 
       - name: Build package
         run: bash scripts/build_pkg_arch.sh
