@@ -119,7 +119,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ github.run_id }}
+          key: ccache-${{ inputs.os }}-${{ inputs.arch }}
           restore-keys: |
             ccache-${{ inputs.os }}-${{ inputs.arch }}-
 
@@ -174,7 +174,7 @@ jobs:
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ github.run_id }}
+          key: ccache-${{ inputs.os }}-${{ inputs.arch }}
 
       - name: ccache statistics (macOS)
         if: always() && runner.os == 'macOS'
@@ -358,7 +358,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ inputs.os }}-${{ github.run_id }}
+          key: ccache-${{ inputs.os }}
           restore-keys: |
             ccache-${{ inputs.os }}-
 
@@ -387,7 +387,7 @@ jobs:
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ inputs.os }}-${{ github.run_id }}
+          key: ccache-${{ inputs.os }}
 
       - name: ccache statistics (Linux)
         if: always() && runner.os == 'Linux'
