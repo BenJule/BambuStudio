@@ -43,6 +43,12 @@ jobs:
           lfs: 'true'
           fetch-depth: 0
 
+      # Weekly-rotating ccache key suffix so the cache refreshes (a stable key
+      # freezes it: actions/cache/save skips when the key already exists).
+      - name: Compute weekly ccache key suffix
+        shell: bash
+        run: echo "CCACHE_WEEK=$(date -u +%Y%U)" >> "$GITHUB_ENV"
+
       - name: load cached deps
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
@@ -119,7 +125,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ inputs.os }}-${{ inputs.arch }}
+          key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ env.CCACHE_WEEK }}
           restore-keys: |
             ccache-${{ inputs.os }}-${{ inputs.arch }}-
 
@@ -174,7 +180,7 @@ jobs:
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ inputs.os }}-${{ inputs.arch }}
+          key: ccache-${{ inputs.os }}-${{ inputs.arch }}-${{ env.CCACHE_WEEK }}
 
       - name: ccache statistics (macOS)
         if: always() && runner.os == 'macOS'
@@ -358,7 +364,7 @@ jobs:
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ inputs.os }}
+          key: ccache-${{ inputs.os }}-${{ env.CCACHE_WEEK }}
           restore-keys: |
             ccache-${{ inputs.os }}-
 
@@ -387,7 +393,7 @@ jobs:
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: ~/.ccache
-          key: ccache-${{ inputs.os }}
+          key: ccache-${{ inputs.os }}-${{ env.CCACHE_WEEK }}
 
       - name: ccache statistics (Linux)
         if: always() && runner.os == 'Linux'
