@@ -89,10 +89,10 @@ private:
     static bool get_stream_url(std::string *url = nullptr);
 
 private:
-    static inline const wxMediaState MEDIASTATE_IDLE         = (wxMediaState) 3;
-    static inline const wxMediaState MEDIASTATE_INITIALIZING = (wxMediaState) 4;
-    static inline const wxMediaState MEDIASTATE_LOADING      = (wxMediaState) 5;
-    static inline const wxMediaState MEDIASTATE_BUFFERING    = (wxMediaState) 6;
+    static constexpr wxMediaState MEDIASTATE_IDLE = (wxMediaState) 3;
+    static constexpr wxMediaState MEDIASTATE_INITIALIZING = (wxMediaState) 4;
+    static constexpr wxMediaState MEDIASTATE_LOADING = (wxMediaState) 5;
+    static constexpr wxMediaState MEDIASTATE_BUFFERING = (wxMediaState) 6;
 
     // token
     std::shared_ptr<int> m_token = std::make_shared<int>(0);
@@ -130,6 +130,7 @@ private:
     std::chrono::system_clock::time_point m_play_timer;
     int           m_print_idle = 0;
     int           m_load_duration = 0;
+    std::string   m_pending_start_liveview_json;
 
     std::shared_ptr<int> m_image_token = std::make_shared<int>(0);
     std::chrono::steady_clock::time_point m_image_last_success_time;

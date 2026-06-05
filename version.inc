@@ -12,4 +12,4 @@ set(BBL_INTERNAL_TESTING "1")
 endif()
 
 # Base version — the 4th segment is auto-computed from git commit count at build time
-set(SLIC3R_VERSION_BASE "02.07.00")
+set(SLIC3R_VERSION_BASE "02.07.01")
