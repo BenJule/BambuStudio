@@ -17,6 +17,9 @@ set(SLIC3R_COMPILE_VERSION "${GIT_SHA1}")
 endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libslic3r_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h @ONLY)
+# Isolated per-build timestamp — keeps it out of the widely-included version
+# header so ccache Direct-mode isn't invalidated on every build.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libslic3r_build_time.h.in ${CMAKE_CURRENT_BINARY_DIR}/libslic3r_build_time.h @ONLY)
 
 if (MINGW)
     add_compile_options(-Wa,-mbig-obj)
