@@ -1,17 +1,14 @@
-# On Windows (MSVC) there is no guaranteed system zlib when the dep cache is
-# cold. dep_ZLIB and dep_Assimp build in parallel, so find_package(ZLIB) can
-# race and fail. Let Assimp use its own bundled zlib on Windows.
-# On macOS / Linux the system or dep_ZLIB is already available and the bundled
-# copy conflicts with SDK headers (macOS 15.5 _stdio.h macro collision).
-if (MSVC)
-    set(_assimp_zlib -DASSIMP_BUILD_ZLIB=ON)
+if(CMAKE_VERSION VERSION_LESS 3.22)
+    set(_assimp_url "https://github.com/assimp/assimp/archive/refs/tags/v5.3.1.tar.gz")
+    set(_assimp_hash "SHA256=a07666be71afe1ad4bc008c2336b7c688aca391271188eb9108d0c6db1be53f1")
 else()
-    set(_assimp_zlib -DASSIMP_BUILD_ZLIB=OFF)
+    set(_assimp_url "https://github.com/assimp/assimp/archive/refs/tags/v5.4.3.tar.gz")
+    set(_assimp_hash "SHA256=66dfbaee288f2bc43172440a55d0235dfc7bf885dda6435c038e8000e79582cb")
 endif()
 
 bambustudio_add_cmake_project(Assimp
-    URL "https://github.com/assimp/assimp/archive/refs/tags/v5.4.3.tar.gz"
-    URL_HASH SHA256=66dfbaee288f2bc43172440a55d0235dfc7bf885dda6435c038e8000e79582cb
+    URL ${_assimp_url}
+    URL_HASH ${_assimp_hash}
     CMAKE_ARGS
         -DASSIMP_BUILD_TESTS=OFF
         -DASSIMP_BUILD_SAMPLES=OFF
@@ -22,7 +19,7 @@ bambustudio_add_cmake_project(Assimp
         -DASSIMP_BUILD_GLTF_IMPORTER=ON
         -DASSIMP_BUILD_OBJ_IMPORTER=ON
         -DASSIMP_BUILD_FBX_IMPORTER=ON
-        ${_assimp_zlib}
+        -DASSIMP_BUILD_ZLIB=ON
         -DASSIMP_WARNINGS_AS_ERRORS=OFF
         -DBUILD_WITH_STATIC_CRT=OFF
 )

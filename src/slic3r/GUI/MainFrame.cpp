@@ -49,11 +49,9 @@
 #include "../Utils/MacDarkMode.hpp"
 
 #include <fstream>
-#include <memory>
 #include <string_view>
 
 #include "GUI_App.hpp"
-#include "GUI_Utils.hpp"
 #include "UnsavedChangesDialog.hpp"
 #include "MsgDialog.hpp"
 #include "Notebook.hpp"
@@ -244,7 +242,6 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
 
     //reset log level
     auto loglevel = wxGetApp().app_config->get("severity_level");
-    Slic3r::set_logging_level(Slic3r::level_string_to_boost(loglevel));
     std::map<std::string, int> wx_log_levels{{"fatal", wxLOG_FatalError}, {"error", wxLOG_FatalError}, {"warning", wxLOG_Warning},
                                              {"info", wxLOG_Info},        {"debug", wxLOG_Debug},      {"trace", wxLOG_Trace}};
     wxLog::SetLogLevel(wx_log_levels[loglevel]);
@@ -444,21 +441,10 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
 
 
     sizer->Add(m_main_sizer, 1, wxEXPAND);
-#ifdef __WXGTK__
-    // On Wayland the window is not yet realized during construction.
-    // SetSizerAndFit/SetSizeHints both call gtk_window_resize before the
-    // compositor has mapped the window, triggering the 'width > 0' assertion.
-    // Use SetSizer (no implicit Fit) and defer all size operations to on_window_geometry.
-    SetMinClientSize(wxSize(400, 300));
-    SetSizer(sizer);
-#else
     SetSizerAndFit(sizer);
-#endif
     // initialize layout from config
     update_layout();
-#ifndef __WXGTK__
     sizer->SetSizeHints(this);
-#endif
 
     // BBS: fix taskbar overlay on windows
 #ifdef WIN32
@@ -490,24 +476,6 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     });
 #endif // WIN32
     // BBS
-#ifdef __WXGTK__
-    // SetSize/SetMinSize with explicit positive values are safe before Wayland
-    // realization. Apply the default geometry now — before persist_window_geometry
-    // restores any saved size — so the restore/sanitize callbacks run after.
-    const wxSize min_size = wxGetApp().get_min_size();
-    SetMinSize(min_size);
-    SetSize(wxSize(FromDIP(1200), FromDIP(800)));
-    Layout();
-    // SetSizeHints computes the sizer's minimum size and may call gtk_window_resize
-    // with a zero extent before the window is realized. Defer it to the first
-    // wxEVT_SHOW via on_window_geometry, guarded so it runs only once.
-    auto hint_done = std::make_shared<bool>(false);
-    on_window_geometry(this, [this, hint_done]() {
-        if (*hint_done) return;
-        *hint_done = true;
-        if (auto* s = GetSizer()) s->SetSizeHints(this);
-    });
-#else
     Fit();
 
     const wxSize min_size = wxGetApp().get_min_size(); //wxSize(76*wxGetApp().em_unit(), 49*wxGetApp().em_unit());
@@ -516,7 +484,6 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     SetSize(wxSize(FromDIP(1200), FromDIP(800)));
 
     Layout();
-#endif
 
     update_title();
 
@@ -713,8 +680,12 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
         const int key_code = evt.GetKeyCode();
 #ifdef __APPLE__
         if (evt.CmdDown() && (evt.GetKeyCode() == 'H')) {
-            //call parent_menu hide behavior
-            return;}
+            // Pass Cmd+H through to the macOS application menu so the
+            // standard "Hide BambuStudio" action fires.  Without evt.Skip()
+            // wxEVT_CHAR_HOOK consumes the event and macOS never sees it.
+            evt.Skip();
+            return;
+        }
         if (evt.CmdDown() && !evt.ShiftDown() && (evt.GetKeyCode() == 'M')) {
             this->Iconize();
             return;
@@ -1393,10 +1364,10 @@ void MainFrame::init_tabpanel()
             // Defer hash navigation until after the notebook paints (macOS + WKWebView).
             CallAfter([this]() {
                 if (m_web_device && m_tabpanel && m_tabpanel->GetCurrentPage() == m_web_device)
-                    m_web_device->NavigateTo("/filament");
+                    m_web_device->NavigateTo("/filament_manager");
             });
 #else
-            m_web_device->NavigateTo("/filament");
+            m_web_device->NavigateTo("/filament_manager");
 #endif
         }
 #ifndef __APPLE__
@@ -3493,10 +3464,10 @@ void MainFrame::init_menubar_as_editor()
             [this]() {return m_plater->is_view3D_shown();; }, this);
         auto flowrate_menu = new wxMenu();
         append_menu_item(
-            flowrate_menu, wxID_ANY, _L("Pass 1"), _L("Flow rate test - Pass 1"),
+            flowrate_menu, wxID_ANY, _L("Coarse"), _L("Flow rate test - Coarse"),
             [this](wxCommandEvent&) { if (m_plater) m_plater->calib_flowrate(1); }, "", nullptr,
             [this]() {return m_plater->is_view3D_shown();; }, this);
-        append_menu_item(flowrate_menu, wxID_ANY, _L("Pass 2"), _L("Flow rate test - Pass 2"),
+        append_menu_item(flowrate_menu, wxID_ANY, _L("Fine"), _L("Flow rate test - Fine"),
             [this](wxCommandEvent&) { if (m_plater) m_plater->calib_flowrate(2); }, "", nullptr,
             [this]() {return m_plater->is_view3D_shown();; }, this);
         m_topbar->GetCalibMenu()->AppendSubMenu(flowrate_menu, _L("Flow rate"));
@@ -3590,7 +3561,7 @@ void MainFrame::init_menubar_as_editor()
     // Flowrate
     auto flowrate_menu = new wxMenu();
     append_menu_item(
-        flowrate_menu, wxID_ANY, _L("Pass 1"), _L("Flow rate test - Pass 1"),
+        flowrate_menu, wxID_ANY, _L("Coarse"), _L("Flow rate test - Coarse"),
         [this](wxCommandEvent &) {
             if (m_plater) m_plater->calib_flowrate(1);
         },
@@ -3601,7 +3572,7 @@ void MainFrame::init_menubar_as_editor()
         },
         this);
     append_menu_item(
-        flowrate_menu, wxID_ANY, _L("Pass 2"), _L("Flow rate test - Pass 2"),
+        flowrate_menu, wxID_ANY, _L("Fine"), _L("Flow rate test - Fine"),
         [this](wxCommandEvent &) {
             if (m_plater) m_plater->calib_flowrate(2);
         },
