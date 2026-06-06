@@ -4,10 +4,9 @@ bambustudio_add_cmake_project(ZLIB
   # GIT_REPOSITORY https://github.com/madler/zlib.git
   # GIT_TAG v1.2.11
   #URL https://github.com/madler/zlib/archive/refs/tags/v1.2.11.zip
-  URL https://github.com/madler/zlib/archive/refs/tags/v1.3.1.zip
-  # zlib 1.2.13 uses K&R-style function declarations that the macOS 26 SDK rejects
-  # ("error: expected ')'" in zError) — 1.3.1 modernised them. Needed for the macOS deps build.
-  URL_HASH SHA256=50b24b47bf19e1f35d2a21ff36d2a366638cdf958219a66f30ce0861201760e6
+  URL https://github.com/madler/zlib/archive/refs/tags/v1.2.13.zip
+  #URL_HASH SHA256=f5cc4ab910db99b2bdbba39ebbdc225ffc2aa04b4057bc2817f1b94b6978cfc3
+  URL_HASH SHA256=c2856951bbf30e30861ace3765595d86ba13f2cf01279d901f6c62258c57f4ff
   PATCH_COMMAND ${patch_command}
   CMAKE_ARGS
     -DSKIP_INSTALL_FILES=ON         # Prevent installation of man pages et al.
