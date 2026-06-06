@@ -333,6 +333,13 @@ jobs:
           merge-multiple: true
         continue-on-error: true
 
+      - name: Drop internal build artifacts (deps) — not for end users
+        run: |
+          # The deps tarballs (BambuStudio_dep_*) are uploaded only for cross-job
+          # sharing and smoke tests — they are not end-user assets and bloat the
+          # release by ~800 MB. Keep them out of the published release.
+          rm -f artifacts/BambuStudio_dep_* 2>/dev/null || true
+
       - name: Check artifact count
         id: check
         run: |

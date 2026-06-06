@@ -1,5 +1,7 @@
 #include "wxMediaCtrl3.h"
+#ifndef BAMBUSTUDIO_NO_AVVIDEODECODER
 #include "AVVideoDecoder.hpp"
+#endif
 #include "I18N.hpp"
 #include "libslic3r/Utils.hpp"
 #include <boost/log/trivial.hpp>
@@ -325,6 +327,7 @@ void wxMediaCtrl3::PlayThread()
         Bambu_StreamInfo info;
         if (error == 0)
             error = Bambu_GetStreamInfo(tunnel, 0, &info);
+#ifndef BAMBUSTUDIO_NO_AVVIDEODECODER
         AVVideoDecoder decoder;
         if (error == 0) {
             decoder.open(info);
@@ -395,6 +398,9 @@ void wxMediaCtrl3::PlayThread()
                 }
             }
         }
+#else
+        error = 100;
+#endif
         if (m_get_frame_thread.joinable()) {
             m_get_frame_exit.store(true);
             m_get_frame_thread.join();
