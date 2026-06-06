@@ -272,6 +272,13 @@ jobs:
           merge-multiple: true
         continue-on-error: true
 
+      - name: Drop internal build artifacts (deps) — not for end users
+        run: |
+          # The deps tarballs (BambuStudio_dep_*) are uploaded only for cross-job
+          # sharing and smoke tests — they are not end-user assets and bloat the
+          # release by ~800 MB. Keep them out of the published release.
+          rm -f artifacts/BambuStudio_dep_* 2>/dev/null || true
+
       - name: Check artifact count
         id: check
         run: |
@@ -306,9 +313,20 @@ jobs:
         run: |
           TAG="${{ steps.ver.outputs.tag }}"
           git tag -s "$TAG" -m "Release candidate ${{ steps.ver.outputs.date }}" HEAD
-          TAG_SHA=$(git rev-parse "$TAG")
-          gh api repos/${{ github.repository }}/git/refs \
-            -X POST -f ref="refs/tags/${TAG}" -f sha="${TAG_SHA}"
+          # Push the signed tag directly — preserves the GPG signature. A tag push adds
+          # no commits, so the workflow-file push protection does not apply. Fall back to
+          # the two-step API (create the tag object first, then the ref) only if the
+          # direct push is rejected — the ref API alone fails with 422 because the local
+          # tag object is not on the server.
+          if ! git push origin "refs/tags/${TAG}"; then
+            echo "::warning::Direct signed-tag push rejected — creating tag via API (unsigned)"
+            TAG_SHA=$(gh api repos/${{ github.repository }}/git/tags \
+              -X POST -f tag="${TAG}" \
+              -f message="Release candidate ${{ steps.ver.outputs.date }}" \
+              -f object="$(git rev-parse 'HEAD^{commit}')" -f type=commit --jq .sha)
+            gh api repos/${{ github.repository }}/git/refs \
+              -X POST -f ref="refs/tags/${TAG}" -f sha="${TAG_SHA}"
+          fi
 
       - name: Publish RC pre-release
         id: publish_rc
