@@ -1,0 +1,211 @@
+name: 'CD: COPR Update'
+run-name: "COPR update (${{ inputs.channel || 'stable' }}) — ${{ github.event.release.tag_name || inputs.tag || 'latest' }}"
+
+# Publishes BambuStudio to Fedora COPR so Fedora users get native `dnf` updates
+# from Fedora's own build/host infrastructure (the Fedora counterpart to AUR).
+#
+# COPR is a BUILD service: it builds from a source RPM (SRPM), it cannot host a
+# pre-built binary RPM directly. We therefore wrap the release AppImage (same
+# asset the AUR job uses) into a tiny "-bin" SRPM whose %install only drops the
+# AppImage in place — no compilation — and let COPR rebuild + host it.
+#
+# One-time setup required (see repo wiki / below):
+#   1. Create a COPR project, e.g. `benjule/bambu-studio` on copr.fedorainfracloud.org
+#   2. Add repo secret COPR_CONFIG = the full contents of your COPR API token
+#      file (copr.fedorainfracloud.org/api/ → "copr-cli config").
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (stable: v02.07.00.55-bj.1 / nightly: nightly-20260531-abc1234)'
+        required: false
+        type: string
+      channel:
+        description: 'COPR project channel'
+        required: false
+        type: choice
+        default: stable
+        options: [stable, nightly]
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+        type: string
+      channel:
+        description: 'COPR channel: stable or nightly'
+        required: false
+        type: string
+        default: stable
+
+permissions: read-all
+
+concurrency:
+  group: cd-deploy-copr-${{ inputs.channel || 'stable' }}
+  cancel-in-progress: false
+
+jobs:
+  copr-update:
+    name: Build SRPM and submit to COPR (${{ inputs.channel || 'stable' }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Determine tag, channel, pkgname, pkgver
+        id: meta
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+            CHANNEL="stable"
+          elif [[ -n "${{ inputs.tag }}" ]]; then
+            TAG="${{ inputs.tag }}"
+            CHANNEL="${{ inputs.channel || 'stable' }}"
+          else
+            echo "::error::No tag provided for non-release trigger"
+            exit 1
+          fi
+
+          if [[ "$CHANNEL" == "nightly" ]]; then
+            PKGNAME="bambu-studio-nightly-bin"
+            COPR_PROJECT="${COPR_PROJECT_NIGHTLY:-bambu-studio-nightly}"
+            DATE_PART=$(echo "$TAG" | cut -d- -f2)
+            SHA_PART=$(echo "$TAG"  | cut -d- -f3)
+            PKGVER="${DATE_PART}.${SHA_PART}"
+          else
+            PKGNAME="bambu-studio-bin"
+            COPR_PROJECT="${COPR_PROJECT_STABLE:-bambu-studio}"
+            VERSION="${TAG#v}"
+            PKGVER="${VERSION//-/.}"  # rpm version: no hyphens
+          fi
+
+          echo "tag=$TAG"               >> "$GITHUB_OUTPUT"
+          echo "channel=$CHANNEL"       >> "$GITHUB_OUTPUT"
+          echo "pkgname=$PKGNAME"       >> "$GITHUB_OUTPUT"
+          echo "pkgver=$PKGVER"         >> "$GITHUB_OUTPUT"
+          echo "copr_project=$COPR_PROJECT" >> "$GITHUB_OUTPUT"
+          echo "Tag: $TAG  Channel: $CHANNEL  pkg: $PKGNAME  ver: $PKGVER  project: $COPR_PROJECT"
+
+      - name: Get AppImage URL
+        id: asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.meta.outputs.tag }}"
+          # Release assets can lag behind the publish job — retry a few times.
+          URL=""
+          for attempt in 1 2 3 4 5 6; do
+            URL=$(gh release view "$TAG" --repo "${{ github.repository }}" --json assets \
+              --jq '[.assets[]
+                | select(
+                    (.name | test("^BambuStudio_ubuntu-24\\.04_amd64_.*\\.AppImage$"; "i")) and
+                    (.name | test("_selfhosted\\.AppImage$"; "i") | not)
+                  )] | .[0].browser_download_url // ""')
+            [[ -n "$URL" ]] && break
+            echo "AppImage asset not visible yet for $TAG (attempt $attempt/6) — waiting 20s…"
+            sleep 20
+          done
+          if [[ -z "$URL" ]]; then
+            echo "::error::No AppImage asset found for tag $TAG after retries"
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "AppImage URL: $URL"
+
+      - name: Install rpm + copr tooling
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends rpm python3-pip
+          pipx install copr-cli || pip3 install --user copr-cli
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build SRPM (binary repackage)
+        id: srpm
+        run: |
+          set -euo pipefail
+          PKGNAME="${{ steps.meta.outputs.pkgname }}"
+          PKGVER="${{ steps.meta.outputs.pkgver }}"
+
+          mkdir -p ~/rpmbuild/{SPECS,SOURCES,SRPMS}
+          echo "Downloading AppImage…"
+          curl -fsSL "${{ steps.asset.outputs.url }}" -o ~/rpmbuild/SOURCES/BambuStudio.AppImage
+          chmod +x ~/rpmbuild/SOURCES/BambuStudio.AppImage
+
+          PROVIDES=""
+          if [[ "${{ steps.meta.outputs.channel }}" == "stable" ]]; then
+            PROVIDES=$'Provides:       bambu-studio\nConflicts:      bambu-studio'
+          fi
+
+          cat > ~/rpmbuild/SPECS/${PKGNAME}.spec << SPEC_EOF
+          Name:           ${PKGNAME}
+          Version:        ${PKGVER}
+          Release:        1%{?dist}
+          Summary:        BambuStudio slicer for Bambu Lab 3D printers (prebuilt)
+          License:        AGPL-3.0-or-later
+          URL:            https://github.com/BenJule/BambuStudio
+          Source0:        BambuStudio.AppImage
+          BuildArch:      x86_64
+          Requires:       fuse-libs gtk3 glib2 libsecret webkit2gtk4.1
+          ${PROVIDES}
+
+          %description
+          BambuStudio is a feature-rich slicer for Bambu Lab 3D printers. This
+          package wraps the prebuilt AppImage published on the project's GitHub
+          releases; no compilation is performed.
+
+          %prep
+          # nothing to prepare — prebuilt binary
+
+          %build
+          # nothing to build — prebuilt binary
+
+          %install
+          install -Dm0755 %{SOURCE0} %{buildroot}/usr/bin/bambu-studio
+
+          %files
+          /usr/bin/bambu-studio
+
+          %changelog
+          * $(LC_ALL=C date '+%a %b %d %Y') BenJule <benjamin.luetker@gmail.com> - ${PKGVER}-1
+          - Automated update to ${{ steps.meta.outputs.tag }}
+          SPEC_EOF
+
+          # Strip the leading indentation the heredoc added
+          sed -i 's/^          //' ~/rpmbuild/SPECS/${PKGNAME}.spec
+          cat ~/rpmbuild/SPECS/${PKGNAME}.spec
+
+          rpmbuild -bs ~/rpmbuild/SPECS/${PKGNAME}.spec
+          SRPM=$(ls ~/rpmbuild/SRPMS/${PKGNAME}-*.src.rpm | head -1)
+          echo "srpm=$SRPM" >> "$GITHUB_OUTPUT"
+          echo "Built SRPM: $SRPM"
+
+      - name: Configure COPR credentials
+        env:
+          COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${COPR_CONFIG:-}" ]]; then
+            echo "::error::Secret COPR_CONFIG is not set. Add your COPR API token (copr.fedorainfracloud.org/api/ → 'copr-cli config') as repo secret COPR_CONFIG."
+            exit 1
+          fi
+          mkdir -p ~/.config
+          printf '%s' "$COPR_CONFIG" > ~/.config/copr
+          chmod 600 ~/.config/copr
+
+      - name: Submit build to COPR
+        run: |
+          set -euo pipefail
+          copr-cli build "${{ steps.meta.outputs.copr_project }}" \
+            "${{ steps.srpm.outputs.srpm }}" --nowait
+          echo "Submitted ${{ steps.meta.outputs.pkgname }} ${{ steps.meta.outputs.pkgver }} to COPR project '${{ steps.meta.outputs.copr_project }}'."
