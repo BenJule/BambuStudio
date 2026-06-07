@@ -519,7 +519,7 @@
       <span class="alert-icon">&#8505;&#65039;</span>
       <div class="alert-body">
         <p>This fork tracks <strong>BambuLab/BambuStudio</strong> upstream and adds Linux packaging (APT, AUR, RPM, Flatpak),
-        Wayland fixes, ccache-accelerated builds, and OpenSSF security hardening. All upstream features are preserved.</p>
+        Wayland fixes, a develop-branch/nightly workflow, and OpenSSF security hardening. All upstream features are preserved.</p>
       </div>
     </div>
 
@@ -562,9 +562,9 @@
         <p>Fixes <code>gtk_window_resize</code> assertion on Wayland compositors. Window geometry is safely deferred until the compositor has realized the window.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">&#9889;</div>
-        <h3>ccache Build Acceleration</h3>
-        <p>Debian CI builds use ccache with persistent GitHub Actions cache. Cache hits reduce build time from ~60 min to ~5 min.</p>
+        <div class="feature-icon">&#127793;</div>
+        <h3>develop Integration Branch</h3>
+        <p>Fixes and features land on <code>develop</code> first, where the nightly builds every platform. Only a green, stable <code>develop</code> is promoted to <code>master</code> &mdash; keeping master release-ready.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">&#128274;</div>
@@ -574,7 +574,7 @@
       <div class="feature-card">
         <div class="feature-icon">&#127769;</div>
         <h3>Nightly Releases</h3>
-        <p>Automated nightly pre-releases built daily at 22:00 UTC from master. 14-day rolling history keeps the release page clean.</p>
+        <p>Automated nightly pre-releases built from <code>develop</code> &mdash; daily at 22:00 UTC and on every push to develop. 14-day rolling history keeps the release page clean.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">&#129302;</div>
@@ -589,7 +589,7 @@
       <div class="feature-card">
         <div class="feature-icon">&#127959;&#65039;</div>
         <h3>Branch Protection</h3>
-        <p>Master requires CI green, signed commits, conversation resolution, and enforces rules on admins too &mdash; nothing broken can land.</p>
+        <p>Master requires the <code>CI Gate</code> status check to pass and GPG-signed commits; force-push and branch deletion are blocked &mdash; nothing broken can land.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">&#128187;</div>
@@ -682,8 +682,8 @@ brew install --cask bambu-studio</pre>
       <tbody>
         <tr>
           <td><strong>CI: PR Build</strong></td>
-          <td>Every pull request</td>
-          <td>Debian trixie, Fedora 42</td>
+          <td>Every PR to develop/master</td>
+          <td>Path-aware: Debian, Fedora, macOS, Windows + CI Gate</td>
           <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml/badge.svg" alt="PR Build"></a></td>
         </tr>
         <tr>
@@ -706,7 +706,7 @@ brew install --cask bambu-studio</pre>
         </tr>
         <tr>
           <td><strong>CD: Nightly</strong></td>
-          <td>Daily 22:00 UTC</td>
+          <td>Push to <code>develop</code> / daily 22:00 UTC</td>
           <td>All platforms + Flatpak</td>
           <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml/badge.svg" alt="Nightly"></a></td>
         </tr>
@@ -731,7 +731,7 @@ brew install --cask bambu-studio</pre>
         <tr>
           <td><strong>Security: CodeQL</strong></td>
           <td>Push to master / PR / weekly</td>
-          <td>C++</td>
+          <td>C++ (security-and-quality)</td>
           <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/security-codeql.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/security-codeql.yml/badge.svg" alt="CodeQL"></a></td>
         </tr>
         <tr>
@@ -752,36 +752,40 @@ brew install --cask bambu-studio</pre>
     <h3>Release Pipeline</h3>
     <ul class="timeline">
       <li class="done">
-        <strong>Pull Request opened</strong>
-        <span>CI builds Debian + Fedora; Copilot reviews code; dependency security check runs automatically</span>
+        <strong>Pull Request opened against <code>develop</code></strong>
+        <span>Path-aware CI builds the affected platforms; the CI Gate aggregates them; dependency security check runs automatically</span>
       </li>
       <li class="done">
-        <strong>PR merged to master</strong>
-        <span>Signed commit required; all status checks must be green; all conversations must be resolved</span>
+        <strong>Merged to <code>develop</code></strong>
+        <span>Signed commit required; the CI Gate must be green. develop is the shared integration branch &mdash; never push fixes straight to master</span>
       </li>
       <li class="done">
-        <strong>Nightly build (22:00 UTC)</strong>
-        <span>All platforms built and tested; pre-release published with 14-day rolling history</span>
+        <strong>Nightly build (push to develop / 22:00 UTC)</strong>
+        <span>All platforms built and tested from develop; pre-release published with 14-day rolling history</span>
+      </li>
+      <li class="done">
+        <strong>Promoted to <code>master</code></strong>
+        <span>Only a green, stable develop is promoted to master &mdash; the controlled, release-ready snapshot</span>
       </li>
       <li>
         <strong>Release triggered</strong>
-        <span>Version tag pushed &rarr; full platform matrix &rarr; APT, AUR, Homebrew, winget, and Flatpak deployed</span>
+        <span>Version tag pushed &rarr; full platform matrix &rarr; signed tag, APT, AUR, Homebrew, winget, and Flatpak deployed</span>
       </li>
     </ul>
 
     <h3>Master Branch Protection</h3>
     <div class="feature-grid" style="margin-top:8px;">
       <div class="feature-card">
-        <h3>&#9989; Required Status Checks</h3>
-        <p><code>Detect affected platforms</code>, <code>Linux / Debian trixie .deb</code>, and <code>Review dependency changes</code> must pass before any merge.</p>
+        <h3>&#9989; Required Status Check</h3>
+        <p>The single <code>CI Gate</code> check aggregates the path-aware platform builds and must pass before any PR merges to master. Docs-only PRs pass without a full build.</p>
       </div>
       <div class="feature-card">
         <h3>&#9989; Signed Commits</h3>
         <p>All commits to master must be GPG-signed. Force push and branch deletion are permanently blocked.</p>
       </div>
       <div class="feature-card">
-        <h3>&#9989; Conversation Resolution</h3>
-        <p>All PR review comments must be resolved before merge is permitted &mdash; even for admins.</p>
+        <h3>&#9989; develop &rarr; master Promotion</h3>
+        <p>Master is only advanced from a green, stable <code>develop</code>. Release Candidate and Release builds are always cut from master.</p>
       </div>
     </div>
   </section>
@@ -795,17 +799,17 @@ brew install --cask bambu-studio</pre>
     <div class="alert alert-warn">
       <span class="alert-icon">&#9888;&#65039;</span>
       <div class="alert-body">
-        <p><strong>Never push directly to master.</strong> Open a PR for every change &mdash; even trivial ones. This ensures CI runs and Copilot reviews every commit.</p>
+        <p><strong>Open every PR against <code>develop</code>, not master.</strong> develop is the shared integration branch; master is advanced only by promoting a green, nightly-tested develop. Never push directly to either branch.</p>
       </div>
     </div>
 
     <h3>Contribution Workflow</h3>
     <ul class="timeline">
       <li><strong>1. Open an Issue</strong><span>Describe the bug or feature. Assign milestone and label.</span></li>
-      <li><strong>2. Create a branch</strong><span>Use <code>fix/short-description</code> or <code>feat/short-description</code>.</span></li>
-      <li><strong>3. Open a Pull Request</strong><span>Reference the issue with <code>Closes #N</code>. CI runs automatically.</span></li>
-      <li><strong>4. Copilot Review</strong><span>Request Copilot review in the GitHub UI. Address medium/high findings.</span></li>
-      <li><strong>5. Squash Merge</strong><span>All checks green + conversations resolved &rarr; squash-merge to master.</span></li>
+      <li><strong>2. Create a branch off <code>develop</code></strong><span>Use <code>fix/short-description</code> or <code>feat/short-description</code>.</span></li>
+      <li><strong>3. Open a Pull Request to <code>develop</code></strong><span>Target <code>develop</code> and reference the issue with <code>Closes #N</code>. Path-aware CI runs automatically.</span></li>
+      <li><strong>4. Review</strong><span>Request a Copilot review in the GitHub UI. Address medium/high findings.</span></li>
+      <li><strong>5. Squash Merge to <code>develop</code></strong><span>CI Gate green &rarr; squash-merge. The nightly then validates develop on all platforms before it is promoted to master.</span></li>
     </ul>
 
     <div class="contrib-grid" style="margin-top:24px;">
