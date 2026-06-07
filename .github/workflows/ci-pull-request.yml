@@ -38,6 +38,7 @@ jobs:
     outputs:
       debian: ${{ steps.check.outputs.debian }}
       fedora: ${{ steps.check.outputs.fedora }}
+      code:   ${{ steps.check.outputs.code }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
@@ -91,9 +92,15 @@ jobs:
             DEBIAN=true
           fi
 
+          # C++ / build-system changes (src, deps, CMakeLists, version.inc) affect
+          # every platform — build macOS + Windows too, to catch platform-specific
+          # compile/link failures (e.g. AppleClang constexpr, Win-ARM64 LNK2001) in
+          # the PR instead of only after merge in the nightly. deps changes always
+          # count as code, so they are never skipped.
           echo "debian=$DEBIAN" >> "$GITHUB_OUTPUT"
           echo "fedora=$FEDORA" >> "$GITHUB_OUTPUT"
-          echo "--- Platform decision: debian=$DEBIAN  fedora=$FEDORA ---"
+          echo "code=$HAS_CPP" >> "$GITHUB_OUTPUT"
+          echo "--- Platform decision: debian=$DEBIAN  fedora=$FEDORA  code(macOS/Win)=$HAS_CPP ---"
 
   # ── Debian trixie .deb ─────────────────────────────────────────────────────
   build_debian:
@@ -219,3 +226,30 @@ jobs:
           path: ./build/bambustudio-*.rpm
           if-no-files-found: warn
           retention-days: 7
+
+  # ── macOS (ARM Universal) — only on src/deps/CMake changes ─────────────────
+  # Catches AppleClang/macOS-SDK-specific compile failures (constexpr, WebKit,
+  # Assimp bundled zlib) in the PR instead of only in the nightly after merge.
+  build_macos:
+    name: macOS / macOS 15 ARM Universal
+    needs: [detect]
+    if: needs.detect.outputs.code == 'true'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: macos-15
+      arch: universal
+      build-deps-only: false
+    secrets: inherit
+
+  # ── Windows x64 — only on src/deps/CMake changes ───────────────────────────
+  # Catches MSVC/Windows-specific compile/link failures (e.g. LNK2001) in the PR.
+  build_windows:
+    name: Windows / windows-2022 (x64)
+    needs: [detect]
+    if: needs.detect.outputs.code == 'true'
+    uses: ./.github/workflows/_build-cached.yml
+    with:
+      os: windows-2022
+      arch: x64
+      build-deps-only: false
+    secrets: inherit
