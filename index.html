@@ -673,7 +673,7 @@ brew install --cask bambu-studio</pre>
   <section class="section" id="cicd">
     <div class="section-label">Pipelines</div>
     <h2 class="section-title">CI/CD &amp; Build Status</h2>
-    <p class="section-desc">Fully automated pipelines from PR through nightly to production release. Every merge to master is signed, tested, and packaged.</p>
+    <p class="section-desc">Fully automated pipelines: changes land on <code>develop</code>, the nightly validates every platform, then a green develop is promoted to master &mdash; signed, tested, and packaged.</p>
 
     <table class="workflow-table">
       <thead>
@@ -687,18 +687,6 @@ brew install --cask bambu-studio</pre>
           <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/ci-pull-request.yml/badge.svg" alt="PR Build"></a></td>
         </tr>
         <tr>
-          <td><strong>CI: Linux Build</strong></td>
-          <td>PR / push</td>
-          <td>Ubuntu 22.04, 24.04, 24.04 ARM</td>
-          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/ci-build-linux.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/ci-build-linux.yml/badge.svg" alt="Linux"></a></td>
-        </tr>
-        <tr>
-          <td><strong>CI: macOS Build</strong></td>
-          <td>PR / push</td>
-          <td>macOS 15 Intel, macOS 15 ARM, macOS 26</td>
-          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/ci-build-macos.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/ci-build-macos.yml/badge.svg" alt="macOS"></a></td>
-        </tr>
-        <tr>
           <td><strong>CI: Debian Container</strong></td>
           <td>Weekly / Dockerfile change</td>
           <td>ghcr.io debian:trixie image</td>
@@ -708,7 +696,7 @@ brew install --cask bambu-studio</pre>
           <td><strong>CD: Nightly</strong></td>
           <td>Push to <code>develop</code> / daily 22:00 UTC</td>
           <td>All platforms + Flatpak</td>
-          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml/badge.svg" alt="Nightly"></a></td>
+          <td><a href="https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml?query=branch%3Adevelop" target="_blank"><img src="https://github.com/BenJule/BambuStudio/actions/workflows/cd-nightly.yml/badge.svg?branch=develop" alt="Nightly"></a></td>
         </tr>
         <tr>
           <td><strong>CD: Release Candidate</strong></td>
