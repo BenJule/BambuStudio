@@ -1,0 +1,215 @@
+name: 'CD: Ubuntu PPA Update'
+run-name: "PPA update (${{ inputs.channel || 'stable' }}) — ${{ github.event.release.tag_name || inputs.tag || 'latest' }}"
+
+# Publishes BambuStudio to a Launchpad PPA so Ubuntu/Debian users get native
+# `apt` updates from Canonical's infrastructure (the most discoverable option
+# next to the project's own APT repo).
+#
+# Launchpad PPAs only accept GPG-signed SOURCE uploads and build them on
+# network-less builders, so we ship a "-bin" SOURCE package that carries the
+# release AppImage in its tarball and whose rules only install it — no compile.
+# Launchpad then rebuilds + hosts it per Ubuntu series.
+#
+# One-time setup required:
+#   1. Create a Launchpad account + a PPA, e.g. ppa:benjule/bambu-studio
+#   2. Register the signing GPG key (the same A950737739C331BD used for releases)
+#      at https://launchpad.net/~<you>/+editpgpkeys
+#   3. Existing repo secrets GIT_SIGNING_KEY / _PASSPHRASE / _ID are reused.
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v02.07.01.55-bj.1)'
+        required: false
+        type: string
+      channel:
+        description: 'PPA channel'
+        required: false
+        type: choice
+        default: stable
+        options: [stable, nightly]
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+        type: string
+      channel:
+        description: 'PPA channel: stable or nightly'
+        required: false
+        type: string
+        default: stable
+
+permissions: read-all
+
+concurrency:
+  group: cd-deploy-ppa-${{ inputs.channel || 'stable' }}
+  cancel-in-progress: false
+
+jobs:
+  ppa-upload:
+    name: Source upload to PPA (${{ matrix.series }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # Ubuntu series Launchpad builds for. AppImage is series-independent;
+        # separate uploads only give per-series availability.
+        series: [jammy, noble]
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Determine tag, channel, pkgname, version
+        id: meta
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"; CHANNEL="stable"
+          elif [[ -n "${{ inputs.tag }}" ]]; then
+            TAG="${{ inputs.tag }}"; CHANNEL="${{ inputs.channel || 'stable' }}"
+          else
+            echo "::error::No tag provided for non-release trigger"; exit 1
+          fi
+
+          if [[ "$CHANNEL" == "nightly" ]]; then
+            PKGNAME="bambu-studio-nightly-bin"
+            DATE_PART=$(echo "$TAG" | cut -d- -f2); SHA_PART=$(echo "$TAG" | cut -d- -f3)
+            BASEVER="${DATE_PART}.${SHA_PART}"
+          else
+            PKGNAME="bambu-studio-bin"
+            VERSION="${TAG#v}"; BASEVER="${VERSION//-/.}"  # deb version: no hyphens
+          fi
+
+          echo "tag=$TAG"           >> "$GITHUB_OUTPUT"
+          echo "channel=$CHANNEL"   >> "$GITHUB_OUTPUT"
+          echo "pkgname=$PKGNAME"   >> "$GITHUB_OUTPUT"
+          echo "basever=$BASEVER"   >> "$GITHUB_OUTPUT"
+          echo "Tag: $TAG  pkg: $PKGNAME  base version: $BASEVER  series: ${{ matrix.series }}"
+
+      - name: Get AppImage URL
+        id: asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.meta.outputs.tag }}"
+          URL=""
+          for attempt in 1 2 3 4 5 6; do
+            URL=$(gh release view "$TAG" --repo "${{ github.repository }}" --json assets \
+              --jq '[.assets[]
+                | select(
+                    (.name | test("^BambuStudio_ubuntu-24\\.04_amd64_.*\\.AppImage$"; "i")) and
+                    (.name | test("_selfhosted\\.AppImage$"; "i") | not)
+                  )] | .[0].browser_download_url // ""')
+            [[ -n "$URL" ]] && break
+            echo "AppImage asset not visible yet for $TAG (attempt $attempt/6) — waiting 20s…"
+            sleep 20
+          done
+          [[ -z "$URL" ]] && { echo "::error::No AppImage asset for $TAG"; exit 1; }
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            devscripts debhelper dput-ng curl ca-certificates lintian
+
+      - name: Import GPG signing key
+        uses: ./.github/actions/setup-gpg
+        with:
+          signing-key: ${{ secrets.GIT_SIGNING_KEY }}
+          signing-key-passphrase: ${{ secrets.GIT_SIGNING_KEY_PASSPHRASE }}
+          signing-key-id: ${{ secrets.GIT_SIGNING_KEY_ID }}
+
+      - name: Build signed source package
+        id: build
+        env:
+          DEBEMAIL: "benjamin.luetker@gmail.com"
+          DEBFULLNAME: "BenJule"
+        run: |
+          set -euo pipefail
+          PKG="${{ steps.meta.outputs.pkgname }}"
+          SERIES="${{ matrix.series }}"
+          # Per-series version: <base>~<series>1 sorts below the final release
+          DEBVER="${{ steps.meta.outputs.basever }}~${SERIES}1"
+
+          WORK="$RUNNER_TEMP/${PKG}-${{ steps.meta.outputs.basever }}"
+          mkdir -p "$WORK/debian/source"
+          curl -fsSL "${{ steps.asset.outputs.url }}" -o "$WORK/BambuStudio.AppImage"
+          chmod +x "$WORK/BambuStudio.AppImage"
+
+          PROVIDES=""
+          [[ "${{ steps.meta.outputs.channel }}" == "stable" ]] && \
+            PROVIDES=$'Provides: bambu-studio\nConflicts: bambu-studio\nReplaces: bambu-studio'
+
+          cat > "$WORK/debian/control" <<CTRL
+          Source: ${PKG}
+          Section: misc
+          Priority: optional
+          Maintainer: BenJule <benjamin.luetker@gmail.com>
+          Build-Depends: debhelper-compat (= 13)
+          Standards-Version: 4.6.2
+          Homepage: https://github.com/BenJule/BambuStudio
+
+          Package: ${PKG}
+          Architecture: amd64
+          Depends: \${misc:Depends}, libfuse2 | libfuse2t64
+          ${PROVIDES}
+          Description: BambuStudio slicer for Bambu Lab 3D printers (prebuilt)
+           BambuStudio is a feature-rich slicer for Bambu Lab 3D printers. This
+           package wraps the prebuilt AppImage from the project's GitHub releases;
+           no compilation is performed.
+          CTRL
+
+          cat > "$WORK/debian/rules" <<'RULES'
+          #!/usr/bin/make -f
+          %:
+          	dh $@
+          override_dh_auto_build:
+          override_dh_auto_install:
+          	install -Dm0755 BambuStudio.AppImage debian/PKGPLACEHOLDER/usr/bin/bambu-studio
+          override_dh_auto_test:
+          RULES
+          sed -i "s/PKGPLACEHOLDER/${PKG}/" "$WORK/debian/rules"
+          chmod +x "$WORK/debian/rules"
+
+          echo "3.0 (native)" > "$WORK/debian/source/format"
+          echo "13" > "$WORK/debian/compat"
+
+          cat > "$WORK/debian/copyright" <<COPY
+          Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+          Upstream-Name: BambuStudio
+          Source: https://github.com/BenJule/BambuStudio
+
+          Files: *
+          Copyright: Bambu Lab, Prusa Research, Alessandro Ranellucci and contributors
+          License: AGPL-3.0+
+          COPY
+
+          cd "$WORK"
+          dch --create --package "$PKG" --newversion "$DEBVER" \
+              --distribution "$SERIES" "Automated update to ${{ steps.meta.outputs.tag }}"
+
+          # Source-only, signed build
+          KEYID="${{ secrets.GIT_SIGNING_KEY_ID }}"
+          dpkg-buildpackage -S -sa -d -k"${KEYID}"
+
+          CHANGES="$RUNNER_TEMP/${PKG}_${DEBVER}_source.changes"
+          ls -la "$RUNNER_TEMP"/*.changes
+          echo "changes=$CHANGES" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to PPA
+        run: |
+          set -euo pipefail
+          dput "ppa:benjule/bambu-studio" "${{ steps.build.outputs.changes }}"
+          echo "Uploaded ${{ steps.meta.outputs.pkgname }} (${{ matrix.series }}) to ppa:benjule/bambu-studio"
