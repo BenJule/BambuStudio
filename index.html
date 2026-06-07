@@ -607,6 +607,7 @@
 
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab(event,'tab-apt')">&#127819; Debian / Ubuntu</button>
+      <button class="tab-btn" onclick="switchTab(event,'tab-fedora')">&#127913; Fedora</button>
       <button class="tab-btn" onclick="switchTab(event,'tab-aur')">&#127919; Arch Linux</button>
       <button class="tab-btn" onclick="switchTab(event,'tab-appimage')">&#128192; AppImage</button>
       <button class="tab-btn" onclick="switchTab(event,'tab-mac')">&#127822; macOS</button>
@@ -621,9 +622,25 @@ echo "deb [signed-by=/etc/apt/trusted.gpg.d/bambustudio.gpg] https://apt.s3-dev.
 sudo apt update &amp;&amp; sudo apt install bambu-studio</pre>
       <p style="color:var(--c-fg-muted);font-size:13px;">Updates via <code>sudo apt upgrade</code>. Supports Debian 12+, Ubuntu 22.04, Ubuntu 24.04.</p>
 
+      <h3>Ubuntu PPA (Launchpad)</h3>
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>sudo add-apt-repository ppa:benlue/bambu-studio
+sudo apt update &amp;&amp; sudo apt install bambu-studio</pre>
+      <p style="color:var(--c-fg-muted);font-size:13px;">Native <code>apt</code> updates from Canonical's Launchpad. Built for Ubuntu 22.04 (jammy) and 24.04 (noble).</p>
+
       <h3>Direct .deb download</h3>
       <p>Download the latest <code>.deb</code> from the <a href="https://github.com/BenJule/BambuStudio/releases/latest" target="_blank">releases page</a> and install:</p>
       <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>sudo dpkg -i bambustudio_*.deb &amp;&amp; sudo apt-get install -f</pre>
+    </div>
+
+    <div id="tab-fedora" class="tab-panel">
+      <h3>COPR (recommended &mdash; automatic updates)</h3>
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>sudo dnf copr enable benlue/bambu-studio
+sudo dnf install bambu-studio</pre>
+      <p style="color:var(--c-fg-muted);font-size:13px;">Native <code>dnf</code> updates from Fedora COPR. Updates via <code>sudo dnf upgrade</code>. Built for Fedora 42/43/44.</p>
+
+      <h3>Direct .rpm download</h3>
+      <p>Download the latest <code>.rpm</code> from the <a href="https://github.com/BenJule/BambuStudio/releases/latest" target="_blank">releases page</a> and install:</p>
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>sudo dnf install ./bambustudio-*.rpm</pre>
     </div>
 
     <div id="tab-aur" class="tab-panel">
@@ -934,7 +951,7 @@ sudo apt update &amp;&amp; sudo apt install bambu-studio</pre>
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     panel.classList.add('active');
-    const idx = ['tab-apt','tab-aur','tab-appimage','tab-mac','tab-win'].indexOf(id);
+    const idx = ['tab-apt','tab-fedora','tab-aur','tab-appimage','tab-mac','tab-win'].indexOf(id);
     const btns = document.querySelectorAll('.tab-btn');
     if (btns[idx]) btns[idx].classList.add('active');
     setTimeout(() => document.getElementById('install').scrollIntoView({behavior:'smooth'}), 50);
