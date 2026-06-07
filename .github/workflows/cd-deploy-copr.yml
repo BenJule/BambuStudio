@@ -127,7 +127,13 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends rpm python3-pip
-          pipx install copr-cli || pip3 install --user copr-cli
+          # copr-cli 2.5 imports 'rich' but doesn't declare it as a dependency,
+          # so install it into the same venv (pipx) or user env (pip fallback).
+          if pipx install copr-cli; then
+            pipx inject copr-cli rich
+          else
+            pip3 install --user --break-system-packages copr-cli rich
+          fi
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Build SRPM (binary repackage)
