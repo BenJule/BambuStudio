@@ -55,6 +55,9 @@ jobs:
           context: docker
           file: docker/Dockerfile.debian-trixie
           push: true
+          # No build attestation — avoids the extra "unknown/unknown" manifest
+          # entry GHCR shows for the provenance attestation.
+          provenance: false
           tags: |
             ghcr.io/${{ env.IMAGE_OWNER }}/bambu-debian-trixie:trixie
             ghcr.io/${{ env.IMAGE_OWNER }}/bambu-debian-trixie:latest
