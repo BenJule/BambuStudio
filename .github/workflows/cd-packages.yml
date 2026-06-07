@@ -179,7 +179,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     continue-on-error: true
-    container: fedora:42@sha256:7c63468daf71fdc5bda3699cd483b169bb995b5137265d5ffe8f04e2ce87fbb8
+    # Pull from our GHCR mirror (built by ci-fedora-container.yml) instead of
+    # Docker Hub directly — avoids the anonymous Docker Hub pull-rate limit, same
+    # as Debian and Arch.
+    container:
+      image: ghcr.io/benjule/bambu-fedora:42
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
     permissions: read-all
 
     steps:

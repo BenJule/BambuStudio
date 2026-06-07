@@ -1,0 +1,13 @@
+# Mirror of fedora:42 into our own GHCR namespace so the Fedora packaging job
+# pulls from ghcr.io (no Docker Hub anonymous pull-rate limit) instead of
+# Docker Hub directly — same hardening already applied to Debian and Arch.
+FROM fedora:42@sha256:7c63468daf71fdc5bda3699cd483b169bb995b5137265d5ffe8f04e2ce87fbb8
+
+LABEL org.opencontainers.image.source="https://github.com/BenJule/BambuStudio"
+LABEL org.opencontainers.image.description="Fedora 42 build environment for BambuStudio CI (mirrors fedora:42 via GHCR to avoid Docker Hub pull-rate limits)"
+LABEL org.opencontainers.image.licenses="AGPL-3.0"
+
+# Pre-install the bootstrap tools the packaging job needs, so the image is
+# self-contained and the job's dnf bootstrap is a no-op.
+RUN dnf install -y sudo git curl git-lfs ca-certificates && \
+    dnf clean all
