@@ -373,20 +373,28 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.ver.outputs.tag }}"
+          # Rerun-safe: a re-run of a partial Publish would otherwise abort with
+          # "fatal: tag already exists" (exit 128), because git fetch pulls the tag
+          # the earlier run created. Drop any stale local tag before recreating it;
+          # the build commit is identical on a re-run.
+          git tag -d "$TAG" 2>/dev/null || true
           git tag -s "$TAG" -m "Nightly build ${{ steps.ver.outputs.date }}" HEAD
           # Push the signed tag directly — preserves the GPG signature. A tag push adds
           # no commits (HEAD is already on the remote), so the workflow-file push
-          # protection does not apply. Fall back to the two-step API (create the tag
-          # object first, then the ref) only if the direct push is rejected — the ref
-          # API alone fails with 422 because the local tag object is not on the server.
-          if ! git push origin "refs/tags/${TAG}"; then
+          # protection does not apply. --force lets a re-run update an existing ref.
+          # Fall back to the two-step API (create the tag object first, then the ref)
+          # only if the direct push is rejected — the ref API alone fails with 422
+          # because the local tag object is not on the server.
+          if ! git push --force origin "refs/tags/${TAG}"; then
             echo "::warning::Direct signed-tag push rejected — creating tag via API (unsigned)"
             TAG_SHA=$(gh api repos/${{ github.repository }}/git/tags \
               -X POST -f tag="${TAG}" \
               -f message="Nightly build ${{ steps.ver.outputs.date }}" \
               -f object="$(git rev-parse 'HEAD^{commit}')" -f type=commit --jq .sha)
             gh api repos/${{ github.repository }}/git/refs \
-              -X POST -f ref="refs/tags/${TAG}" -f sha="${TAG_SHA}"
+              -X POST -f ref="refs/tags/${TAG}" -f sha="${TAG_SHA}" \
+              || gh api repos/${{ github.repository }}/git/refs/tags/"${TAG}" \
+                -X PATCH -f sha="${TAG_SHA}" -F force=true
           fi
 
       - name: Cleanup old nightly releases (keep last 14)
