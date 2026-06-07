@@ -11,9 +11,9 @@ run-name: "PPA update (${{ inputs.channel || 'stable' }}) — ${{ github.event.r
 # Launchpad then rebuilds + hosts it per Ubuntu series.
 #
 # One-time setup required:
-#   1. Create a Launchpad account + a PPA, e.g. ppa:benjule/bambu-studio
+#   1. Create a Launchpad account + a PPA, e.g. ppa:benlue/bambu-studio
 #   2. Register the signing GPG key (the same A950737739C331BD used for releases)
-#      at https://launchpad.net/~<you>/+editpgpkeys
+#      at https://launchpad.net/~benlue/+editpgpkeys
 #   3. Existing repo secrets GIT_SIGNING_KEY / _PASSPHRASE / _ID are reused.
 
 on:
@@ -211,5 +211,5 @@ jobs:
       - name: Upload to PPA
         run: |
           set -euo pipefail
-          dput "ppa:benjule/bambu-studio" "${{ steps.build.outputs.changes }}"
-          echo "Uploaded ${{ steps.meta.outputs.pkgname }} (${{ matrix.series }}) to ppa:benjule/bambu-studio"
+          dput "ppa:benlue/bambu-studio" "${{ steps.build.outputs.changes }}"
+          echo "Uploaded ${{ steps.meta.outputs.pkgname }} (${{ matrix.series }}) to ppa:benlue/bambu-studio"
