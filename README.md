@@ -27,7 +27,7 @@ This fork tracks BambuLab's upstream and adds what desktop and Linux users miss 
 
 | Area | Details |
 |------|---------|
-| **Native packaging** | Signed **APT** repository, **AUR**, **Fedora RPM**, **Arch**, **Flatpak**, **AppImage**, **Homebrew** cask, and Windows **winget** |
+| **Native packaging** | Signed **APT** repository, **Ubuntu PPA**, **AUR**, **Fedora COPR**, **Flatpak**, **AppImage**, **Homebrew** cask, and Windows **winget** |
 | **Automated releases** | Nightly pre-releases from `develop`, GPG-signed release tags, automatic deployment to every package channel |
 | **Hardened pipelines** | Pinned action SHAs, egress-audited runners, reproducible distro build containers mirrored to GHCR |
 | **Continuous security** | CodeQL (security & quality), OpenSSF Scorecard, dependency review, signed commits required on `master` |
@@ -38,6 +38,8 @@ This fork tracks BambuLab's upstream and adds what desktop and Linux users miss 
 | Platform | Method | Auto-updates |
 |----------|--------|:---:|
 | **Debian / Ubuntu** | APT repository | ✅ |
+| **Ubuntu** | PPA (`ppa:benlue/bambu-studio`) | ✅ |
+| **Fedora** | COPR (`benlue/bambu-studio`) | ✅ |
 | **Arch Linux** | AUR (`bambu-studio-bin`) | ✅ |
 | **macOS** | Homebrew cask | ✅ |
 | **Windows** | winget | ✅ |
@@ -53,6 +55,28 @@ sudo apt update && sudo apt install bambu-studio
 ```
 
 Supports Debian 12+, Ubuntu 22.04 and 24.04. Update with `sudo apt upgrade`.
+</details>
+
+<details>
+<summary><b>Ubuntu — PPA (Launchpad)</b></summary>
+
+```bash
+sudo add-apt-repository ppa:benlue/bambu-studio
+sudo apt update && sudo apt install bambu-studio
+```
+
+Native `apt` updates from Canonical's Launchpad. Built for Ubuntu 22.04 (jammy) and 24.04 (noble). Update with `sudo apt upgrade`.
+</details>
+
+<details>
+<summary><b>Fedora — COPR</b></summary>
+
+```bash
+sudo dnf copr enable benlue/bambu-studio
+sudo dnf install bambu-studio
+```
+
+Native `dnf` updates from Fedora COPR. Update with `sudo dnf upgrade`.
 </details>
 
 <details>
