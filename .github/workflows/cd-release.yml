@@ -294,6 +294,13 @@ jobs:
         with:
           subject-path: release-assets/**
 
+      - name: Import GPG signing key
+        uses: ./.github/actions/setup-gpg
+        with:
+          signing-key: ${{ secrets.GIT_SIGNING_KEY }}
+          signing-key-passphrase: ${{ secrets.GIT_SIGNING_KEY_PASSPHRASE }}
+          signing-key-id: ${{ secrets.GIT_SIGNING_KEY_ID }}
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -308,15 +315,14 @@ jobs:
               --repo "${{ github.repository }}" \
               --clobber
           else
-            # Create the tag at the built commit via the git refs API first.
-            # gh release create --target <sha> returns HTTP 403 "Resource not
-            # accessible by integration" with GITHUB_TOKEN when it has to create
-            # the tag itself (cli/cli#9514). Creating the ref via the API works
-            # with contents:write and points the tag at the exact built commit;
-            # gh release create then reuses the existing tag (no --target needed).
-            gh api "repos/${{ github.repository }}/git/refs" \
-              -X POST -f ref="refs/tags/${TAG}" -f sha="${COMMIT_SHA}" \
-              || echo "Tag ${TAG} may already exist — continuing"
+            # Create a SIGNED annotated tag at the built commit so final release
+            # tags are GPG-signed like the nightly/RC tags — the git refs API only
+            # creates a lightweight, unsigned tag. Rerun-safe: drop any stale local
+            # tag, then force-push. gh release create then reuses the existing tag
+            # (no --target, which would hit HTTP 403 cli/cli#9514 with the token).
+            git tag -d "$TAG" 2>/dev/null || true
+            git tag -s "$TAG" -m "BambuStudio $TAG" "$COMMIT_SHA"
+            git push --force origin "refs/tags/${TAG}"
             gh release create "$TAG" \
               --repo "${{ github.repository }}" \
               --title "BambuStudio $TAG" \
