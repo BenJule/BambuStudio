@@ -184,7 +184,6 @@ jobs:
           chmod +x "$WORK/debian/rules"
 
           echo "3.0 (native)" > "$WORK/debian/source/format"
-          echo "13" > "$WORK/debian/compat"
 
           cat > "$WORK/debian/copyright" <<COPY
           Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
