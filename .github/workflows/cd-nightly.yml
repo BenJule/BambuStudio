@@ -543,8 +543,13 @@ jobs:
 
       - name: Install .deb
         run: |
-          sudo apt-get install -f -y
-          sudo dpkg -i "$DEB" || { sudo apt-get install -f -y && sudo dpkg -i "$DEB"; }
+          set -euo pipefail
+          sudo apt-get update
+          # Install via apt with the local .deb path so runtime dependencies
+          # (libsecret, libwebkit2gtk, gstreamer, …) are resolved from the
+          # archive. `dpkg -i` only unpacks and fails on missing dependencies
+          # (the previous `apt-get install -f` fallback did not reliably recover).
+          sudo apt-get install -y "$(realpath "$DEB")"
 
       - name: Verify binary present
         run: |
