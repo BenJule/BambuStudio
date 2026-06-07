@@ -2,28 +2,15 @@ name: 'CI: PR Build'
 run-name: "PR #${{ github.event.pull_request.number }} — ${{ github.event.pull_request.title }}"
 
 on:
+  # Run on every PR (no paths filter) so the 'CI Gate' job — used as the
+  # required status check on protected branches — always reports a result.
+  # The detect job below decides which platforms actually build; docs-only
+  # PRs build nothing but still get a green gate (so they aren't blocked).
   pull_request:
     branches:
       - main
       - develop
       - master
-    paths:
-      - 'deps/**'
-      - 'src/**'
-      - '**/CMakeLists.txt'
-      - 'version.inc'
-      - 'linux.d/**'
-      - 'scripts/**'
-      - ".github/workflows/_build-core.yml"
-      - ".github/workflows/_build-deps.yml"
-      - ".github/workflows/_build-cached.yml"
-      - ".github/workflows/ci-build-linux.yml"
-      - ".github/workflows/ci-build-macos.yml"
-      - ".github/workflows/ci-pull-request.yml"
-      - ".github/workflows/cd-packages.yml"
-      - 'BuildLinux.sh'
-      - 'BuildMac.sh'
-      - 'build_win.bat'
 
 permissions: read-all
 concurrency:
@@ -85,8 +72,11 @@ jobs:
             FEDORA=false
           fi
 
-          # Build Debian for everything except a pure RPM-only change
-          if [ "$FEDORA" = true ] && [ "$HAS_CPP" = false ] && [ "$HAS_DEB" = false ] && [ "$HAS_WF" = false ]; then
+          # Build Debian for everything except a pure RPM-only change or a
+          # docs-only / non-build change (docs PRs run the gate but no build).
+          if [ "$HAS_CPP" = false ] && [ "$HAS_DEB" = false ] && [ "$HAS_RPM" = false ] && [ "$HAS_WF" = false ]; then
+            DEBIAN=false   # nothing build-relevant changed (docs only, etc.)
+          elif [ "$FEDORA" = true ] && [ "$HAS_CPP" = false ] && [ "$HAS_DEB" = false ] && [ "$HAS_WF" = false ]; then
             DEBIAN=false
           else
             DEBIAN=true
@@ -253,3 +243,32 @@ jobs:
       arch: x64
       build-deps-only: false
     secrets: inherit
+
+  # ── CI Gate — the single required status check on protected branches ───────
+  # Runs on every PR and aggregates the (path-aware) build jobs: passes when all
+  # needed jobs succeeded or were skipped, fails if any failed/cancelled. Using
+  # one always-running gate means docs-only PRs (which skip every build) still
+  # get a green required check instead of hanging forever on "expected".
+  ci_gate:
+    name: CI Gate
+    needs: [detect, build_debian, build_fedora, build_macos, build_windows]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify required jobs passed (or were skipped)
+        run: |
+          fail=0
+          for jr in "detect:${{ needs.detect.result }}" \
+                    "debian:${{ needs.build_debian.result }}" \
+                    "fedora:${{ needs.build_fedora.result }}" \
+                    "macos:${{ needs.build_macos.result }}" \
+                    "windows:${{ needs.build_windows.result }}"; do
+            name="${jr%%:*}"; res="${jr#*:}"
+            echo "$name: $res"
+            if [ "$res" = "failure" ] || [ "$res" = "cancelled" ]; then
+              echo "::error::Required job '$name' did not pass ($res)"
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then exit 1; fi
+          echo "All required build jobs passed or were skipped — gate green."
