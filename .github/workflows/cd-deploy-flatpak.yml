@@ -79,7 +79,7 @@ jobs:
           # Primary: find the GitHub-hosted ubuntu-24.04 amd64 AppImage via API (name pattern: BambuStudio_ubuntu-24.04_amd64_*.AppImage, excluding _selfhosted)
           ASSET_URL=$(gh release view "${TAG}" --repo "${{ github.repository }}" \
             --json assets --jq \
-            '[.assets[] | select((.name | test("^BambuStudio_ubuntu-24\\.04_amd64_.*\\.AppImage$"; "i")) and (.name | test("_selfhosted\\.AppImage$"; "i") | not))] | .[0].browser_download_url // ""')
+            '[.assets[] | select((.name | test("^BambuStudio_ubuntu-24\\.04_amd64_.*\\.AppImage$"; "i")) and (.name | test("_selfhosted\\.AppImage$"; "i") | not))] | .[0].url // ""')
           if [[ -n "${ASSET_URL}" ]]; then
             echo "Downloading: ${ASSET_URL}"
             if curl -fL -o BambuStudio.AppImage "${ASSET_URL}"; then

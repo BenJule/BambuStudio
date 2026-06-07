@@ -110,7 +110,7 @@ jobs:
                 | select(
                     (.name | test("^BambuStudio_ubuntu-24\\.04_amd64_.*\\.AppImage$"; "i")) and
                     (.name | test("_selfhosted\\.AppImage$"; "i") | not)
-                  )] | .[0].browser_download_url // ""')
+                  )] | .[0].url // ""')
             [[ -n "$URL" ]] && break
             echo "AppImage asset not visible yet for $TAG (attempt $attempt/6) — waiting 20s…"
             sleep 20
