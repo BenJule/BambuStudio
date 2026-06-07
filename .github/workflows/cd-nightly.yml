@@ -549,7 +549,9 @@ jobs:
           # (libsecret, libwebkit2gtk, gstreamer, …) are resolved from the
           # archive. `dpkg -i` only unpacks and fails on missing dependencies
           # (the previous `apt-get install -f` fallback did not reliably recover).
-          sudo apt-get install -y "$(realpath "$DEB")"
+          # --fix-missing tolerates a transient apt-mirror 404 on a system dep
+          # (matches the shared smoke-test-deb action used by RC/Release).
+          sudo apt-get install -y --fix-missing "$(realpath "$DEB")"
 
       - name: Verify binary present
         run: |

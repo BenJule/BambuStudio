@@ -27,10 +27,13 @@ runs:
       shell: bash
       run: |
         sudo apt-get update -qq
-        sudo dpkg -i "${{ inputs.deb-path }}" || true
-        sudo apt-get install -f -y --fix-missing \
-          || sudo apt-get install -f -y --fix-missing --allow-unauthenticated
-        sudo dpkg -i "${{ inputs.deb-path }}"
+        # Install via apt with the local .deb path so runtime dependencies
+        # (libsecret, libwebkit2gtk, gstreamer, …) are resolved from the archive.
+        # `dpkg -i` only unpacks and fails on missing dependencies. --fix-missing
+        # lets the install proceed if a system dep transiently 404s on the apt
+        # mirror; the shared-library check below treats such webkit/gstreamer gaps
+        # as a warning rather than a packaging defect.
+        sudo apt-get install -y --fix-missing "$(realpath "${{ inputs.deb-path }}")"
 
     - name: Verify binary present
       shell: bash
