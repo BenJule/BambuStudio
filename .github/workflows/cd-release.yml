@@ -322,7 +322,7 @@ jobs:
             # (no --target, which would hit HTTP 403 cli/cli#9514 with the token).
             git tag -d "$TAG" 2>/dev/null || true
             git tag -s "$TAG" -m "BambuStudio $TAG" "$COMMIT_SHA"
-            git push --force origin "refs/tags/${TAG}"
+            git push --force "https://x-access-token:${{ secrets.WORKFLOW_PAT }}@github.com/${GITHUB_REPOSITORY}" "refs/tags/${TAG}"
             gh release create "$TAG" \
               --repo "${{ github.repository }}" \
               --title "BambuStudio $TAG" \

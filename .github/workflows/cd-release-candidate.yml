@@ -323,7 +323,7 @@ jobs:
           # a re-run update an existing ref. Fall back to the two-step API (create the tag
           # object first, then the ref) only if the direct push is rejected — the ref API
           # alone fails with 422 because the local tag object is not on the server.
-          if ! git push --force origin "refs/tags/${TAG}"; then
+          if ! git push --force "https://x-access-token:${{ secrets.WORKFLOW_PAT }}@github.com/${GITHUB_REPOSITORY}" "refs/tags/${TAG}"; then
             echo "::warning::Direct signed-tag push rejected — creating tag via API (unsigned)"
             TAG_SHA=$(gh api repos/${{ github.repository }}/git/tags \
               -X POST -f tag="${TAG}" \
