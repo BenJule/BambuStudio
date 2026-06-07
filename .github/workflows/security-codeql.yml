@@ -51,7 +51,9 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: manual
-          queries: security-extended
+          # security-and-quality = security-extended plus maintainability/
+          # reliability (code-quality) queries — the most thorough suite.
+          queries: security-and-quality
 
       - name: Install build dependencies
         run: |
