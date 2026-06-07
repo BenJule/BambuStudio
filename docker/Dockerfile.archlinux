@@ -1,0 +1,14 @@
+# Mirror of archlinux:base into our own GHCR namespace so the Arch packaging job
+# pulls from ghcr.io (no Docker Hub anonymous pull-rate limit) instead of
+# Docker Hub directly. Docker Hub limits caused the Arch job to fail at
+# "Initialize containers" intermittently even with a valid, current digest.
+FROM archlinux:base@sha256:a9a1e6db522cf5f8018c920d035e2bfbf8e39c485ee737ce0388990898f2f042
+
+LABEL org.opencontainers.image.source="https://github.com/BenJule/BambuStudio"
+LABEL org.opencontainers.image.description="Arch Linux build environment for BambuStudio CI (mirrors archlinux:base via GHCR to avoid Docker Hub pull-rate limits)"
+LABEL org.opencontainers.image.licenses="AGPL-3.0"
+
+# Pre-install the bootstrap tools the packaging job needs, so the image is
+# self-contained and the job's pacman bootstrap is a no-op refresh.
+RUN pacman -Syu --noconfirm sudo git curl git-lfs unzip ca-certificates && \
+    pacman -Scc --noconfirm

@@ -242,7 +242,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     continue-on-error: true
-    container: archlinux:base@sha256:a9a1e6db522cf5f8018c920d035e2bfbf8e39c485ee737ce0388990898f2f042
+    # Pull from our GHCR mirror (built by ci-arch-container.yml) instead of
+    # Docker Hub directly — avoids the anonymous Docker Hub pull-rate limit that
+    # intermittently failed this job at "Initialize containers".
+    container:
+      image: ghcr.io/benjule/bambu-archlinux:base
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
     permissions: read-all
 
     steps:
