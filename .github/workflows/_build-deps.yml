@@ -160,7 +160,20 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
             brew install automake texinfo nasm yasm x264
-            ./BuildMac.sh -d -x -a x86_64 -t 10.15 -1
+            # Retry the dependency build: CMake ExternalProject downloads
+            # third-party tarballs from GitHub, which intermittently return
+            # HTTP 5xx. Already-built deps are skipped on retry.
+            retry() {
+              local n=1 max=3
+              until "$@"; do
+                if [ "$n" -ge "$max" ]; then
+                  echo "::error::dependency build failed after ${n} attempts"; return 1
+                fi
+                echo "::warning::dependency build attempt ${n}/${max} failed (likely a transient download), retrying in 30s…"
+                n=$((n + 1)); sleep 30
+              done
+            }
+            retry ./BuildMac.sh -d -x -a x86_64 -t 10.15 -1
             (cd "${{ github.workspace }}/deps/build/x86_64" && \
             find . -mindepth 1 -maxdepth 1 ! -name 'BambuStudio_deps' -exec rm -rf {} +)
             brew list zstd &>/dev/null || brew install zstd
@@ -170,7 +183,19 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
             brew install automake texinfo nasm yasm x264
-            ./BuildMac.sh -d -x -a universal -t 10.15 -1
+            # Retry the dependency build (transient GitHub 5xx on tarball
+            # downloads); already-built deps are skipped on retry.
+            retry() {
+              local n=1 max=3
+              until "$@"; do
+                if [ "$n" -ge "$max" ]; then
+                  echo "::error::dependency build failed after ${n} attempts"; return 1
+                fi
+                echo "::warning::dependency build attempt ${n}/${max} failed (likely a transient download), retrying in 30s…"
+                n=$((n + 1)); sleep 30
+              done
+            }
+            retry ./BuildMac.sh -d -x -a universal -t 10.15 -1
             for arch in arm64 x86_64; do
                 (cd "${{ github.workspace }}/deps/build/${arch}" && \
                 find . -mindepth 1 -maxdepth 1 ! -name 'BambuStudio_deps' -exec rm -rf {} +)
@@ -191,7 +216,19 @@ jobs:
         run: |
             sudo ./BuildLinux.sh -ur
             sudo chown $USER -R ./
-            ./BuildLinux.sh -dfr
+            # Retry the dependency build (transient GitHub 5xx on tarball
+            # downloads); already-built deps are skipped on retry.
+            retry() {
+              local n=1 max=3
+              until "$@"; do
+                if [ "$n" -ge "$max" ]; then
+                  echo "::error::dependency build failed after ${n} attempts"; return 1
+                fi
+                echo "::warning::dependency build attempt ${n}/${max} failed (likely a transient download), retrying in 30s…"
+                n=$((n + 1)); sleep 30
+              done
+            }
+            retry ./BuildLinux.sh -dfr
             cd deps/build
             tar -czvf BambuStudio_dep_${{ inputs.os }}_$(date +"%Y%m%d").tar.gz destdir
 
