@@ -6,10 +6,16 @@ extern "C"
 {
     #include <libavutil/avutil.h>
     #include <libavutil/imgutils.h>
+    #include <libavutil/log.h>
 }
 
 AVVideoDecoder::AVVideoDecoder()
 {
+    // Silence ffmpeg's per-frame console spam from the camera MJPEG stream
+    // (e.g. "deprecated pixel format used", "unable to decode APP fields"):
+    // these are harmless warnings about malformed/relayed frames, and real
+    // decode failures are already handled via return codes, not via the log.
+    av_log_set_level(AV_LOG_FATAL);
     codec_ctx_ = avcodec_alloc_context3(nullptr);
 }
 
