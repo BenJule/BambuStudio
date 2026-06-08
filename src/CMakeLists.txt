@@ -146,6 +146,14 @@ endif ()
 if (SLIC3R_GUI)
 #    target_link_libraries(BambuStudio ws2_32 uxtheme setupapi libslic3r_gui ${wxWidgets_LIBRARIES})
 target_link_libraries(BambuStudio libslic3r_gui)
+    # The Filament Manager / device web UI is a pnpm/vite project built by the
+    # `device_page_build` custom target. That target is ALL-only, but
+    # BuildLinux.sh and BuildMac.sh build `--target BambuStudio`, which would
+    # skip it and ship a stale bundle (Filament Manager -> "Not Found"). Make it
+    # a real dependency so every BambuStudio build refreshes the web bundle.
+    if (TARGET device_page_build)
+        add_dependencies(BambuStudio device_page_build)
+    endif ()
     if (MSVC)
         # Generate debug symbols even in release mode.
         target_link_options(BambuStudio PUBLIC "$<$<CONFIG:RELEASE>:/DEBUG>")
