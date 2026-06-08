@@ -272,7 +272,10 @@ AboutDialog::AboutDialog()
 
     // Header panel — draws the background bitmap via OnPaint so child
     // widgets render correctly on GTK (wxStaticBitmap::SetSizer breaks on Linux)
-    m_logo_bitmap = ScalableBitmap(this, "BambuStudio_about", 250);
+    // Load the background SVG at the panel's height (237) — its native size is
+    // 562x238, so loading it at 250 stretched it and pushed the version text
+    // onto the logo. Matching the panel height keeps the designed text area free.
+    m_logo_bitmap = ScalableBitmap(this, "BambuStudio_about", 237);
     wxPanel *header_panel = new wxPanel(this, wxID_ANY, wxDefaultPosition,
                                         wxSize(FromDIP(560), FromDIP(237)));
     header_panel->SetBackgroundStyle(wxBG_STYLE_PAINT);
@@ -418,7 +421,9 @@ AboutDialog::AboutDialog()
     button_portions->SetTextColor(report_text);
     button_portions->SetFont(Label::Body_12);
     button_portions->SetCornerRadius(FromDIP(12));
-    button_portions->SetMinSize(wxSize(FromDIP(120), FromDIP(24)));
+    // Size the button to its (translated) label so long strings like the German
+    // "Informationen zum Urheberrecht" are not clipped; keep a 120px minimum.
+    button_portions->SetMinSize(wxSize(wxMax(button_portions->GetBestSize().GetWidth(), FromDIP(120)), FromDIP(24)));
 
     wxBoxSizer *copyright_button_ver = new wxBoxSizer(wxVERTICAL);
     copyright_button_ver->Add( 0, 0, 0, wxTOP, FromDIP(10));
