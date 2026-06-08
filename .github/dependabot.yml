@@ -2,6 +2,7 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -12,6 +13,7 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/src/slic3r/GUI/DeviceWeb/device_page"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -23,6 +25,7 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/tests/web-e2e"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "monday"
