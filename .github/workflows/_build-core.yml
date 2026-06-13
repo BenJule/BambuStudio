@@ -119,12 +119,26 @@ jobs:
         run: |
           set -euo pipefail
           brew install automake texinfo nasm yasm zstd
+          # Retry the build: the deps phase git-clones wxWidgets + submodules,
+          # which intermittently fails on transient DNS/network ("Could not
+          # resolve host: github.com"). CMake ExternalProject is idempotent, so
+          # already-fetched deps are skipped and only the failed clone is retried.
+          retry() {
+            local n=1 max=3
+            until "$@"; do
+              if [ "$n" -ge "$max" ]; then
+                echo "::error::macOS build failed after ${n} attempts"; return 1
+              fi
+              echo "::warning::macOS build attempt ${n}/${max} failed (likely a transient download/clone), retrying in 30s…"
+              n=$((n + 1)); sleep 30
+            done
+          }
           if [ ! -d "${{ github.workspace }}/deps/build/x86_64" ]; then
             echo "No macOS Intel cache found. Building deps + slicer..."
-            ./BuildMac.sh -x -a x86_64 -t 10.15
+            retry ./BuildMac.sh -x -a x86_64 -t 10.15
           else
             echo "Using cached deps..."
-            ./BuildMac.sh -s -x -a x86_64 -t 10.15
+            retry ./BuildMac.sh -s -x -a x86_64 -t 10.15
           fi
 
       - name: Build slicer mac (ARM / Universal)
@@ -133,12 +147,26 @@ jobs:
         run: |
           set -euo pipefail
           brew install automake texinfo nasm yasm zstd
+          # Retry the build: the deps phase git-clones wxWidgets + submodules,
+          # which intermittently fails on transient DNS/network ("Could not
+          # resolve host: github.com"). CMake ExternalProject is idempotent, so
+          # already-fetched deps are skipped and only the failed clone is retried.
+          retry() {
+            local n=1 max=3
+            until "$@"; do
+              if [ "$n" -ge "$max" ]; then
+                echo "::error::macOS build failed after ${n} attempts"; return 1
+              fi
+              echo "::warning::macOS build attempt ${n}/${max} failed (likely a transient download/clone), retrying in 30s…"
+              n=$((n + 1)); sleep 30
+            done
+          }
           if [ ! -d "${{ github.workspace }}/deps/build/arm64" ]; then
             echo "No macOS ARM cache found. Building deps + slicer..."
-            ./BuildMac.sh -x -a universal -t 10.15 -1
+            retry ./BuildMac.sh -x -a universal -t 10.15 -1
           else
             echo "Using cached deps..."
-            ./BuildMac.sh -s -x -a universal -t 10.15 -1
+            retry ./BuildMac.sh -s -x -a universal -t 10.15 -1
           fi
 
       - name: Pack macOS .dmg
