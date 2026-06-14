@@ -55,8 +55,10 @@ jobs:
           UPSTREAM_VER="${VER%-bj.*}"    # strip distributor suffix for filename
           BASE="https://github.com/${{ github.repository }}/releases/download/${TAG}"
 
-          URL_ARM="${BASE}/BambuStudio_Mac_arm64_V${UPSTREAM_VER}.zip"
-          URL_INTEL="${BASE}/BambuStudio_Mac_x86_64_V${UPSTREAM_VER}.zip"
+          # This fork ships universal macOS .dmg assets (not the upstream arm64/x86_64
+          # .zip). The universal dmg covers both architectures; use it as the cask URL.
+          URL_ARM="${BASE}/BambuStudio_macos-15_universal_V${UPSTREAM_VER}.dmg"
+          URL_INTEL="${BASE}/BambuStudio_macos-15-intel_x86_64_V${UPSTREAM_VER}.dmg"
 
           SHA_ARM=$(curl -sL "$URL_ARM" | sha256sum | cut -d' ' -f1)
           SHA_INTEL=$(curl -sL "$URL_INTEL" | sha256sum | cut -d' ' -f1)
