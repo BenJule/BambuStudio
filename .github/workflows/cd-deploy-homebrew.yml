@@ -27,11 +27,10 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
         with:
-          egress-policy: block
-          allowed-endpoints: |
-            api.github.com:443
-            github.com:443
-            objects.githubusercontent.com:443
+          # audit (not block) to match the other deploy workflows — block mode
+          # rejected the checkout connection to github.com even though it was
+          # allow-listed, failing the deploy at the checkout step.
+          egress-policy: audit
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
       - name: Determine version
