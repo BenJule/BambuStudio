@@ -350,13 +350,31 @@ jobs:
               "${{ github.sha }}"
             cat /tmp/changelog.md
           } > /tmp/release-notes.md
-          gh release create "${{ steps.ver.outputs.tag }}" \
-            --repo "${{ github.repository }}" \
-            --title "${{ steps.ver.outputs.title }}" \
-            --notes-file /tmp/release-notes.md \
-            --prerelease \
-            --target "${{ github.sha }}" \
-            "${FILES[@]}"
+          TAG="${{ steps.ver.outputs.tag }}"
+          # Rerun-safe: the tag step force-recreates the tag, but a release object
+          # from a prior/partial run persists, so `gh release create` would abort
+          # with "a release with the same tag name already exists". If the release
+          # exists, update it in place and re-upload assets; otherwise create it.
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release edit "$TAG" \
+              --repo "${{ github.repository }}" \
+              --title "${{ steps.ver.outputs.title }}" \
+              --notes-file /tmp/release-notes.md \
+              --prerelease \
+              --target "${{ github.sha }}"
+            gh release upload "$TAG" \
+              --repo "${{ github.repository }}" \
+              --clobber \
+              "${FILES[@]}"
+          else
+            gh release create "$TAG" \
+              --repo "${{ github.repository }}" \
+              --title "${{ steps.ver.outputs.title }}" \
+              --notes-file /tmp/release-notes.md \
+              --prerelease \
+              --target "${{ github.sha }}" \
+              "${FILES[@]}"
+          fi
           echo "published=true" >> "$GITHUB_OUTPUT"
 
   # ── 5. Post-publish smoke test (warning only, no rollback) ───────────────
