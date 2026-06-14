@@ -38,10 +38,13 @@ runs:
     - name: Verify binary present
       shell: bash
       run: |
-        if command -v bambustudio &>/dev/null; then
-          BINARY=$(which bambustudio)
-        elif [ -f /usr/lib/bambustudio/bin/bambu-studio ]; then
+        # /usr/bin/bambustudio is a thin wrapper shell script that sets
+        # LD_LIBRARY_PATH and execs the real ELF. ldd on the wrapper fails
+        # ("not a dynamic executable"), so resolve the packaged ELF directly.
+        if [ -x /usr/lib/bambustudio/bin/bambu-studio ]; then
           BINARY=/usr/lib/bambustudio/bin/bambu-studio
+        elif command -v bambustudio &>/dev/null; then
+          BINARY=$(which bambustudio)
         else
           echo "::error::bambustudio binary not found after dpkg install"
           dpkg -L bambu-studio 2>/dev/null | head -30 || true
@@ -50,11 +53,14 @@ runs:
         echo "OK: $BINARY"
         file "$BINARY"
         echo "BAMBU_BINARY=$BINARY" >> "$GITHUB_ENV"
+        # The wrapper adds this to LD_LIBRARY_PATH at runtime; ldd/--version on
+        # the real ELF need it too, else the bundled libs report "not found".
+        echo "BAMBU_LIBDIR=/usr/lib/bambustudio" >> "$GITHUB_ENV"
 
     - name: Verify shared libraries
       shell: bash
       run: |
-        MISSING=$(ldd "$BAMBU_BINARY" 2>/dev/null | grep "not found" || true)
+        MISSING=$(LD_LIBRARY_PATH="${BAMBU_LIBDIR:-}" ldd "$BAMBU_BINARY" 2>/dev/null | grep "not found" || true)
         if [[ -n "$MISSING" ]]; then
           # webkit2gtk / javascriptcoregtk / gstreamer are external system deps
           # pulled in by apt at install time. On GitHub runners the apt mirror can
@@ -71,7 +77,7 @@ runs:
           echo "::warning::Some optional/system libs reported missing — likely a transient apt-mirror 404 for webkit/gstreamer, not a packaging defect:"
           echo "$MISSING"
         fi
-        LIB_COUNT=$(ldd "$BAMBU_BINARY" 2>/dev/null | wc -l)
+        LIB_COUNT=$(LD_LIBRARY_PATH="${BAMBU_LIBDIR:-}" ldd "$BAMBU_BINARY" 2>/dev/null | wc -l || true)
         echo "OK: $LIB_COUNT shared libraries listed (core libs resolved)"
 
     - name: Verify resources
@@ -100,7 +106,7 @@ runs:
       run: |
         PKG_VERSION=$(dpkg-query -W -f='${Version}' bambu-studio 2>/dev/null \
           || dpkg-query -W -f='${Version}' bambustudio 2>/dev/null || true)
-        CLI_VERSION=$("$BAMBU_BINARY" --version 2>/dev/null | head -1 || true)
+        CLI_VERSION=$(LD_LIBRARY_PATH="${BAMBU_LIBDIR:-}" "$BAMBU_BINARY" --version 2>/dev/null | head -1 || true)
         if [[ -n "$CLI_VERSION" ]]; then
           echo "CLI version:     $CLI_VERSION"
         fi
