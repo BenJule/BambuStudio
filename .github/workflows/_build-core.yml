@@ -180,17 +180,38 @@ jobs:
           else
             APP_PATH="${{ github.workspace }}/build/universal/BambuStudio/BambuStudio.app"
           fi
+          VOLNAME="BambuStudio ${{ env.ver }}"
           DMG_NAME="BambuStudio_${{ inputs.os }}_${{ inputs.arch }}_${{ env.ver }}.dmg"
+          DMG_PATH="${{ github.workspace }}/$DMG_NAME"
           STAGING=$(mktemp -d)
           cleanup() { rm -rf "$STAGING"; }
           trap cleanup EXIT
           cp -R "$APP_PATH" "$STAGING/BambuStudio.app"
           ln -s /Applications "$STAGING/Applications"
-          hdiutil create \
-            -srcfolder "$STAGING" \
-            -format UDZO \
-            -volname "BambuStudio ${{ env.ver }}" \
-            -o "${{ github.workspace }}/$DMG_NAME"
+          # hdiutil intermittently fails with "Resource busy" on CI runners when a
+          # stale volume is still attached (Spotlight/AV holding the image). Retry a
+          # few times, detaching any leftover mount and clearing a partial .dmg
+          # (-ov) between attempts.
+          for attempt in 1 2 3; do
+            if hdiutil create \
+                 -srcfolder "$STAGING" \
+                 -format UDZO \
+                 -volname "$VOLNAME" \
+                 -ov \
+                 -o "$DMG_PATH"; then
+              echo "DMG created on attempt ${attempt}"
+              break
+            fi
+            if [[ "${attempt}" -eq 3 ]]; then
+              echo "::error::hdiutil create failed after 3 attempts"
+              exit 1
+            fi
+            echo "::warning::hdiutil create failed (attempt ${attempt}/3) — likely 'Resource busy'; detaching stale mount and retrying…"
+            hdiutil detach -force "/Volumes/$VOLNAME" 2>/dev/null || true
+            rm -f "$DMG_PATH" 2>/dev/null || true
+            sync
+            sleep 15
+          done
 
       - name: Upload artifacts mac
         if: runner.os == 'macOS'

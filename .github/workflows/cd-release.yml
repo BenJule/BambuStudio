@@ -303,7 +303,10 @@ jobs:
 
       - name: Publish release
         env:
-          GH_TOKEN: ${{ github.token }}
+          # Use the PAT (not GITHUB_TOKEN) so the release `released` event triggers
+          # the deploy workflows — GitHub suppresses workflow-triggered events that
+          # originate from the default GITHUB_TOKEN (recursion prevention).
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
           TAG="${{ needs.prepare.outputs.tag }}"
           COMMIT_SHA=$(git rev-parse HEAD)
