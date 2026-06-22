@@ -211,14 +211,6 @@ if (WIN32)
                 VERBATIM
             )
         endforeach ()
-
-        if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-            bambustudio_copy_dlls(BambuStudioDllsCopy "Debug" "d" output_dlls_Debug)
-        elseif("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
-            bambustudio_copy_dlls(BambuStudioDllsCopy "RelWithDebInfo" "" output_dlls_RelWithDebInfo)
-        else()
-            bambustudio_copy_dlls(BambuStudioDllsCopy "Release" "" output_dlls_Release)
-        endif()
     else ()
         file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}/resources" WIN_RESOURCES_SYMLINK)
         add_custom_command(TARGET BambuStudio POST_BUILD
@@ -227,6 +219,22 @@ if (WIN32)
             VERBATIM
         )
     endif ()
+
+    # Stage the third-party runtime DLLs (OpenCASCADE/FFmpeg/GMP/MPFR/...) next to
+    # the binary and record them for install(). This must run for single-config
+    # generators (Ninja — used for the Windows x64 CI build) too: it used to be
+    # nested inside `if (CMAKE_CONFIGURATION_TYPES)`, which is only true for
+    # multi-config generators (Visual Studio). The Ninja x64 build therefore
+    # skipped it entirely and produced a portable zip containing only
+    # BambuStudio.dll, so the app failed to start with STATUS_DLL_NOT_FOUND and
+    # broke winget validation (microsoft/winget-pkgs#387868).
+    if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+        bambustudio_copy_dlls(BambuStudioDllsCopy "Debug" "d" output_dlls_Debug)
+    elseif("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
+        bambustudio_copy_dlls(BambuStudioDllsCopy "RelWithDebInfo" "" output_dlls_RelWithDebInfo)
+    else()
+        bambustudio_copy_dlls(BambuStudioDllsCopy "Release" "" output_dlls_Release)
+    endif()
 
 
 else ()
