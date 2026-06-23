@@ -70,7 +70,7 @@ jobs:
         run: apt-get update -qq && apt-get install -y --no-install-recommends sudo git curl git-lfs ca-certificates
 
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           lfs: 'true'
           fetch-depth: 0
@@ -199,7 +199,7 @@ jobs:
         run: dnf install -y sudo git curl git-lfs
 
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           lfs: 'true'
           fetch-depth: 0
@@ -269,7 +269,7 @@ jobs:
         run: pacman -Syu --noconfirm sudo git curl git-lfs unzip
 
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           lfs: 'true'
           fetch-depth: 0
@@ -282,7 +282,7 @@ jobs:
           key: pkg-deps-arch-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
 
       - name: Install cmake 3.31.x (Arch)
-        uses: lukka/get-cmake@591817e96fcad43505fb4eae36172462abb3a42e  # v4.3.3
+        uses: lukka/get-cmake@f5b8fbb4d77cec1acc5a5f9f0df4beffaf5d98d9  # v4.3.4
         with:
           cmakeVersion: "~3.31.0"
           useLocalCache: true
