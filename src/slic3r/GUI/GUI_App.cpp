@@ -3098,16 +3098,14 @@ bool GUI_App::on_init_inner()
         app_config->set("dark_mode_follow_system", app_config->get("dark_color_mode") == "1" ? "0" : "1");
 
     {
+        // Follow the OS appearance only when the user chose "Follow system" — on all
+        // platforms. An explicit Light/Dark choice (now available on Linux too) must
+        // not be overwritten on every start.
         wxSystemAppearance app = wxSystemSettings::GetAppearance();
-#ifdef __WINDOWS__
         if (app_config->get("dark_mode_follow_system") == "1") {
             app_config->set("dark_color_mode", app.IsDark() ? "1" : "0");
             app_config->save();
         }
-#else
-        GUI::wxGetApp().app_config->set("dark_color_mode", app.IsDark() ? "1" : "0");
-        GUI::wxGetApp().app_config->save();
-#endif
     }
 
 

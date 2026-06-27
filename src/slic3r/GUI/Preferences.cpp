@@ -1490,8 +1490,8 @@ wxWindow* PreferencesDialog::create_general_page()
     auto title_media = create_item_title(_L("Media"), page, _L("Media"));
     auto item_auto_stop_liveview = create_item_checkbox(_L("Keep liveview when printing."), page, _L("By default, Liveview will pause after 15 minutes of inactivity on the computer. Check this box to disable this feature during printing."), 50, "auto_stop_liveview");
 
-    //dark mode
-#ifdef _WIN32
+    //dark mode (native on macOS; manual toggle on Windows and Linux)
+#ifndef __APPLE__
     auto title_darkmode = create_item_title(_L("Dark Mode"), page, _L("Dark Mode"));
     auto item_darkmode = create_item_darkmode_combobox(_L("Dark mode"), page, _L("Choose the interface theme: light, dark, or follow the system setting."), 50);
 #endif
@@ -1605,7 +1605,7 @@ wxWindow* PreferencesDialog::create_general_page()
     sizer_page->Add(title_media, 0, wxTOP| wxEXPAND, FromDIP(20));
     sizer_page->Add(item_auto_stop_liveview, 0, wxEXPAND, FromDIP(3));
 
-#ifdef _WIN32
+#ifndef __APPLE__
     sizer_page->Add(title_darkmode, 0, wxTOP | wxEXPAND, FromDIP(20));
     sizer_page->Add(item_darkmode, 0, wxEXPAND, FromDIP(3));
 #endif
