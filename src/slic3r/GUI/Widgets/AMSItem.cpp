@@ -1294,6 +1294,31 @@ void AMSLib::render_generic_text(wxDC &dc)
             tooltip_text += m_info.material_name;
         }
 
+        auto append_tooltip_line = [&tooltip_text](const wxString& line) {
+            if (line.empty()) return;
+            if (!tooltip_text.empty()) tooltip_text += "\n";
+            tooltip_text += line;
+        };
+
+        wxString color_text;
+        auto append_color = [&color_text](const wxColour& color) {
+            if (color.Alpha() == 0) return;
+            if (!color_text.empty()) color_text += ", ";
+            color_text += color.GetAsString(wxC2S_HTML_SYNTAX);
+        };
+
+        if (!m_info.material_cols.empty()) {
+            for (const wxColour& color : m_info.material_cols)
+                append_color(color);
+        } else {
+            append_color(m_info.material_colour);
+        }
+
+        if (!color_text.empty() && !m_info.material_name.empty()) {
+            wxString color_label = _L("Color");
+            append_tooltip_line(color_label + ": " + color_text);
+        }
+
         //draw k&n
         if (m_obj && show_k_value) {
             if (m_show_kn) {
