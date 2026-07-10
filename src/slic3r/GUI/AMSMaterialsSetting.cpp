@@ -273,6 +273,18 @@ void AMSMaterialsSetting::create_panel_normal(wxWindow* parent)
     m_filament_compatibility_hint->Wrap(
         AMS_MATERIALS_SETTING_BODY_WIDTH);
     m_filament_compatibility_hint->Hide();
+    m_show_only_user_presets = new wxCheckBox(
+        parent,
+        wxID_ANY,
+        _L("Show only my profiles"));
+    m_show_only_user_presets->SetFont(::Label::Body_13);
+    m_show_only_user_presets->SetValue(false);
+    m_show_only_user_presets->Hide();
+    m_show_only_user_presets->Bind(
+        wxEVT_CHECKBOX,
+        [this](wxCommandEvent&) {
+            apply_filament_profile_filter();
+        });
 
     wxBoxSizer* m_sizer_colour = new wxBoxSizer(wxHORIZONTAL);
 
@@ -394,6 +406,12 @@ void AMSMaterialsSetting::create_panel_normal(wxWindow* parent)
     sizer->Add(0, 0, 0, wxTOP, FromDIP(4));
     sizer->Add(
         m_filament_compatibility_hint,
+        0,
+        wxLEFT | wxRIGHT,
+        FromDIP(20));
+    sizer->Add(0, 0, 0, wxTOP, FromDIP(6));
+    sizer->Add(
+        m_show_only_user_presets,
         0,
         wxLEFT | wxRIGHT,
         FromDIP(20));
@@ -1204,6 +1222,7 @@ void AMSMaterialsSetting::get_filaments_info(const MachineObject*               
                 FilamentInfos filament_infos;
                 filament_infos.filament_id         = filament_it->filament_id;
                 filament_infos.setting_id          = filament_it->setting_id;
+                filament_infos.is_user_preset      = preset.is_user();
                 map_filament_items[fialment_alias] = filament_infos;
                 break;
             }
@@ -1217,6 +1236,42 @@ void AMSMaterialsSetting::get_filaments_info(const MachineObject*               
     if (obj->is_support_user_preset || m_is_third) {
         collect_pass(false);
     }
+}
+
+void AMSMaterialsSetting::apply_filament_profile_filter()
+{
+    if (!m_comboBox_filament)
+        return;
+
+    const wxString selected_item = m_comboBox_filament->GetValue();
+    const bool show_only_user =
+        m_show_only_user_presets &&
+        m_show_only_user_presets->IsChecked();
+
+    wxArrayString visible_items;
+
+    for (const wxString& item : m_all_filament_items) {
+        const auto filament_it =
+            map_filament_items.find(into_u8(item));
+
+        if (show_only_user &&
+            (filament_it == map_filament_items.end() ||
+             !filament_it->second.is_user_preset)) {
+            continue;
+        }
+
+        visible_items.Add(item);
+    }
+
+    const int selection_idx = visible_items.Index(selected_item);
+
+    m_comboBox_filament->Set(visible_items);
+    m_comboBox_filament->SetSelection(selection_idx);
+
+    if (selection_idx == wxNOT_FOUND)
+        m_comboBox_filament->SetValue(wxEmptyString);
+
+    post_select_event(selection_idx);
 }
 
 Preset* AMSMaterialsSetting::get_filament_by_id(const std::string& filament_id, bool is_system)
@@ -1238,6 +1293,10 @@ Preset* AMSMaterialsSetting::get_filament_by_id(const std::string& filament_id, 
 void AMSMaterialsSetting::Popup(wxString filament, wxString sn, wxString temp_min, wxString temp_max, wxString k, wxString n)
 {
     if (!obj) return;
+
+    m_all_filament_items.Clear();
+    map_filament_items.clear();
+
     update_widgets();
     // set default value
     if (k.IsEmpty())
@@ -1270,6 +1329,25 @@ void AMSMaterialsSetting::Popup(wxString filament, wxString sn, wxString temp_mi
     get_filaments_info(obj, nozzle_diameter_str, filament_items, map_filament_items, query_filament_vendors, query_filament_types, query_filament_is_user_preset);
 
     const std::vector<wxString> recent_filament_items = load_ams_recent_filament_presets(ams_id, slot_id);
+
+    const bool has_user_presets = std::any_of(
+        filament_items.begin(),
+        filament_items.end(),
+        [this](const wxString& item) {
+            const auto filament_it =
+                map_filament_items.find(into_u8(item));
+
+            return filament_it != map_filament_items.end() &&
+                   filament_it->second.is_user_preset;
+        });
+
+    const bool show_user_filter =
+        m_is_third &&
+        obj->is_support_user_preset &&
+        has_user_presets;
+
+    m_show_only_user_presets->SetValue(false);
+    m_show_only_user_presets->Show(show_user_filter);
 
     if (Preset* ams_fila_it = get_filament_by_id(ams_filament_id, !m_is_third)) {
         auto fialment_alias = preset_bundle->filaments.get_preset_alias(*ams_fila_it, true);
@@ -1392,6 +1470,8 @@ void AMSMaterialsSetting::Popup(wxString filament, wxString sn, wxString temp_mi
 
         std::sort(filament_items.begin(), filament_items.end(), _filament_sorter);
     }
+
+    m_all_filament_items = filament_items;
 
     // traverse the hint selection idx
     int selection_idx = -1;
