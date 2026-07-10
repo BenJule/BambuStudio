@@ -69,6 +69,7 @@ var g_collapsed_groups = {};
 var g_page = 1;
 var g_page_size = 50;
 var FM_SAVED_VIEWS_KEY = "bambu_fila_manager_saved_views_v1";
+var g_quick_filter = "";
 
 var BAMBU_COLORS = [
     "#000000","#333333","#555555","#808080","#BBBBBB","#FFFFFF",
@@ -292,6 +293,111 @@ function getSpoolSortValue(s, key) {
         ].map(function(v) { return v || ""; }).join(" ");
     }
     return s[key];
+function isSpoolDryDue(s) {
+    if (!(s.dry_reminder_days > 0 && s.dry_date)) return false;
+
+    var dryDate = new Date(s.dry_date).getTime();
+    if (isNaN(dryDate)) return false;
+
+    var diff = (Date.now() - dryDate) / 86400000;
+    return diff >= s.dry_reminder_days;
+}
+
+function matchesQuickFilter(s) {
+    var remain = s.remain_percent || 0;
+
+    if (g_quick_filter === "low") return remain > 0 && remain < 20;
+    if (g_quick_filter === "dry") return isSpoolDryDue(s);
+    if (g_quick_filter === "empty") return remain === 0;
+    if (g_quick_filter === "ams") return s.entry_method === "ams_sync";
+
+    return true;
+}
+
+function getQuickChipCounts() {
+    var counts = { total: 0, low: 0, dry: 0, empty: 0, ams: 0, archived: 0 };
+
+    g_spools.forEach(function(s) {
+        if (s.status === "archived") {
+            counts.archived++;
+            return;
+        }
+
+        counts.total++;
+
+        var remain = s.remain_percent || 0;
+        if (remain === 0) counts.empty++;
+        else if (remain < 20) counts.low++;
+
+        if (isSpoolDryDue(s)) counts.dry++;
+        if (s.entry_method === "ams_sync") counts.ams++;
+    });
+
+    return counts;
+}
+
+function renderQuickChips() {
+    var el = document.getElementById("quick-chip-row");
+    if (!el) return;
+
+    var counts = getQuickChipCounts();
+    var chips = [
+        {key: "total", label: "全部", count: counts.total},
+        {key: "low", label: "低余量", count: counts.low},
+        {key: "dry", label: "需烘干", count: counts.dry},
+        {key: "empty", label: "已用尽", count: counts.empty},
+        {key: "ams", label: "AMS", count: counts.ams},
+        {key: "archived", label: "存档", count: counts.archived}
+    ];
+
+    el.innerHTML = chips.map(function(chip) {
+        var active = (chip.key === "archived")
+            ? g_view === "archived"
+            : (g_view !== "archived" && ((chip.key === "total" && !g_quick_filter) || g_quick_filter === chip.key));
+
+        return '<button class="quick-chip'+(active ? " active" : "")+'" data-chip="'+chip.key+'">' +
+            '<span>'+chip.label+'</span>' +
+            '<span class="quick-chip-count">'+chip.count+'</span>' +
+        '</button>';
+    }).join("");
+}
+
+function syncInventoryViewControls() {
+    document.querySelectorAll(".nav-item").forEach(function(el) {
+        el.classList.toggle("active", el.getAttribute("data-view") === g_view);
+    });
+    document.querySelectorAll(".tab-pill").forEach(function(el) {
+        el.classList.toggle("active", el.getAttribute("data-tab") === g_tab);
+    });
+
+    document.getElementById("stats-view").style.display = (g_view === "stats") ? "" : "none";
+    document.getElementById("list-view").style.display = (g_view === "stats") ? "none" : "";
+}
+
+function applyQuickChip(key) {
+    g_page = 1;
+    g_selected_ids = {};
+
+    if (key === "total") {
+        g_view = "my";
+        g_tab = "all";
+        g_quick_filter = "";
+    } else if (key === "archived") {
+        g_view = "archived";
+        g_tab = "all";
+        g_quick_filter = "";
+    } else if (key === "ams") {
+        g_view = "my";
+        g_tab = "ams";
+        g_quick_filter = "ams";
+    } else {
+        g_view = "my";
+        g_tab = "all";
+        g_quick_filter = key;
+    }
+
+    syncInventoryViewControls();
+    refresh();
 }
 
 function getFilteredSpools() {
@@ -301,6 +407,7 @@ function getFilteredSpools() {
         else { if (s.status === "archived") return false; }
         if (g_tab === "favorite" && !s.favorite) return false;
         if (g_tab === "ams" && s.entry_method !== "ams_sync") return false;
+        if (g_quick_filter && !matchesQuickFilter(s)) return false;
         if (keyword) {
             var hay = ((s.brand||"")+" "+(s.material_type||"")+" "+(s.series||"")+" "+(s.color_name||"")).toLowerCase();
             if (hay.indexOf(keyword) === -1) return false;
@@ -322,6 +429,7 @@ function getFilteredSpools() {
 }
 
 function refresh() {
+    renderQuickChips();
     var spools = getFilteredSpools();
     renderTable(spools);
     updateBatchUI();
@@ -1170,6 +1278,7 @@ document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll(".nav-item").forEach(function(el) {
         el.addEventListener("click", function() {
             g_view = this.getAttribute("data-view");
+            g_quick_filter = "";
             document.querySelectorAll(".nav-item").forEach(function(n) { n.classList.remove("active"); });
             this.classList.add("active");
             g_selected_ids = {};
@@ -1183,6 +1292,7 @@ document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll(".tab-pill").forEach(function(el) {
         el.addEventListener("click", function() {
             g_tab = this.getAttribute("data-tab");
+            g_quick_filter = "";
             document.querySelectorAll(".tab-pill").forEach(function(t) { t.classList.remove("active"); });
             this.classList.add("active");
             refresh();
@@ -1300,6 +1410,13 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("filter-dropdown").style.display = "none";
         var savedViewsDropdown = document.getElementById("saved-views-dropdown");
         if (savedViewsDropdown) savedViewsDropdown.style.display = "none";
+    });
+
+    // Quick inventory chips
+    document.getElementById("quick-chip-row").addEventListener("click", function(e) {
+        var chip = e.target.closest(".quick-chip");
+        if (!chip) return;
+        applyQuickChip(chip.getAttribute("data-chip"));
     });
 
     // Group toggle
