@@ -36,6 +36,82 @@ static std::string float_to_string_with_precision(float value, int precision = 3
     return stream.str();
 }
 
+
+namespace {
+
+constexpr size_t AMS_RECENT_FILAMENT_PRESETS_MAX = 5;
+
+std::string ams_recent_filament_presets_key(int ams_id, int slot_id)
+{
+    std::ostringstream key;
+    key << "ams_recent_filament_presets_" << ams_id << "_" << slot_id;
+    return key.str();
+}
+
+std::vector<wxString> parse_ams_recent_filament_presets(const std::string& value)
+{
+    std::vector<wxString> result;
+    std::stringstream ss(value);
+    std::string item;
+
+    while (std::getline(ss, item, '\n')) {
+        if (!item.empty())
+            result.emplace_back(from_u8(item));
+    }
+
+    return result;
+}
+
+std::string serialize_ams_recent_filament_presets(const std::vector<wxString>& items)
+{
+    std::string value;
+
+    for (const wxString& item : items) {
+        if (item.empty())
+            continue;
+
+        if (!value.empty())
+            value += '\n';
+
+        value += into_u8(item);
+    }
+
+    return value;
+}
+
+std::vector<wxString> load_ams_recent_filament_presets(int ams_id, int slot_id)
+{
+    return parse_ams_recent_filament_presets(
+        wxGetApp().app_config->get(ams_recent_filament_presets_key(ams_id, slot_id)));
+}
+
+void remember_ams_recent_filament_preset(int ams_id, int slot_id, const wxString& selected)
+{
+    if (selected.empty())
+        return;
+
+    std::vector<wxString> items = load_ams_recent_filament_presets(ams_id, slot_id);
+
+    items.erase(std::remove(items.begin(), items.end(), selected), items.end());
+    items.insert(items.begin(), selected);
+
+    if (items.size() > AMS_RECENT_FILAMENT_PRESETS_MAX)
+        items.resize(AMS_RECENT_FILAMENT_PRESETS_MAX);
+
+    wxGetApp().app_config->set(
+        ams_recent_filament_presets_key(ams_id, slot_id),
+        serialize_ams_recent_filament_presets(items));
+}
+
+int ams_recent_filament_preset_rank(const std::vector<wxString>& recent_items, const wxString& item)
+{
+    auto it = std::find(recent_items.begin(), recent_items.end(), item);
+    return it == recent_items.end() ? -1 : static_cast<int>(std::distance(recent_items.begin(), it));
+}
+
+} // namespace
+
+
 AMSMaterialsSetting::AMSMaterialsSetting(wxWindow *parent, wxWindowID id)
     : DPIDialog(parent, id, _L("AMS Materials Setting"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX)
     , m_color_picker_popup(ColorPickerPopup(this))
@@ -739,6 +815,7 @@ void AMSMaterialsSetting::on_select_ok(wxCommandEvent& event)
     // set filament
     if (m_is_third) {
         obj->command_ams_filament_settings(ams_id, slot_id, ams_filament_id, ams_setting_id, std::string(col_buf), m_filament_type, nozzle_temp_min_int, nozzle_temp_max_int);
+        remember_ams_recent_filament_preset(ams_id, slot_id, m_comboBox_filament->GetValue());
     }
 
     //reset param
@@ -1073,6 +1150,8 @@ void AMSMaterialsSetting::Popup(wxString filament, wxString sn, wxString temp_mi
 
     get_filaments_info(obj, nozzle_diameter_str, filament_items, map_filament_items, query_filament_vendors, query_filament_types, query_filament_is_user_preset);
 
+    const std::vector<wxString> recent_filament_items = load_ams_recent_filament_presets(ams_id, slot_id);
+
     if (Preset* ams_fila_it = get_filament_by_id(ams_filament_id, !m_is_third)) {
         auto fialment_alias = preset_bundle->filaments.get_preset_alias(*ams_fila_it, true);
         if (!fialment_alias.empty()) {
@@ -1143,8 +1222,16 @@ void AMSMaterialsSetting::Popup(wxString filament, wxString sn, wxString temp_mi
     {
         static std::vector<wxString> sorted_vendors { "Bambu Lab", "Generic" };
         static std::vector<wxString> sorted_types { "PLA", "PETG", "ABS", "TPU" };
-        auto _filament_sorter = [&query_filament_vendors, &query_filament_types, &query_filament_is_user_preset](const wxString& left, const wxString& right) -> bool
+        auto _filament_sorter = [&recent_filament_items, &query_filament_vendors, &query_filament_types, &query_filament_is_user_preset](const wxString& left, const wxString& right) -> bool
         {
+            const int left_recent_rank  = ams_recent_filament_preset_rank(recent_filament_items, left);
+            const int right_recent_rank = ams_recent_filament_preset_rank(recent_filament_items, right);
+            if (left_recent_rank != right_recent_rank) {
+                if (left_recent_rank < 0)  return false;
+                if (right_recent_rank < 0) return true;
+                return left_recent_rank < right_recent_rank;
+            }
+
             auto is_user_preset = [&query_filament_is_user_preset](const wxString& item) {
                 auto it = query_filament_is_user_preset.find(item);
                 return it != query_filament_is_user_preset.end() && it->second;
