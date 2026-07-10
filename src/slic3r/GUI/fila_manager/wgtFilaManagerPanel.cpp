@@ -2,6 +2,9 @@
 #include "wgtFilaManagerStore.h"
 
 #include <wx/sizer.h>
+#include <stdexcept>
+#include <boost/nowide/fstream.hpp>
+#include <wx/filedlg.h>
 #include <boost/log/trivial.hpp>
 
 #include "slic3r/GUI/GUI_App.hpp"
@@ -252,6 +255,44 @@ void wgtFilaManagerPanel::register_handlers()
             if (mgr) mgr->set_selected_machine(dev_id);
         }
         send_response(seq, 0, build_ams_data());
+    };
+
+    m_handlers["export_spool_inventory"] = [this](int seq, const nlohmann::json&) {
+        wxFileDialog dialog(
+            this,
+            wxString("Export filament inventory"),
+            wxEmptyString,
+            "filament_inventory_backup.json",
+            "JSON files (*.json)|*.json",
+            wxFD_SAVE | wxFD_OVERWRITE_PROMPT
+        );
+
+        if (dialog.ShowModal() == wxID_CANCEL) {
+            send_response(seq, 1, {{"cancelled", true}});
+            return;
+        }
+
+        try {
+            const wxString wx_path = dialog.GetPath();
+            const std::string path = wx_path.ToUTF8().data();
+
+            boost::nowide::ofstream ofs(path);
+            if (!ofs)
+                throw std::runtime_error("failed to open export file");
+
+            nlohmann::json root = {
+                {"spools", build_spool_list()}
+            };
+            ofs << root.dump(2);
+            ofs.close();
+
+            if (!ofs)
+                throw std::runtime_error("failed to write export file");
+
+            send_response(seq, 0, {{"path", path}});
+        } catch (const std::exception& e) {
+            send_response(seq, -1, {{"error", std::string("export failed: ") + e.what()}});
+        }
     };
 
     /* ---- Spool CRUD ---- */

@@ -1128,6 +1128,16 @@ document.addEventListener("DOMContentLoaded", function() {
         refresh();
     });
 
+    // Export inventory
+    document.getElementById("btn-export").addEventListener("click", function() {
+        sendRequest("export_spool_inventory", {}, function(code, data) {
+            if (code === 1 && data && data.cancelled) return;
+            if (code !== 0) {
+                alert((data && data.error) ? data.error : "导出失败");
+            }
+        }, 0);
+    });
+
     // Pagination delegation
     document.getElementById("pagination").addEventListener("click", function(e) {
         var btn = e.target.closest(".page-btn");
