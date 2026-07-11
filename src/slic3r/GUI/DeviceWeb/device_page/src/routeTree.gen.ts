@@ -8,99 +8,52 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as Filament_managerRouteImport } from './routes/filament_manager'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as IndexRouteImport } from './routes/index'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as FilamentmanagerImport } from './routes/filament_manager'
-import { Route as AppImport } from './routes/app'
-import { Route as AboutImport } from './routes/about'
-import { Route as IndexImport } from './routes/index'
-
-// Create/Update Routes
-
-const FilamentmanagerRoute = FilamentmanagerImport.update({
+const Filament_managerRoute = Filament_managerRouteImport.update({
   id: '/filament_manager',
   path: '/filament_manager',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const AppRoute = AppImport.update({
+const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const AboutRoute = AboutImport.update({
+const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const IndexRoute = IndexImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-// Populate the FileRoutesByPath interface
-
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutImport
-      parentRoute: typeof rootRoute
-    }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppImport
-      parentRoute: typeof rootRoute
-    }
-    '/filament_manager': {
-      id: '/filament_manager'
-      path: '/filament_manager'
-      fullPath: '/filament_manager'
-      preLoaderRoute: typeof FilamentmanagerImport
-      parentRoute: typeof rootRoute
-    }
-  }
-}
-
-// Create and export the route tree
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
-  '/filament_manager': typeof FilamentmanagerRoute
+  '/filament_manager': typeof Filament_managerRoute
 }
-
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
-  '/filament_manager': typeof FilamentmanagerRoute
+  '/filament_manager': typeof Filament_managerRoute
 }
-
 export interface FileRoutesById {
-  __root__: typeof rootRoute
+  __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
-  '/filament_manager': typeof FilamentmanagerRoute
+  '/filament_manager': typeof Filament_managerRoute
 }
-
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths: '/' | '/about' | '/app' | '/filament_manager'
@@ -109,49 +62,52 @@ export interface FileRouteTypes {
   id: '__root__' | '/' | '/about' | '/app' | '/filament_manager'
   fileRoutesById: FileRoutesById
 }
-
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AppRoute: typeof AppRoute
-  FilamentmanagerRoute: typeof FilamentmanagerRoute
+  Filament_managerRoute: typeof Filament_managerRoute
+}
+
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/filament_manager': {
+      id: '/filament_manager'
+      path: '/filament_manager'
+      fullPath: '/filament_manager'
+      preLoaderRoute: typeof Filament_managerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+  }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AppRoute: AppRoute,
-  FilamentmanagerRoute: FilamentmanagerRoute,
+  Filament_managerRoute: Filament_managerRoute,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/",
-        "/about",
-        "/app",
-        "/filament_manager"
-      ]
-    },
-    "/": {
-      "filePath": "index.tsx"
-    },
-    "/about": {
-      "filePath": "about.tsx"
-    },
-    "/app": {
-      "filePath": "app.tsx"
-    },
-    "/filament_manager": {
-      "filePath": "filament_manager.tsx"
-    }
-  }
-}
-ROUTE_MANIFEST_END */
