@@ -31,6 +31,7 @@ using namespace nlohmann;
 #if defined(__linux__) || defined(__LINUX__)
 #include <condition_variable>
 #include <mutex>
+#include <sys/stat.h>
 #include <boost/thread.hpp>
 #endif
 
@@ -86,6 +87,7 @@ using namespace nlohmann;
 #include "slic3r/GUI/Plater.hpp"
 #include "slic3r/GUI/GuiColor.hpp"
 #include <GLFW/glfw3.h>
+#include <cstdlib>
 
 #ifdef __WXGTK__
 #include <X11/Xlib.h>
@@ -94,6 +96,75 @@ using namespace nlohmann;
 #ifdef SLIC3R_GUI
     #include "slic3r/GUI/GUI_Init.hpp"
 #endif /* SLIC3R_GUI */
+
+#if defined(__linux__) || defined(__LINUX__)
+// Returns true when the X11 Unix domain socket for DISPLAY exists on disk,
+// meaning XWayland is actually running (not just that DISPLAY is set).
+// KDE Plasma 6 sets DISPLAY even before XWayland starts ("on-demand" mode).
+static bool x11_socket_exists(const char* display)
+{
+    if (!display || !*display)
+        return false;
+    // Parse display number: ":0" or ":0.0" → "0"
+    const char* p = display;
+    while (*p && *p != ':') ++p;
+    if (*p == ':') ++p;
+    char num[32]; size_t i = 0;
+    while (p[i] && p[i] != '.' && i < sizeof(num) - 1) { num[i] = p[i]; ++i; }
+    num[i] = '\0';
+    if (num[0] == '\0')
+        return false;
+    char path[256];
+    snprintf(path, sizeof(path), "/tmp/.X11-unix/X%s", num);
+    struct stat st;
+    return stat(path, &st) == 0 && S_ISSOCK(st.st_mode);
+}
+
+static void setup_display_backend() {
+    if (std::getenv("GDK_BACKEND") != nullptr)
+        return;
+
+    const char* xdg_session = std::getenv("XDG_SESSION_TYPE");
+    if (xdg_session && std::strcmp(xdg_session, "wayland") == 0) {
+        // Force XWayland only when the X11 socket actually exists.
+        // KDE Plasma 6 "on-demand XWayland" sets DISPLAY before XWayland
+        // starts; connecting to a non-existent socket crashes GTK.
+        const char* display = std::getenv("DISPLAY");
+        if (x11_socket_exists(display))
+            setenv("GDK_BACKEND", "x11", 1);
+    }
+}
+
+static bool check_display_available() {
+    const char* display         = std::getenv("DISPLAY");
+    const char* wayland_display = std::getenv("WAYLAND_DISPLAY");
+
+    if (wayland_display && *wayland_display)
+        return true;
+
+    if (display && *display) {
+        // Remote X11 displays (e.g. DISPLAY=host:0) don't have a local socket.
+        // Only require the socket for local displays (starting with ':' or 'unix:').
+        bool is_local = (display[0] == ':') ||
+                        (strncmp(display, "unix:", 5) == 0);
+        if (!is_local)
+            return true;
+        if (x11_socket_exists(display))
+            return true;
+        std::cerr << "[BambuStudio] DISPLAY=" << display
+                  << " is set but no XWayland socket found at /tmp/.X11-unix/.\n"
+                  << "  Under KDE Plasma 6 (Wayland), XWayland may be set to\n"
+                  << "  \"on demand\". Enable it unconditionally:\n"
+                  << "  System Settings → Display → Compositor → Legacy Applications\n"
+                  << "  Or start it before launching: Xwayland :0 &" << std::endl;
+        return false;
+    }
+
+    std::cerr << "[BambuStudio] No display available. "
+              << "Set DISPLAY=:0 (X11/XWayland) or WAYLAND_DISPLAY=wayland-0 (Wayland)." << std::endl;
+    return false;
+}
+#endif /* __linux__ */
 
 using namespace Slic3r;
 
@@ -1592,21 +1663,19 @@ int CLI::run(int argc, char **argv)
     bool start_gui = m_actions.empty() && !downward_check;
     if (start_gui) {
         BOOST_LOG_TRIVIAL(info) << "no action, start gui directly" << std::endl;
-        ::Label::initSysFont();
 #ifdef SLIC3R_GUI
-    /*#if !defined(_WIN32) && !defined(__APPLE__)
-        // likely some linux / unix system
-        const char *display = boost::nowide::getenv("DISPLAY");
-        // const char *wayland_display = boost::nowide::getenv("WAYLAND_DISPLAY");
-        //if (! ((display && *display) || (wayland_display && *wayland_display))) {
-        if (! (display && *display)) {
-            // DISPLAY not set.
-            boost::nowide::cerr << "DISPLAY not set, GUI mode not available." << std::endl << std::endl;
-            this->print_help(false);
-            // Indicate an error.
-            return 1;
-        }
-    #endif // some linux / unix system*/
+#if defined(__linux__) || defined(__LINUX__)
+        // Set GDK_BACKEND=x11 (XWayland) when a Wayland session is detected
+        // and the X11 socket is actually present. Must happen before any
+        // GTK/wxWidgets initialisation (including Label::initSysFont).
+        setup_display_backend();
+        if (!check_display_available())
+            return CLI_ENVIRONMENT_ERROR;
+#endif
+        // Font initialisation (initSysFont) requires an active GTK/GDK display
+        // because wxFont objects need Pango which calls gdk_display_get_default().
+        // GTK is initialised by wxApp inside GUI_Run(), so initSysFont must NOT
+        // be called here — GUI_App's constructor handles it after gtk_init().
         Slic3r::GUI::GUI_InitParams params;
         params.argc = argc;
         params.argv = argv;
