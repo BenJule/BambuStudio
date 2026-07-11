@@ -50,10 +50,8 @@
 
 #include <fstream>
 #include <string_view>
-#include <memory>
 
 #include "GUI_App.hpp"
-#include "GUI_Utils.hpp"   // on_window_geometry — Wayland-safe deferred window geometry
 #include "UnsavedChangesDialog.hpp"
 #include "MsgDialog.hpp"
 #include "Notebook.hpp"
@@ -127,6 +125,12 @@ static bool should_skip_fit_camera_shortcut(Plater *plater)
     return is_gizmo_running(plater->get_view3D_canvas3D()) ||
            is_gizmo_running(plater->get_assmeble_canvas3D()) ||
            is_gizmo_running(plater->get_current_canvas3D());
+}
+
+static bool should_block_window_resize_for_assembly(Plater *plater)
+{
+    GLCanvas3D *canvas = plater ? plater->get_assmeble_canvas3D() : nullptr;
+    return canvas && canvas->is_assembly_play_or_export_mode();
 }
 
 enum class ERescaleTarget
@@ -390,6 +394,9 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
                 m_topbar->SetMaximizedSize();
             }
 #endif
+        if (should_block_window_resize_for_assembly(m_plater))
+            return;
+
 #ifdef _WIN32
         if (m_is_in_move_or_resize) {
             ULONGLONG now = GetTickCount64();
@@ -443,21 +450,10 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
 
 
     sizer->Add(m_main_sizer, 1, wxEXPAND);
-#ifdef __WXGTK__
-    // On Wayland the window is not yet realized during construction.
-    // SetSizerAndFit/SetSizeHints both call gtk_window_resize before the
-    // compositor has mapped the window, triggering the 'width > 0' assertion.
-    // Use SetSizer (no implicit Fit) and defer all size operations to on_window_geometry.
-    SetMinClientSize(wxSize(400, 300));
-    SetSizer(sizer);
-#else
     SetSizerAndFit(sizer);
-#endif
     // initialize layout from config
     update_layout();
-#ifndef __WXGTK__
     sizer->SetSizeHints(this);
-#endif
 
     // BBS: fix taskbar overlay on windows
 #ifdef WIN32
@@ -489,24 +485,6 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     });
 #endif // WIN32
     // BBS
-#ifdef __WXGTK__
-    // SetSize/SetMinSize with explicit positive values are safe before Wayland
-    // realization. Apply the default geometry now — before persist_window_geometry
-    // restores any saved size — so the restore/sanitize callbacks run after.
-    const wxSize min_size = wxGetApp().get_min_size();
-    SetMinSize(min_size);
-    SetSize(wxSize(FromDIP(1200), FromDIP(800)));
-    Layout();
-    // SetSizeHints computes the sizer's minimum size and may call gtk_window_resize
-    // with a zero extent before the window is realized. Defer it to the first
-    // wxEVT_SHOW via on_window_geometry, guarded so it runs only once.
-    auto hint_done = std::make_shared<bool>(false);
-    on_window_geometry(this, [this, hint_done]() {
-        if (*hint_done) return;
-        *hint_done = true;
-        if (auto* s = GetSizer()) s->SetSizeHints(this);
-    });
-#else
     Fit();
 
     const wxSize min_size = wxGetApp().get_min_size(); //wxSize(76*wxGetApp().em_unit(), 49*wxGetApp().em_unit());
@@ -515,7 +493,6 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     SetSize(wxSize(FromDIP(1200), FromDIP(800)));
 
     Layout();
-#endif
 
     update_title();
 
@@ -550,6 +527,9 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
         if (event.CanVeto() && !wxGetApp().check_print_host_queue()) {
             event.Veto();
             return;
+        }
+        if (GLCanvas3D *canvas = m_plater->get_assmeble_canvas3D()) {
+            canvas->close_project_and_save_assembly_steps_tree();
         }
 
     #if 0 // BBS
@@ -602,6 +582,9 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
                 j["color_painting"] = get_value(GLGizmosManager::convert_gizmo_type_to_string(GLGizmosManager::EType::MmuSegmentation));
                 j["brimears"]            = get_value(GLGizmosManager::convert_gizmo_type_to_string(GLGizmosManager::EType::BrimEars));
                 j["assembly_view"] = get_value("assembly_view");
+                j["assembly_view_export_pdf"] = get_value("assembly_view_export_pdf");
+                j["assembly_view_export_markdown"] = get_value("assembly_view_export_markdown");
+                j["assembly_view_export_mp4"] = get_value("assembly_view_export_mp4");
 
                 agent->track_event("key_func", j.dump());
 
@@ -935,10 +918,14 @@ WXLRESULT MainFrame::MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam
         break;
     }
     case WM_ENTERSIZEMOVE:
+        if (should_block_window_resize_for_assembly(m_plater))
+            return 0;
         m_is_in_move_or_resize = true;
         break;
     case WM_EXITSIZEMOVE:
         m_is_in_move_or_resize = false;
+        if (should_block_window_resize_for_assembly(m_plater))
+            return 0;
         Refresh();
         Layout();
         wxQueueEvent(wxGetApp().plater(), new SimpleEvent(EVT_NOTICE_CHILDE_SIZE_CHANGED));
@@ -1396,12 +1383,22 @@ void MainFrame::init_tabpanel()
             // Defer hash navigation until after the notebook paints (macOS + WKWebView).
             CallAfter([this]() {
                 if (m_web_device && m_tabpanel && m_tabpanel->GetCurrentPage() == m_web_device)
-                    m_web_device->NavigateTo("/filament_manager");
+                    m_web_device->NavigateTo("/filament_manager", /*re_init=*/true);
             });
 #else
-            m_web_device->NavigateTo("/filament_manager");
+            // Switching back to this tab: re-run init() to pick up changes.
+            m_web_device->NavigateTo("/filament_manager", /*re_init=*/true);
 #endif
         }
+#if defined(__WXOSX__)
+        // macOS root cause fix: suspend the Filament Manager WKWebView whenever it
+        // is not the visible tab. Its live React SPA, if left mounted in a hidden
+        // webview, keeps the CFRunLoop busy and starves wxEVT_IDLE app-wide, which
+        // freezes the 3D canvas / tab switching on the prepare page and breaks the
+        // language-switch GUI rebuild. Returning to the tab reloads it (NavigateTo).
+        if (m_web_device && panel != m_web_device)
+            m_web_device->Suspend();
+#endif
 #ifndef __APPLE__
         if (sel == tp3DEditor) {
             m_topbar->EnableUndoRedoItems();
@@ -1446,6 +1443,7 @@ void MainFrame::init_tabpanel()
             m_webview->load_url(url);
         });
         m_tabpanel->AddPage(m_webview, "", "tab_home_active", "tab_home_active", false);
+        m_tabpanel->SetPageToolTip(tpHome, _L("Home"));
         m_param_panel = new ParamsPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBK_LEFT | wxTAB_TRAVERSAL);
     }
 
@@ -1485,8 +1483,10 @@ void MainFrame::init_tabpanel()
     m_calibration->SetBackgroundColour(*wxWHITE);
     m_tabpanel->AddPage(m_calibration, _L("Calibration"), std::string("tab_calibration_active"), std::string("tab_calibration_active"), false);
 
-    m_web_device = new DeviceWebPage(m_tabpanel);
-    m_tabpanel->AddPage(m_web_device, _L("Filament Manager"), std::string("tab_filament_active"), std::string("tab_filament_active"), false);
+    if (!wxGetApp().is_fila_manager_disabled()) {
+        m_web_device = new DeviceWebPage(m_tabpanel);
+        m_tabpanel->AddPage(m_web_device, _L("Filament Manager"), std::string("tab_filament_active"), std::string("tab_filament_active"), false);
+    }
 
     if (m_plater) {
         // load initial config
@@ -1959,12 +1959,11 @@ wxBoxSizer* MainFrame::create_side_tools()
     sizer->Add(expand_program_holder, 0, wxALIGN_CENTER, 0);
     sizer->Add(FromDIP(4), 0, 0, 0, 0);
     sizer->Add(split_line_icon, 0, wxALIGN_CENTER, 0);
-    sizer->Add(FromDIP(10), 0, 0, 0, 0);
+    sizer->Add(FromDIP(6), 0, 0, 0, 0);
     sizer->Add(slice_panel);
-    sizer->Add(FromDIP(15), 0, 0, 0, 0);
+    sizer->Add(FromDIP(8), 0, 0, 0, 0);
     sizer->Add(print_panel);
     sizer->Add(FromDIP(4), 0, 0, 0, 0);
-    sizer->Add(FromDIP(19), 0, 0, 0, 0);
 
     sizer->Layout();
 
@@ -2341,7 +2340,7 @@ wxBoxSizer* MainFrame::create_side_tools()
     });
     sizer->Add(aux_btn, 0, wxLEFT | wxALIGN_CENTER_VERTICAL, 1 * em / 10);
     */
-    sizer->Add(FromDIP(19), 0, 0, 0, 0);
+    // sizer->Add(FromDIP(19), 0, 0, 0, 0);
 
     return sizer;
 }

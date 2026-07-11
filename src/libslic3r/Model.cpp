@@ -105,6 +105,12 @@ Model& Model::assign_copy(const Model &rhs)
     this->md_name = rhs.md_name;
     this->md_value = rhs.md_value;
 
+    this->step_import_path = rhs.step_import_path;
+    this->step_import_tree_nodes = rhs.step_import_tree_nodes;
+    this->m_assembly_tree_data       = rhs.m_assembly_tree_data;
+    this->m_assembly_tree_json_str  = rhs.m_assembly_tree_json_str;
+    this->m_assembly_steps_tree_data = rhs.m_assembly_steps_tree_data;
+    this->m_assembly_steps_json_str = rhs.m_assembly_steps_json_str;
     this->texture_mesh = rhs.texture_mesh;
 
     return *this;
@@ -154,6 +160,14 @@ Model& Model::assign_copy(Model &&rhs)
     rhs.model_info.reset();
     this->profile_info = rhs.profile_info;
     rhs.profile_info.reset();
+
+    this->step_import_path = std::move(rhs.step_import_path);
+    this->step_import_tree_nodes = std::move(rhs.step_import_tree_nodes);
+    this->m_assembly_tree_data       = std::move(rhs.m_assembly_tree_data);
+    this->m_assembly_tree_json_str   = std::move(rhs.m_assembly_tree_json_str);
+    this->m_assembly_steps_tree_data = std::move(rhs.m_assembly_steps_tree_data);
+    this->m_assembly_steps_json_str  = std::move(rhs.m_assembly_steps_json_str);
+
     return *this;
 }
 
@@ -650,6 +664,8 @@ void Model::clear_objects()
         delete o;
     }
     this->objects.clear();
+    step_import_path.clear();
+    step_import_tree_nodes.clear();
     object_backup_id_map.clear();
     next_object_backup_id = 1;
     texture_mesh.reset();
@@ -1175,7 +1191,12 @@ void Model::load_from(Model& model)
     md_name = model.md_name;
     md_value = model.md_value;
     texture_mesh = std::move(model.texture_mesh);
-    model.design_info.reset();
+    step_import_path           = model.step_import_path;
+    step_import_tree_nodes     = model.step_import_tree_nodes;
+    m_assembly_tree_data       = model.m_assembly_tree_data;
+    m_assembly_tree_json_str  = model.m_assembly_tree_json_str;
+    m_assembly_steps_tree_data = model.m_assembly_steps_tree_data;
+    m_assembly_steps_json_str = model.m_assembly_steps_json_str;    model.design_info.reset();
     model.model_info.reset();
     model.profile_info.reset();
     model.calib_pa_pattern.reset();
@@ -2709,16 +2730,13 @@ void ModelObject::split(ModelObjectPtrs* new_objects)
                 Vec3d shift = model_instance->get_transformation().get_matrix(true) * new_vol->get_offset();
                 model_instance->set_offset(model_instance->get_offset() + shift);
 
-                //BBS: add assemble_view related logic
-                Geometry::Transformation instance_transformation_copy = model_instance->get_transformation();
-                instance_transformation_copy.set_offset(-new_vol->get_offset());
-                const Transform3d &assemble_matrix = model_instance->get_assemble_transformation().get_matrix();
-                const Transform3d &instance_inverse_matrix = instance_transformation_copy.get_matrix().inverse();
-                Transform3d new_instance_inverse_matrix = instance_inverse_matrix * model_instance->get_transformation().get_matrix(true).inverse();
-                Transform3d new_assemble_transform      = assemble_matrix * new_instance_inverse_matrix;
-                model_instance->set_assemble_from_transform(new_assemble_transform);
-                model_instance->set_offset_to_assembly(new_vol->get_offset());
+                // BBS: the copied instance keeps the source assemble matrix but resets the initialized
+                Geometry::Transformation assemble_trafo = model_instance->get_assemble_transformation();
+                model_instance->set_assemble_transformation(assemble_trafo);
             }
+
+            // BBS: keep the assembly-view world transform identical across split.
+            new_vol->set_assemble_transformation(volume->get_assemble_transformation());
 
             new_vol->set_offset(Vec3d::Zero());
             // reset the source to disable reload from disk
@@ -3407,6 +3425,32 @@ void ModelVolume::set_transformation(const Transform3d &trafo) {
     m_transformation.set_from_transform(trafo);
 }
 
+// Per-volume assemble transformation, mirrors ModelInstance::get_assemble_transformation().
+const Geometry::Transformation& ModelVolume::get_assemble_transformation() const
+{
+    if (!m_assemble_initialized)
+        return m_transformation;
+    return m_assemble_transformation;
+}
+
+void ModelVolume::set_assemble_transformation(const Geometry::Transformation &transformation)
+{
+    m_assemble_initialized    = true;
+    m_assemble_transformation = transformation;
+}
+
+void ModelVolume::set_assemble_from_transform(const Transform3d &transform)
+{
+    m_assemble_initialized = true;
+    m_assemble_transformation.set_from_transform(transform);
+}
+
+void ModelVolume::set_assemble_offset(const Vec3d &offset)
+{
+    m_assemble_initialized = true;
+    m_assemble_transformation.set_offset(offset);
+}
+
 int ModelVolume::get_repaired_errors_count() const
 {
     const RepairedMeshErrors &stats = this->mesh().stats().repaired_errors;
@@ -3472,6 +3516,12 @@ size_t ModelVolume::split(unsigned int max_extruders, float scale_det)
 
     unsigned int extruder_counter = 0;
     const Vec3d offset = this->get_offset();
+    // Capture the source volume's assembly-view transform up front. Every split
+    // piece inherits this same assemble transform (idx 0 keeps it, idx > 0 copies
+    // it via the ModelVolume copy ctor); below we compensate it per piece for the
+    // geometry recentering so each mesh keeps its world position in assembly view.
+    const bool        src_assemble_initialized = this->is_assemble_initialized();
+    const Transform3d src_assemble_matrix      = this->get_assemble_transformation().get_matrix();
     std::vector<std::string> tris_split_strs;
     auto face_count = m_mesh->its.indices.size();
     tris_split_strs.reserve(face_count);
@@ -3519,9 +3569,17 @@ size_t ModelVolume::split(unsigned int max_extruders, float scale_det)
                 }
             }
         }
-        this->object->volumes[ivolume]->set_offset(Vec3d::Zero());
-        this->object->volumes[ivolume]->center_geometry_after_creation();
-        this->object->volumes[ivolume]->translate(offset);
+        ModelVolume *cur_vol = this->object->volumes[ivolume];
+        cur_vol->set_offset(Vec3d::Zero());
+        // center_geometry_after_creation() recenters the sub-mesh's local origin by
+        // its bbox center. Capture that shift so the inherited assemble transform can
+        // be post-multiplied by it, keeping the piece's assembly-view world position
+        // identical (the edit-view world is already preserved by the offset dance).
+        const Vec3d center_shift = cur_vol->mesh().bounding_box().center();
+        cur_vol->center_geometry_after_creation();
+        cur_vol->translate(offset);
+        if (src_assemble_initialized)
+            cur_vol->set_assemble_from_transform(src_assemble_matrix * Geometry::translation_transform(center_shift));
         this->object->volumes[ivolume]->name = name + "_" + std::to_string(idx + 1);
         //BBS: always set the extruder id the same as original
         this->object->volumes[ivolume]->config.set("extruder", this->extruder_id());

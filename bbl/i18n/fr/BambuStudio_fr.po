@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Bambu Studio\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-01 09:40+0800\n"
+"POT-Creation-Date: 2026-06-25 17:06+0800\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -1085,7 +1085,7 @@ msgstr "les connecteurs sont hors du contour de la coupe"
 msgid "connector is out of object"
 msgstr "le connecteur est hors de l'objet"
 
-msgid "connectors is out of object"
+msgid "connectors are out of object"
 msgstr "Les connecteurs doivent se trouver sur la surface de l'objet."
 
 msgid "Some connectors are overlapped"
@@ -1273,13 +1273,13 @@ msgstr ""
 "La fonctionnalité 1 a été réinitialisée, \n"
 "la fonctionnalité 2 est devenue la fonctionnalité 1"
 
-msgid "Warning:please select Plane's feature."
+msgid "Warning: Please select a Plane feature."
 msgstr "Attention : veuillez sélectionner la fonctionnalité Plan."
 
-msgid "Warning:please select Point's or Circle's feature."
+msgid "Warning: Please select a Point or Circle feature."
 msgstr "Attention : veuillez sélectionner la fonctionnalité Point ou Cercle."
 
-msgid "Warning:please select two different mesh."
+msgid "Warning: Please select two different meshes."
 msgstr "Attention : veuillez sélectionner deux maillages différents."
 
 msgid "Copy to clipboard"
@@ -1323,6 +1323,9 @@ msgstr "Retourner par Face 2"
 
 msgid "Assemble"
 msgstr "Assembler"
+
+msgid "Please exit the assembly guide before using this tool."
+msgstr ""
 
 msgid "Please confirm explosion ratio = 1 and select at least two volumes."
 msgstr "Veuillez confirmer le taux d’explosion = 1 et sélectionner au moins deux volumes."
@@ -1528,31 +1531,31 @@ msgstr "Profondeur encastrée"
 msgid "Text Gap"
 msgstr "Interlettrage"
 
-msgid "Warning:There is a mirror in the text matrix, and dragging it will completely regenerate it."
+msgid "Warning: There is a mirror in the text matrix, and dragging it will completely regenerate it."
 msgstr "Attention : Il y a un miroir dans la matrice du texte, et le fait de le faire glisser le régénère complètement."
 
-msgid "Warning:Due to font upgrades,previous font may not necessarily be replaced successfully, and recommend you to modify the font."
+msgid "Warning: Due to font upgrades, previous font may not necessarily be replaced successfully. Please modify the font."
 msgstr "Avertissement: En raison des mises à jour de police d'écriture, la police précédente pourrait ne pas être remplacée correctement, nous vous recommandons de la modifier."
 
-msgid "Warning:create text fail."
+msgid "Warning: Text creation failed."
 msgstr "Avertissement : La création du texte a échoué."
 
-msgid "Warning:text normal is error."
+msgid "Warning: Text normal has an error."
 msgstr "Avertissement : le texte normal est une erreur."
 
-msgid "Warning:text normal has been reset."
+msgid "Warning: Text normal has been reset."
 msgstr "Avertissement : le texte normal a été réinitialisé."
 
-msgid "Warning:current text spacing is not very reasonable. If you continue editing, a more reasonable text spacing will be generated."
+msgid "Warning: Current text spacing is not optimal. If you continue editing, a more reasonable text spacing will be generated."
 msgstr "Avertissement : l’espacement actuel du texte n’est pas très approprié. Si vous continuez l’édition, un espacement plus adapté sera généré."
 
-msgid "Warning:old matrix has at least two parameters: mirroring, scaling, and rotation. If you continue editing, it may not be correct. Please dragging text or cancel using current pose, save and reedit again."
-msgstr "Attention : l'ancienne matrice comporte au moins deux paramètres : l'effet miroir, la mise à l'échelle et la rotation. Si vous continuez l'édition, il se peut qu'elle ne soit pas correcte. Veuillez déplacer le texte ou annuler en utilisant la pose actuelle, sauvegarder et rééditer."
+msgid "Warning: Old matrix has at least two parameters: mirroring, scaling, and rotation. If you continue editing, it may not be correct. Please drag the text or cancel the current pose, save and reedit again."
+msgstr ""
 
-msgid "Error:Detecting an incorrect mesh id or an unknown error, regenerating text may result in incorrect outcomes.Please drag text,save it then reedit it again."
+msgid "Error: Detecting an incorrect mesh id or an unknown error, regenerating text may result in incorrect outcomes. Please drag text, save it then reedit it again."
 msgstr "Erreur:Détection d’un identifiant de maille incorrect ou une erreur inconnue, la régénération du texte peut aboutir à des résultats incorrects."
 
-msgid "Warning:Due to functional upgrade, rotation information cannot be restored. Please drag or modify text,save it and reedit it will ok."
+msgid "Warning: Due to functional upgrade, rotation information cannot be restored. Please drag or modify text, save it and reedit it to fix the issue."
 msgstr "Avertissement : En raison d'une mise à jour fonctionnelle, les informations de rotation ne peuvent pas être restaurées. Veuillez glisser ou modifier le texte, l'enregistrer et le rééditer."
 
 msgid "Detected that text did not adhere to mesh surface. Please manually drag yellow square to mesh surface that needs to be adhered."
@@ -1770,7 +1773,7 @@ msgstr "Fichier SVG manquant dans la forme embossée"
 msgid "Missing data of svg file"
 msgstr "Données manquantes du fichier svg"
 
-msgid "Tip:If you want to place svg file on another part surface,you should select part first, and then drag svg file to the part surface."
+msgid "Tip: If you want to place an SVG file on another part surface, select the part first, then drag the SVG file to the part surface."
 msgstr "Astuce : Si vous souhaitez placer un fichier svg sur une autre surface de pièce, vous devez d'abord sélectionner la pièce, puis faire glisser le fichier svg sur la surface de la pièce."
 
 #. TRN - Preview of filename after clear local filepath.
@@ -2188,11 +2191,14 @@ msgstr "Ajouter un modificateur SVG"
 msgid "Select settings"
 msgstr "Sélectionnez les paramètres"
 
-msgid "Hide"
-msgstr "Masquer"
+msgid "Add to New Step"
+msgstr ""
 
-msgid "Show"
-msgstr "Afficher"
+msgid "Add to Current Step"
+msgstr ""
+
+msgid "Add to Existing Step"
+msgstr ""
 
 msgid "Delete the selected object"
 msgstr "Supprimer l'objet sélectionné"
@@ -3125,6 +3131,420 @@ msgstr "La température maximale ne peut pas dépasser"
 msgid "The minmum temperature should not be less than "
 msgstr "La température minimale ne doit pas être inférieure à"
 
+msgid "Export file Settings"
+msgstr ""
+
+msgid "Homepage  title"
+msgstr ""
+
+msgid "For privacy reasons, image paths are not saved or restored.Just for pdf/md file."
+msgstr ""
+
+msgid "Homepage image"
+msgstr ""
+
+msgid "Second page image"
+msgstr ""
+
+msgid "Browse"
+msgstr "Parcourir"
+
+msgid "Image files"
+msgstr ""
+
+msgid "All files"
+msgstr ""
+
+msgid "Open image file"
+msgstr ""
+
+msgid "Step"
+msgstr "Étape"
+
+msgid "Install parts"
+msgstr ""
+
+msgid "Apply the final assembly pose to the objects or parts added in the current step?"
+msgstr ""
+
+msgid "Apply final assembly pose"
+msgstr ""
+
+msgid "Assembly Guide"
+msgstr "Guide d'assemblage"
+
+msgid "PDF files"
+msgstr ""
+
+msgid "Markdown files"
+msgstr ""
+
+msgid "MP4 files"
+msgstr ""
+
+msgid "Export Assembly Guide to PDF"
+msgstr ""
+
+msgid "Export Assembly Guide to Markdown"
+msgstr ""
+
+msgid "Export Assembly Guide to MP4"
+msgstr ""
+
+msgid "Exporting file"
+msgstr ""
+
+msgid "Export"
+msgstr "Exporter"
+
+msgid "Saving project will automatically switch to end frame"
+msgstr ""
+
+msgid "New Step"
+msgstr ""
+
+msgid "Final assembly"
+msgstr ""
+
+msgid "end frame"
+msgstr ""
+
+msgid "Assembly Structure"
+msgstr ""
+
+msgid "Start your assembly journey from Add Step"
+msgstr ""
+
+msgctxt "AssemblyStructure"
+msgid "Default"
+msgstr "Défaut"
+
+msgid "Contain"
+msgstr ""
+
+msgid "Assembly Module"
+msgstr ""
+
+msgid "Click to add objects to the current step"
+msgstr ""
+
+msgid "_copy"
+msgstr ""
+
+msgid "Are you sure you want to delete the current step?"
+msgstr ""
+
+msgid "Delete step"
+msgstr ""
+
+msgid "Model"
+msgstr "Modèle"
+
+msgid "Volume"
+msgstr ""
+
+msgid "start frame"
+msgstr ""
+
+msgid "transition frame"
+msgstr ""
+
+#, boost-format
+msgid "Plate %1%"
+msgstr ""
+
+msgid "Assembly Step"
+msgstr ""
+
+msgid "Start frame"
+msgstr ""
+
+msgid "End frame"
+msgstr ""
+
+msgid "Transition frame"
+msgstr ""
+
+msgid "Frame"
+msgstr ""
+
+msgid "step"
+msgstr ""
+
+msgid "Play all frames for all steps."
+msgstr ""
+
+msgid "Toggle playback speed."
+msgstr ""
+
+msgid "Play previous frame."
+msgstr ""
+
+msgid "Play next frame."
+msgstr ""
+
+msgid "Set export file parameters"
+msgstr ""
+
+msgid "Camera margin factor for the current frame. The larger the value, the more margin."
+msgstr ""
+
+msgid "Modify camera margin"
+msgstr ""
+
+msgid "Edit step name"
+msgstr ""
+
+msgid "Insert step before"
+msgstr ""
+
+msgid "Insert step after"
+msgstr ""
+
+msgid "Tip"
+msgstr "Astuce"
+
+msgid "No step card is currently selected. Pose-changing operations such as move gizmo will affect the actual final-assembly view."
+msgstr ""
+
+msgid "Expand"
+msgstr ""
+
+msgid "Collapse"
+msgstr "Réduire"
+
+msgid "Options"
+msgstr "Choix"
+
+msgid "Go to Wiki"
+msgstr "Aller sur le Wiki"
+
+msgid "Copy current step"
+msgstr ""
+
+msgid "Delete current step"
+msgstr ""
+
+msgid "Add some objects to current step"
+msgstr ""
+
+msgid "Copy Step"
+msgstr ""
+
+msgid "Add Step"
+msgstr ""
+
+#, boost-format
+msgid "No more than %1% steps are allowed."
+msgstr ""
+
+msgid "Only copy steps. This is independent of the selected objects on the canvas."
+msgstr ""
+
+msgid "Only add empty steps. This has nothing to do with the selected objects on the canvas."
+msgstr ""
+
+msgid "Exit"
+msgstr ""
+
+msgid "Click to add Cyber Brick"
+msgstr ""
+
+msgid "Delete this keyframe"
+msgstr ""
+
+msgid "Export PDF"
+msgstr ""
+
+msgid "Export Markdown"
+msgstr ""
+
+msgid "Export MP4"
+msgstr ""
+
+msgid "After exporting the Markdown document, you can edit it in third-party software such as Zettlr and then export it to PDF."
+msgstr ""
+
+msgid "Auto recommend"
+msgstr ""
+
+msgid "Model objects only"
+msgstr ""
+
+msgid "Model parts only"
+msgstr ""
+
+msgid "Automatically choose object-or-part-level labels: objects already shown in earlier steps are collapsed into a single object label, while the rest are labeled per individual part."
+msgstr ""
+
+msgid "Show one label per model object."
+msgstr ""
+
+msgid "Show one label per model part."
+msgstr ""
+
+msgid "Label"
+msgstr ""
+
+msgid "Label settings"
+msgstr ""
+
+msgid "Show Object/Part labels"
+msgstr ""
+
+msgid "Show object and part names  on models"
+msgstr ""
+
+msgid "Automatically select the optimal camera perspective and auto-arrange auto recommend labels each time the checkbox is re-ticked."
+msgstr ""
+
+msgid "Auto layout"
+msgstr ""
+
+msgid "Auto-arrange labels in current view"
+msgstr ""
+
+msgid "Current view labels"
+msgstr ""
+
+msgid "Label Settings"
+msgstr ""
+
+msgid "Font size"
+msgstr ""
+
+msgid "Display mode"
+msgstr ""
+
+msgid "Export assembly guide PDF, Markdown or MP4"
+msgstr ""
+
+msgid "Screw"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Pose changes (e.g. move gizmo) made on the final-assembly step's keyframe will affect the actual assembly display."
+msgstr ""
+
+msgid "Pose changes (e.g. move gizmo) made on this step's keyframe do not affect the actual assembly display."
+msgstr ""
+
+msgid "If necessary, a relatively good position can be restored by pressing the \"apply actual assembly pose\" button at present."
+msgstr ""
+
+msgid "undoing these edits is not yet supported and will be added in a later version."
+msgstr ""
+
+msgid "Some objects were used in an earlier keyframe of the current step and are not exploded here. You can explode them manually with the move tool."
+msgstr ""
+
+msgid "Connection Type"
+msgstr ""
+
+msgid "Clip"
+msgstr ""
+
+msgid "Glue"
+msgstr ""
+
+msgid "Add Clip"
+msgstr ""
+
+msgid "Add Glue"
+msgstr ""
+
+msgid "Add Screw"
+msgstr ""
+
+msgid "Add Notes"
+msgstr ""
+
+msgid "Add Rectangle"
+msgstr ""
+
+msgid "Add Circle"
+msgstr ""
+
+msgid "Add Arrow"
+msgstr ""
+
+msgid "Add Text"
+msgstr ""
+
+msgid "Text"
+msgstr "Texte"
+
+msgid "Background"
+msgstr ""
+
+msgid "Timeline"
+msgstr ""
+
+msgid "Play all frames for current step"
+msgstr ""
+
+msgid "At least two keyframes are required to play."
+msgstr ""
+
+msgid "Automatically explode all objects."
+msgstr ""
+
+msgid "Automatically explode all parts."
+msgstr ""
+
+msgid "Apply the final assembly pose to the currently selected object or part(if none is selected, apply it to all objects added in the current frame)"
+msgstr ""
+
+msgid "Apply current camera angle to all frames of the current step"
+msgstr ""
+
+msgid "Add keyframe"
+msgstr ""
+
+msgid "Click to select this frame"
+msgstr ""
+
+msgid "Save update"
+msgstr ""
+
+msgid "Save current frame"
+msgstr ""
+
+msgid "Assembly tree"
+msgstr ""
+
+msgid "Search"
+msgstr "Rechercher"
+
+msgid "List"
+msgstr ""
+
+msgid "Select all parts in a step"
+msgstr ""
+
+msgid "Red"
+msgstr ""
+
+msgid "Orange"
+msgstr ""
+
+msgid "Green"
+msgstr ""
+
+msgid "Blue"
+msgstr ""
+
+msgid "Black"
+msgstr ""
+
+msgid "Grey"
+msgstr ""
+
+msgid "White"
+msgstr ""
+
 msgid ""
 "All the selected objects are on the locked plate,\n"
 "We can not do auto-arrange on these objects."
@@ -3211,9 +3631,6 @@ msgstr "Il n'existe aucune surface valide pour la projection de texte."
 
 msgid "Text mesh ie empty."
 msgstr "Text mesh is empty."
-
-msgid "Text"
-msgstr "Texte"
 
 msgid "Error! Unable to create thread!"
 msgstr "Erreur! Impossible de créer le processus !"
@@ -3639,9 +4056,6 @@ msgstr "%s ne prend pas en charge %s"
 msgid "Dynamic flow Calibration"
 msgstr "Calibration de la dynamique du débit"
 
-msgid "Step"
-msgstr "Étape"
-
 msgid "Unmapped"
 msgstr "Non cartographié"
 
@@ -3826,7 +4240,7 @@ msgstr "Lors de l'insertion d'un nouveau filament, l'AMS ne lit pas automatiquem
 msgid "Power on update"
 msgstr "Actualisation à la mise sous tension"
 
-msgid "The AMS will automatically read the information of inserted filament on start-up. It will take about 1 minute.The reading process will roll filament spools."
+msgid "The AMS will automatically read the information of inserted filament on start-up. It will take about 1 minute. The reading process will roll filament spools."
 msgstr "Au démarrage, l'AMS lit automatiquement les informations relatives au filament inséré. Cela prend environ 1 minute et ce processus fait tourner les bobines de filament."
 
 msgid "The AMS will not automatically read information from inserted filament during startup and will continue to use the information recorded before the last shutdown."
@@ -3883,6 +4297,15 @@ msgstr "Réinitialiser l’ordre des AMS"
 
 msgid "File"
 msgstr "Fichier"
+
+msgid "Save Project"
+msgstr "Sauvegarder le projet"
+
+msgid "Undo"
+msgstr "Annuler"
+
+msgid "Redo"
+msgstr "Recommencer"
 
 msgid "Calibration"
 msgstr "Calibration"
@@ -3994,9 +4417,6 @@ msgstr "Retirer"
 msgid "Not found:"
 msgstr "Introuvable:"
 
-msgid "Model"
-msgstr "Modèle"
-
 msgid "Choose an STL file to import bed shape from:"
 msgstr "Choisissez un fichier STL à partir duquel importer la forme du plateau :"
 
@@ -4065,7 +4485,7 @@ msgstr ""
 "Réinitialiser par défaut"
 
 #, c-format, boost-format
-msgid "Current chamber temperature is higher than the material's safe temperature,it may result in material softening and clogging.The maximum safe temperature for the material is %d"
+msgid "Current chamber temperature is higher than the material's safe temperature, it may result in material softening and clogging. The maximum safe temperature for the material is %d"
 msgstr "Current chamber temperature is higher than the material's safe temperature; this may result in material softening and nozzle clogs.The maximum safe temperature for the material is %d"
 
 msgid ""
@@ -4231,39 +4651,45 @@ msgstr ""
 "Réinitialiser à 50%% de la profondeur de la peau"
 
 msgid "Alternate extra wall is incompatible with spiral vase mode. To enable alternate extra wall, the following adjustments are recommended:"
-msgstr ""
+msgstr "L'option « paroi supplémentaire alternée » est incompatible avec le mode vase spirale. Pour activer cette option, les réglages suivants sont recommandés :"
 
 msgid "Set ensure vertical shell thickness to Partial."
-msgstr ""
+msgstr "Réglez l'épaisseur verticale de la coque sur « partielle »."
 
 #, c-format, boost-format
 msgid "Set wall loops to %d."
-msgstr ""
+msgstr "Réglez les nombres de parois sur %d."
 
 #, c-format, boost-format
 msgid "Set sparse infill density to %d%%."
-msgstr ""
+msgstr "Définir la densité de remplissage interne à %d%%."
 
 msgid "Disable spiral vase mode."
-msgstr ""
+msgstr "Désactiver le mode vase spirale."
 
 msgid ""
 "Change these settings automatically?\n"
 "Yes - Apply and keep alternate extra wall enabled\n"
 "No  - Don't use alternate extra wall"
 msgstr ""
+"Modifier automatiquement ces paramètres ?\n"
+"Oui – Appliquer et conserver l’option « paroi supplémentaire alternée » activée.\n"
+"Non – Ne pas utiliser l’option « paroi supplémentaire alternée »"
 
 msgid "For alternate extra wall to work properly, the following adjustments are recommended:"
-msgstr ""
+msgstr "Pour que l’option « paroi supplémentaire alternée » fonctionne correctement, les réglages suivants sont recommandés :"
 
 msgid ""
 "Apply these adjustments?\n"
 "Yes - Apply and keep alternate extra wall enabled\n"
 "No  - Keep current settings and alternate extra wall enabled"
 msgstr ""
+"Appliquer ces modifications ?\n"
+"Oui – Appliquer et conserver l’option « paroi supplémentaire alternée » activée.\n"
+"Non – Conserver les réglages actuels et activer l’option « paroi supplémentaire alternée »"
 
 msgid "Spiral mode only works when wall loops is 1, support is disabled, clumping detection by probing is disabled, top shell layers is 0, sparse infill density is 0, timelapse type is traditional, smoothing wall speed in z direction is false and alternate extra wall is disabled."
-msgstr ""
+msgstr "Le mode spirale ne fonctionne que lorsque le nombre de parois est de 1, le support est désactivé, la détection d'encrassement par sondage est désactivée, le nombre de couches supérieures est de 0, la densité de remplissage interne est de 0, le type de timelapse est traditionnel, le lissage de la vitesse de paroi dans la direction z est désactivé et la paroi supplémentaire alternée est désactivée."
 
 msgid " But machines with I3 structure will not generate timelapse videos."
 msgstr " Mais les machines avec une structure I3 ne généreront pas de vidéos timelapse."
@@ -4385,10 +4811,10 @@ msgstr "Pause (erreur première couche)"
 msgid "Pause (nozzle clog)"
 msgstr "Pause (buse bouchée)"
 
-msgid "Measuring motion percision"
+msgid "Measuring motion precision"
 msgstr "Mesurer la précision des mouvements"
 
-msgid "Enhancing motion percision"
+msgid "Enhancing motion precision"
 msgstr "Améliorer la précision des mouvements"
 
 msgid "Measure motion accuracy"
@@ -4534,7 +4960,7 @@ msgstr "La température AMS est trop élevée, ce qui peut entraîner un ramolli
 msgid "The current chamber temperature or the target chamber temperature exceeds 45℃.In order to avoid extruder clogging,low temperature filament(PLA/PETG/TPU) is not allowed to be loaded."
 msgstr "La température actuelle du caisson ou sa température cible dépasse 45 ℃. Afin d'éviter de boucher l'extrudeur, le chargement de filaments à basse température (PLA/PETG/TPU) n'est pas autorisé."
 
-msgid "Low temperature filament(PLA/PETG/TPU) is loaded in the extruder.In order to avoid extruder clogging,it is not allowed to set the chamber temperature."
+msgid "Low temperature filament (PLA/PETG/TPU) is loaded in the extruder. In order to avoid extruder clogging, it is not allowed to set the chamber temperature."
 msgstr "Un filament à basse température (PLA/PETG/TPU) est chargé dans l'extrudeuse. Afin d'éviter le colmatage, le réglage de la température de la chambre n'est pas autorisé."
 
 msgid "When you set the chamber temperature below 40℃, the chamber temperature control will not be activated. And the target chamber temperature will automatically be set to 0℃."
@@ -4828,9 +5254,6 @@ msgstr "Changements de filament"
 msgid "Wipe"
 msgstr "Essuyage"
 
-msgid "Options"
-msgstr "Choix"
-
 msgid "travel"
 msgstr "déplacement"
 
@@ -5089,6 +5512,9 @@ msgstr "La position ou la taille du modèle %s dépasse la zone imprimable de la
 msgid " Please check and adjust the part's position or size to fit the printable range:\n"
 msgstr " Veuillez vérifier et ajuster la position ou la taille de la pièce pour qu'elle corresponde à la plage imprimable :\n"
 
+msgid "Unnamed"
+msgstr ""
+
 msgid "Mirror Object"
 msgstr "Miroir Objet"
 
@@ -5187,9 +5613,6 @@ msgstr "Sélectionner la plaque"
 msgid "Change camera perspective"
 msgstr "Changer la perspective de la caméra"
 
-msgid "Go to Wiki"
-msgstr "Aller sur le Wiki"
-
 #, boost-format
 msgid "Current assembly rate: %1%%%, volume rate: %2%%%"
 msgstr "Vitesse d'assemblage actuelle : %1%%%, vitesse de volume : %2%%%"
@@ -5226,11 +5649,14 @@ msgstr "Ajuster Caméra"
 msgid "Fit camera to scene or selected object."
 msgstr "Ajustez la caméra à la scène ou à l’objet sélectionné."
 
+msgid "Auto recommend camera angle(Only works when the assembly step function is active)"
+msgstr ""
+
 msgid "Paint Toolbar"
 msgstr "Barre d'outils de peinture"
 
 msgid "This border is used to distinguish it from the background"
-msgstr ""
+msgstr "Cette bordure sert à la distinguer de l'arrière-plan"
 
 msgid "Explosion Ratio"
 msgstr "Taux d'explosion"
@@ -5243,6 +5669,15 @@ msgstr "Contrôle de l'Assemblage"
 
 msgid "Selection Mode"
 msgstr "Mode de Sélection"
+
+msgid "Show Current Step Objects Only"
+msgstr ""
+
+msgid "X-Ray Other Objects"
+msgstr ""
+
+msgid "Display Mode"
+msgstr ""
 
 msgid "Total Volume:"
 msgstr "Volume total:"
@@ -5454,6 +5889,9 @@ msgstr "Aperçu"
 msgid "The current page has unsaved changes. You can continue editing or choose to save/discard before leaving."
 msgstr "La page actuelle contient des modifications non enregistrées. Vous pouvez continuer la modification ou choisir de sauvegarder/annuler avant de quitter."
 
+msgid "Home"
+msgstr ""
+
 msgid "Device"
 msgstr "Imprimante"
 
@@ -5626,9 +6064,6 @@ msgstr "Ouvrir un fichier de projet"
 msgid "Recent projects"
 msgstr "Projets récents"
 
-msgid "Save Project"
-msgstr "Sauvegarder le projet"
-
 msgid "Save current project to file"
 msgstr "Enregistrer le projet actuel dans un fichier"
 
@@ -5686,9 +6121,6 @@ msgstr "Exporter un Ensemble de Configurations"
 msgid "Export current configuration to files"
 msgstr "Exporter la configuration actuelle vers des fichiers"
 
-msgid "Export"
-msgstr "Exporter"
-
 msgid "Publish to MakerWorld"
 msgstr "Publier sur MakerWorld"
 
@@ -5697,12 +6129,6 @@ msgstr "Gestion des Configurations par Lots"
 
 msgid "Quit"
 msgstr "Quitter"
-
-msgid "Undo"
-msgstr "Annuler"
-
-msgid "Redo"
-msgstr "Recommencer"
 
 msgid "Cut selection to clipboard"
 msgstr "Couper la sélection dans le presse-papiers"
@@ -6000,7 +6426,7 @@ msgid "Plugin library failed to load. Click here to view the solution."
 msgstr "Échec du chargement de la bibliothèque de plugins. Cliquez ici pour voir la solution."
 
 msgid "Loading failed. Please check the network and try again."
-msgstr ""
+msgstr "Échec du chargement. Veuillez vérifier votre connexion réseau et réessayer."
 
 msgid "Temporarily closed because there is no operation for a while."
 msgstr "Fermé temporairement car il n'y a pas d'activité pendant un certain temps."
@@ -6298,9 +6724,6 @@ msgstr "Permuter les axes Y/Z"
 
 msgid "(LAN)"
 msgstr "(LAN)"
-
-msgid "Search"
-msgstr "Rechercher"
 
 msgid "My Device"
 msgstr "Mon Imprimante"
@@ -6768,9 +7191,6 @@ msgstr "%s avertissement"
 msgid "%s has a warning"
 msgstr "%s a un avertissement"
 
-msgid "Collapse"
-msgstr "Réduire"
-
 msgid "View details"
 msgstr "Détails"
 
@@ -6932,9 +7352,6 @@ msgstr "Aller à"
 
 msgid "Error:"
 msgstr "Erreur:"
-
-msgid "Enable support for"
-msgstr "Activer la prise en charge de"
 
 msgid "Open link for more info"
 msgstr "Ouvrir le lien pour plus d'informations"
@@ -7146,13 +7563,13 @@ msgid "Automatically capture and upload print photos, showing defects during pri
 msgstr "Capturez et téléversez automatiquement des photos d'impression, montrant les défauts pendant l'impression ainsi que le résultat final pour une consultation à distance."
 
 msgid "Automatically match the corresponding switch strategy for leak-prone filaments (disable blob detection) and regular filaments (enable blob detection)."
-msgstr ""
+msgstr "Adaptation automatique de la stratégie de changement aux filaments sujets aux fuites (désactivation de la détection des blobs) et aux filaments réguliers (activation de la détection des blobs)."
 
 msgid "Detect whether the nozzle is wrapped by filament or other foreign matter."
-msgstr ""
+msgstr "Détecter si la buse est enroulée de filaments ou d'autres corps étrangers."
 
 msgid "After disabling, nozzle wrapping cannot be detected, which may lead to print failure or nozzle damage."
-msgstr ""
+msgstr "Après la désactivation, l'enroulement des buses ne peut plus être détecté, ce qui peut entraîner un échec d'impression ou des dommages à la buse."
 
 msgctxt "Nozzle Type"
 msgid "Type"
@@ -7590,6 +8007,12 @@ msgstr "Calcul des couleurs de texture :%s"
 
 msgid "Texture Import Warning"
 msgstr "Avertissement concernant l’importation de textures"
+
+msgid ""
+"The imported STEP file is split by sub-assembly, so some objects may not be placed on the build plate at first.\n"
+"It is expected if they are placed on the build plate later after move,rotate gizmo or similar operations.\n"
+"The overall assembly can be checked from the assembly thumbnail or by entering the assembly view."
+msgstr ""
 
 msgid "Load these files as a single object with multiple parts?\n"
 msgstr "Charger ces fichiers en tant qu'objet unique avec plusieurs parties ?\n"
@@ -8355,9 +8778,6 @@ msgstr ""
 "\n"
 "Poursuivre l'activation de cette fonction ?"
 
-msgid "Browse"
-msgstr "Parcourir"
-
 msgid "Choose Download Directory"
 msgstr "Choisissez le répertoire de téléchargement"
 
@@ -8436,6 +8856,12 @@ msgstr "Gestion Multi-Imprimantes (prend effet après le redémarrage de Studio)
 msgid "With this option enabled, you can send a task to multiple devices at the same time and manage multiple devices."
 msgstr "Lorsque cette option est activée, vous pouvez envoyer une tâche et gérer plusieurs Imprimantes simultanément."
 
+msgid "Take effect after restarting Studio"
+msgstr ""
+
+msgid "The Filament Manager is turned off by default on macOS because compatibility issues on some systems may cause the application to become unresponsive."
+msgstr ""
+
 msgid "Show the step mesh parameter setting dialog."
 msgstr "Affiche la boîte de dialogue de paramétrage du maillage de l'étape."
 
@@ -8487,7 +8913,7 @@ msgstr "Zoomez sur la position du pointeur de la souris dans la vue 3D, plutôt 
 msgid "Always show shells in preview"
 msgstr "Toujours afficher les murs dans l'aperçu"
 
-msgid "Always show shells or not in preview view tab.If change value,you should reslice."
+msgid "Always show shells or not in preview view tab. If you change this value, you should reslice."
 msgstr "Les murs sont toujours affichées dans l'onglet de prévisualisation. Si la valeur est modifiée, il faut redécouper."
 
 msgid "Import a single SVG and split it"
@@ -9112,7 +9538,7 @@ msgstr "Le filament ne correspond pas au filament du slot AMS. Veuillez mettre �
 msgid "The selected printer (%s) is incompatible with the print file configuration (%s). Please adjust the printer preset in the prepare page or choose a compatible printer on this page."
 msgstr "L'imprimante sélectionnée (%s) est incompatible avec la configuration du fichier d'impression (%s). Veuillez ajuster le préréglage de l'imprimante dans la page de préparation ou choisir une imprimante compatible sur cette page."
 
-msgid "When enable spiral vase mode, machines with I3 structure will not generate timelapse videos."
+msgid "When enabling spiral vase mode, machines with I3 structure will not generate timelapse videos."
 msgstr "When spiral vase mode is enabled, machines with I3 structure will not generate timelapse videos."
 
 msgid "The current printer does not support timelapse in Traditional Mode when printing By-Object."
@@ -9141,8 +9567,14 @@ msgstr "Veuillez vérifier les points suivants :"
 msgid "Please fix the error above, otherwise printing cannot continue."
 msgstr "Veuillez corriger l'erreur ci-dessus, sinon l'impression ne pourra pas se poursuivre."
 
-msgid "Please click the confirm button if you still want to proceed with printing."
-msgstr "Cliquez sur le bouton de confirmation si vous souhaitez continuer à imprimer."
+msgid "Please click the \"Continue printing\"  button if you still want to proceed with printing."
+msgstr ""
+
+msgid "Continue printing"
+msgstr ""
+
+msgid "Return to modify"
+msgstr ""
 
 msgid "This checks the flatness of heatbed. Leveling makes extruded height uniform."
 msgstr "Cette opération permet de vérifier la planéité du plateau. Le nivellement permet d'uniformiser la hauteur de l'extrusion."
@@ -9309,7 +9741,7 @@ msgid "The hardness of current material (%s) exceeds the hardness of %s (%s). It
 msgstr "La dureté du matériau actuel (%s) dépasse celle de %s (%s). Cela peut entraîner une usure de la buse, provoquant des fuites de matériau et un débit instable. Veuillez faire preuve de prudence lors de son utilisation."
 
 msgid "If 'Dynamic Flow Calibration' is set to Auto/On, the system will use the manual calibration value or the default value and skip the flow calibration process. You can perform a manual flow calibration for TPU filament on the 'Calibration' page."
-msgstr ""
+msgstr "Si l'option « Étalonnage dynamique du débit » est auto/activée, le système utilisera la valeur d'étalonnage manuel ou la valeur par défaut et ignorera le processus d'étalonnage du débit. Vous pouvez effectuer un étalonnage manuel du débit pour le filament TPU sur la page « Étalonnage »."
 
 msgid "Some filaments may switch between extruders during printing. Manual K-value calibration cannot be applied throughout the entire print, which may affect print quality. Enabling Flow Dynamics Calibration is recommended."
 msgstr "Certains filaments peuvent basculer entre les extrudeurs pendant l'impression. L'étalonnage manuel de la valeur K ne peut pas être appliqué sur l'ensemble de l'impression, ce qui peut affecter la qualité d'impression. L'activation de la Calibration de la Dynamique du Débit est recommandée."
@@ -9536,7 +9968,7 @@ msgstr "Lire et accepter"
 msgid "Terms and Conditions"
 msgstr "Termes et conditions"
 
-msgid "Thank you for purchasing a Bambu Lab device.Before using your Bambu Lab device, please read the termsand conditions.By clicking to agree to use your Bambu Lab device, you agree to abide by the Privacy Policy and Terms of Use(collectively, the \"Terms\"). If you do not comply with or agree to the Bambu Lab Privacy Policy, please do not use Bambu Lab equipment and services."
+msgid "Thank you for purchasing a Bambu Lab device. Before using your Bambu Lab device, please read the terms and conditions. By clicking to agree to use your Bambu Lab device, you agree to abide by the Privacy Policy and Terms of Use (collectively, the \"Terms\"). If you do not comply with or agree to the Bambu Lab Privacy Policy, please do not use Bambu Lab equipment and services."
 msgstr "Merci d'avoir acheté une machine Bambu Lab. Avant de l'utiliser veuillez lire les conditions générales. En cliquant pour accepter d'utiliser votre dispositif Bambu Lab, vous acceptez de respecter la Politique de Confidentialité et les Conditions d'Utilisation (collectivement, les « Conditions »). Si vous ne respectez pas ou n'acceptez pas la politique de confidentialité de Bambu Lab, veuillez ne pas utiliser les équipements et services de Bambu Lab."
 
 msgid "and"
@@ -10054,6 +10486,12 @@ msgstr "Rétraction Firmware"
 msgid "Detached"
 msgstr "Détaché"
 
+msgid "The current preset is embedded in the 3MF project file. Please save changes directly.  'Save as new' is not supported for preset inside project."
+msgstr ""
+
+msgid "Unable to save preset"
+msgstr ""
+
 #, c-format, boost-format
 msgid "%d Filament Preset and %d Process Preset is attached to this printer. Those presets would be deleted if the printer is deleted."
 msgstr "%d Configurations Filament et %d Configurations de Traitement sont attachées à cette imprimante. Ces configurations seront supprimées en cas de suppression de l'imprimante."
@@ -10265,9 +10703,6 @@ msgstr "Des photos"
 msgid "Bill of Materials"
 msgstr "Nomenclature"
 
-msgid "Assembly Guide"
-msgstr "Guide d'assemblage"
-
 msgid "Author"
 msgstr "Auteur"
 
@@ -10368,11 +10803,8 @@ msgstr "L'importation de textures est temporairement indisponible, la coloration
 msgid " And "
 msgstr " Et "
 
-msgid "Note"
-msgstr ""
-
 msgid "The color has been selected, you can choose OK to continue or manually adjust it."
-msgstr "La couleur a été sélectionnée, vous pouvez choisir OK pour continuer ou l 'ajuster manuellement."
+msgstr "La couleur a été sélectionnée, vous pouvez choisir OK pour continuer ou l"
 
 msgctxt "ObjImport"
 msgid "Original"
@@ -10451,9 +10883,6 @@ msgstr ""
 
 msgid "Use AMS"
 msgstr "Utilisez AMS"
-
-msgid "Tip"
-msgstr "Astuce"
 
 msgid "Only synchronize filament type and color, not including AMS slot information."
 msgstr "Ne synchronise que le type et la couleur du filament, sans inclure les informations des slots AMS."
@@ -11898,6 +12327,9 @@ msgstr "Veuillez sélectionner la séquence d'impression \"Par objet\" pour impr
 msgid "The spiral vase mode does not work when an object contains more than one materials."
 msgstr "Le mode Vase Spirale ne fonctionne pas lors d'impressions multi-matériaux."
 
+msgid "The spiral vase mode does not work when an object contains regions with different print settings."
+msgstr ""
+
 msgid "Variable layer height is not supported with Organic supports."
 msgstr "La hauteur de couche variable n'est pas prise en charge avec les supports Organiques."
 
@@ -12203,6 +12635,22 @@ msgstr "Débit des ponts"
 
 msgid "Decrease this value slightly(for example 0.9) to reduce the amount of material for bridge, to improve sag"
 msgstr "Diminuez légèrement cette valeur (p. ex. 0,9) pour réduire la quantité de matériaux pour le pont afin de réduire l'affaissement."
+
+msgid "Bridge counterbore holes"
+msgstr ""
+
+msgid ""
+"This option creates bridges for counterbore holes, allowing them to be printed without support. Available modes include:\n"
+"1. None: No bridge is created\n"
+"2. Partially Bridged: Only a part of the unsupported area will be bridged\n"
+"3. Sacrificial Layer: A full sacrificial bridge layer is created"
+msgstr ""
+
+msgid "Partially bridged"
+msgstr ""
+
+msgid "Sacrificial layer"
+msgstr ""
 
 msgid "Top surface flow ratio"
 msgstr "Débit sur la surface supérieure"
@@ -12768,7 +13216,7 @@ msgid "temperature when flushing filament. 0 indicates the upper bound of the re
 msgstr "température lors du rinçage du filament. Si elle est définie sur 0, la température maximale du filament sera sélectionnée."
 
 msgid "Flush temperature used in fast purge mode."
-msgstr ""
+msgstr "Température de rinçage utilisée en mode de purge rapide."
 
 msgid "Flush volumetric speed"
 msgstr "Vitesse volumétrique de rinçage"
@@ -12971,10 +13419,10 @@ msgid "Start and end ratios for the first component in gradient mode. Comma-sepa
 msgstr "Ratios de début et de fin pour le premier composant en mode dégradé. Paire séparée par des virgules, par exemple \"0.10,0.90\" signifie 10% à 90%."
 
 msgid "Mixed filament gradient curve"
-msgstr ""
+msgstr "Courbe de dégradé du filament mixte"
 
 msgid "Optional Photoshop-style custom curve mapping Z progress to the first component ratio. Encoded as pipe-separated control points, either \"x,y\" (legacy) or \"x,y,m_in,m_out\" when a tangent override is needed (empty token or \"nan\" means use PCHIP default). x in [0,1]; y is clamped to the configured ratio range, e.g. \"0,0.15|0.5,0.50|1,0.85\". When empty, the linear gradient_range is used instead."
-msgstr ""
+msgstr "Mappage facultatif par courbe personnalisée de type Photoshop, associant la progression de l’axe Z jusqu’au rapport du premier composant. Encodée sous forme de points de contrôle séparés par une barre verticale, soit « x,y » (hérité), soit « x,y,m_in,m_out » lorsqu’une dérivée personnalisée est nécessaire (un champ vide ou « nan » signifie l’utilisation de la valeur par défaut de PCHIP). x est compris entre [0,1]; y est limité à la plage de rapports configurée, par exemple « 0,0.15|0.5,0.50|1,0.85 ». Si ce champ est vide, la plage de dégradé linéaire est utilisée."
 
 msgid "Mixed filament per-part gradient"
 msgstr "Dégradé de mélange de filaments par pièce"
@@ -13388,10 +13836,10 @@ msgid "Enable clumping detection"
 msgstr "Activer la détection d'encrassement"
 
 msgid "Order-independent overlap carving"
-msgstr ""
+msgstr "Découpe par chevauchement indépendante de l'ordre"
 
 msgid "When enabled, overlapping model parts are carved by bounding-box size so smaller embedded parts are not removed by larger parts due to volume order."
-msgstr ""
+msgstr "Lorsque cette option est activée, les parties de modèle qui se chevauchent sont découpées en fonction de la taille de la boîte englobante afin que les petites pièces intégrées ne soient pas supprimées par les pièces plus grandes en raison de l'ordre du volume."
 
 msgid "Clumping detection layers"
 msgstr "Couches de détection d'encrassement"
@@ -14259,6 +14707,12 @@ msgstr "Si le mode fluide ou traditionnel est sélectionné, une vidéo en timel
 msgid "Traditional"
 msgstr "Traditionnel"
 
+msgid "Farthest point timelapse"
+msgstr "Timelapse du point le plus éloigné"
+
+msgid "When enabled, the timelapse snapshot is taken at the farthest point from camera instead of traveling to the wipe tower or excess chute. Only effective in traditional timelapse mode on non-I3 printers."
+msgstr "Lorsque cette option est activée, l'instantané du timelapse est effectué au point le plus éloigné de la caméra, sans déplacement jusqu'à la tour de purge ou la goulotte d'évacuation. Fonctionne uniquement en mode timelapse traditionnel sur les imprimantes non-I3."
+
 msgid "Temperature variation"
 msgstr "Variation de température"
 
@@ -14918,13 +15372,6 @@ msgstr "Génération d'un parcours d'outil de remplissage"
 msgid "Detect overhangs for auto-lift"
 msgstr "Détectez les surplombs pour un levage automatique"
 
-msgid "Levitating objects cannot be printed without supports."
-msgstr "Les objets en lévitation ne peuvent pas être imprimés sans supports."
-
-#, c-format, boost-format
-msgid "It seems object %s has floating regions. Please re-orient the object or enable support generation."
-msgstr "Il semble que l’objet %s présente des zones flottantes. Veuillez réorienter l’objet ou activer la génération de supports."
-
 msgid "Checking support necessity"
 msgstr "Vérification de la nécessité du support"
 
@@ -15201,10 +15648,10 @@ msgid ""
 "4. Weak Structural Integrity: Prints break easily or don't seem as sturdy as they should be."
 msgstr ""
 "Après avoir utilisé la calibration de la dynamique du débit, certains problèmes d’extrusion peuvent encore apparaître, tels que :\n"
-"	1. Sur-extrusion : excès de matière sur l’objet imprimé, formation de blobs ou de bourrelets, ou encore couches plus épaisses que prévu et non uniformes.\n"
-"	2. Sous-extrusion : couches très fines, remplissage fragile, ou trous dans la couche supérieure du modèle, même lors d’une impression lente.\n"
-"	3. Mauvaise qualité de surface : la surface des impressions paraît rugueuse ou irrégulière.\n"
-"	4. Faible intégrité structurelle : les pièces se cassent facilement ou ne semblent pas aussi solides qu’elles devraient l’être."
+"\t1. Sur-extrusion : excès de matière sur l’objet imprimé, formation de blobs ou de bourrelets, ou encore couches plus épaisses que prévu et non uniformes.\n"
+"\t2. Sous-extrusion : couches très fines, remplissage fragile, ou trous dans la couche supérieure du modèle, même lors d’une impression lente.\n"
+"\t3. Mauvaise qualité de surface : la surface des impressions paraît rugueuse ou irrégulière.\n"
+"\t4. Faible intégrité structurelle : les pièces se cassent facilement ou ne semblent pas aussi solides qu’elles devraient l’être."
 
 msgid "In addition, Flow Rate Calibration is crucial for foaming materials like LW-PLA used in RC planes. These materials expand greatly when heated, and calibration provides a useful reference flow rate."
 msgstr "En outre, l'étalonnage du débit est crucial pour les matériaux expansifs tels que le LW-PLA utilisé dans le modélisme. Ces matériaux se dilatent considérablement lorsqu'ils sont chauffés et l'étalonnage fournit un débit de référence utile."
@@ -16440,7 +16887,7 @@ msgstr "Connection to Duet is working correctly."
 msgid "Could not connect to Duet"
 msgstr "Impossible de se connecter à Duet"
 
-msgid "Unknown error occurred"
+msgid "Unknown error occured"
 msgstr "Une erreur inconnue s'est produite"
 
 msgid "Wrong password"
@@ -17239,7 +17686,7 @@ msgid "Starting: Checking air vent"
 msgstr "Démarrage : Vérification des évents d'air"
 
 msgid "Terms of Bambu Lab User Experience Improvement Program"
-msgstr "Conditions du programme d'am lioration de l'exp e9rience utilisateur Bambu Lab"
+msgstr "Conditions du programme d'am"
 
 msgid "Recent Helio Runs"
 msgstr "Dernières Exécutions Helio"
@@ -17415,10 +17862,10 @@ msgid "Remove the third material"
 msgstr "Supprimer le troisième matériau"
 
 msgid "Material Ratio"
-msgstr ""
+msgstr "Rapport de matière"
 
 msgid "Model Height"
-msgstr ""
+msgstr "Hauteur du modèle"
 
 #: resources/data/hints.ini: [hint:How to use keyboard shortcuts]
 msgid ""
@@ -17715,6 +18162,28 @@ msgid ""
 msgstr ""
 "Fiabilité Garantie du Premier Coup\n"
 "Moins de surveillance, une production plus prévisible. Exemple : une petite exploitation agricole produisant des pièces en PETG évite les mauvaises surprises \"panne au bout de 6 h\" et respecte les délais de production."
+
+#~ msgid "Warning:old matrix has at least two parameters: mirroring, scaling, and rotation. If you continue editing, it may not be correct. Please dragging text or cancel using current pose, save and reedit again."
+#~ msgstr "Attention : l'ancienne matrice comporte au moins deux paramètres : l'effet miroir, la mise à l'échelle et la rotation. Si vous continuez l'édition, il se peut qu'elle ne soit pas correcte. Veuillez déplacer le texte ou annuler en utilisant la pose actuelle, sauvegarder et rééditer."
+
+#~ msgid "Enable support for"
+#~ msgstr "Activer la prise en charge de"
+
+#~ msgid "Levitating objects cannot be printed without supports."
+#~ msgstr "Les objets en lévitation ne peuvent pas être imprimés sans supports."
+
+#, c-format, boost-format
+#~ msgid "It seems object %s has floating regions. Please re-orient the object or enable support generation."
+#~ msgstr "Il semble que l’objet %s présente des zones flottantes. Veuillez réorienter l’objet ou activer la génération de supports."
+
+#~ msgid "Please click the confirm button if you still want to proceed with printing."
+#~ msgstr "Cliquez sur le bouton de confirmation si vous souhaitez continuer à imprimer."
+
+#~ msgid "Hide"
+#~ msgstr "Masquer"
+
+#~ msgid "Show"
+#~ msgstr "Afficher"
 
 #~ msgid "Spiral mode only works when wall loops is 1, support is disabled, clumping detection by probing is disabled, top shell layers is 0, sparse infill density is 0, timelapse type is traditional and smoothing wall speed in z direction is false."
 #~ msgstr "Le mode spirale ne fonctionne que lorsque le nombre de parois est égal à 1, que les supports sont désactivés, que la détection d'encrassement par palpage est désactivée, que le nombre de couches supérieures est de 0, que la densité de remplissage est de 0, que le type de timelapse est « traditionnel » et que le lissage de la vitesse des parois dans la direction Z est désactivé."
@@ -19587,7 +20056,7 @@ msgstr ""
 #~ msgid "A error occurred. Maybe memory of system is not enough or it's a bug of the program"
 #~ msgstr "Une erreur s'est produite. Peut-être que la mémoire du système est insuffisante ou c'est un bug du programme"
 
-#~ msgid "A problem occurred during calibration. Click to view the solution."
+#~ msgid "A problem occured during calibration. Click to view the solution."
 #~ msgstr "Un problème est survenu lors de la calibration. Cliquez pour voir la solution."
 
 #~ msgid "Acivate for better air filtration"

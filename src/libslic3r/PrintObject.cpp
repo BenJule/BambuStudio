@@ -1370,16 +1370,15 @@ bool PrintObject::invalidate_state_by_config_options(
             || opt_key == "enable_overhang_speed"
             || opt_key == "detect_thin_wall"
             || opt_key == "precise_outer_wall") {
+            // filament_shrink is applied to slice contours in slice_volumes() (posSlice) using wall_filament.
+            if (opt_key == "wall_filament")
+                steps.emplace_back(posSlice);
             steps.emplace_back(posPerimeters);
             steps.emplace_back(posSupportMaterial);
         } else if (opt_key == "bridge_flow") {
-            if (m_config.support_top_z_distance > 0.) {
-            	// Only invalidate due to bridging if bridging is enabled.
-            	// If later "support_top_z_distance" is modified, the complete PrintObject is invalidated anyway.
-            	steps.emplace_back(posPerimeters);
-            	steps.emplace_back(posInfill);
-	            steps.emplace_back(posSupportMaterial);
-	        }
+            steps.emplace_back(posPerimeters);
+            steps.emplace_back(posInfill);
+	        steps.emplace_back(posSupportMaterial);
         } else if (
                 opt_key == "wall_generator"
             || opt_key == "wall_transition_length"
@@ -1572,14 +1571,22 @@ void PrintObject::detect_surfaces_type(std::vector<std::vector<SurfaceCollection
                     bool detect_top = spiral_mode || layerm->region().config().top_shell_layers;
                     bool detect_bottom = spiral_mode || layerm->region().config().bottom_shell_layers;
 
+                    // When counterbore_hole_bridging is set to "Sacrificial Layer" (chbFilled),
+                    // process_no_bridge() may have added extra fill surfaces that extend beyond the original slices.
+                    // We need to union these with the slices to ensure proper top/bottom surface detection.
+                    ExPolygons layerm_slices_surfaces = to_expolygons(layerm->slices.surfaces);
+                    if (layerm->region().config().counterbore_hole_bridging.value == chbFilled) {
+                        layerm_slices_surfaces = union_ex(layerm_slices_surfaces, to_expolygons(layerm->fill_surfaces.surfaces));
+                    }
+
                     // find top surfaces (difference between current surfaces
                     // of current layer and upper one)
                     Surfaces top;
                     if (detect_top) {
                         if (upper_layer) {
                             ExPolygons upper_slices = interface_shells ?
-                                diff_ex(layerm->slices.surfaces, upper_layer->m_regions[region_id]->slices.surfaces, ApplySafetyOffset::Yes) :
-                                diff_ex(layerm->slices.surfaces, upper_layer->lslices, ApplySafetyOffset::Yes);
+                                diff_ex(layerm_slices_surfaces, upper_layer->m_regions[region_id]->slices.surfaces, ApplySafetyOffset::Yes) :
+                                diff_ex(layerm_slices_surfaces, upper_layer->lslices, ApplySafetyOffset::Yes);
                             surfaces_append(top, opening_ex(upper_slices, offset), stTop);
                         }
                         else {
@@ -1608,7 +1615,7 @@ void PrintObject::detect_surfaces_type(std::vector<std::vector<SurfaceCollection
                             surfaces_append(
                                 bottom,
                                 opening_ex(
-                                    diff_ex(layerm->slices.surfaces, lower_layer->lslices, ApplySafetyOffset::Yes),//完全悬空
+                                    diff_ex(layerm_slices_surfaces, lower_layer->lslices, ApplySafetyOffset::Yes),//完全悬空
                                     offset),
                                 surface_type_bottom_other);
                             // if user requested internal shells, we need to identify surfaces
@@ -1620,7 +1627,7 @@ void PrintObject::detect_surfaces_type(std::vector<std::vector<SurfaceCollection
                                     bottom,
                                     opening_ex(
                                         diff_ex(
-                                            intersection(layerm->slices.surfaces, lower_layer->lslices), // 先扣掉完全悬空
+                                            intersection(layerm_slices_surfaces, lower_layer->lslices), // 先扣掉完全悬空
                                             lower_layer->m_regions[region_id]->slices.surfaces,//再扣掉同材料的区域
                                             ApplySafetyOffset::Yes),
                                         offset),

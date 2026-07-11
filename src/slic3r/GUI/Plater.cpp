@@ -15,6 +15,7 @@
 #include <functional>
 #include <fstream>
 #include <chrono>
+#include <iomanip>
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
 #include <boost/filesystem/path.hpp>
@@ -3964,7 +3965,7 @@ void Sidebar::on_filament_count_change(size_t num_filaments)
     auto& choices = combos_filament();
 
     if (num_physical == choices.size()) {
-        // the ctor pre-creates one combo, so on startup with a single-filament project this guard is hit 
+        // the ctor pre-creates one combo, so on startup with a single-filament project this guard is hit
         // before any layout pass has sized m_physical_scroll_area.
         // this is a workaround for such cases
         recalc_filament_scroll_sizes();
@@ -5211,8 +5212,9 @@ void Sidebar::update_mixed_filament_list()
                 auto* grad_panel = new wxPanel(p->m_panel_mixed_content, wxID_ANY,
                                                wxDefaultPosition, wxSize(swatch_sz, swatch_sz));
                 grad_panel->SetMinSize(wxSize(swatch_sz, swatch_sz));
+                grad_panel->SetBackgroundStyle(wxBG_STYLE_PAINT);
                 grad_panel->Bind(wxEVT_PAINT, [grad_panel, col_from, col_to, mix_num, mc_text](wxPaintEvent&) {
-                    wxPaintDC dc(grad_panel);
+                    wxBufferedPaintDC dc(grad_panel);
                     wxSize sz = grad_panel->GetClientSize();
                     dc.GradientFillLinear(wxRect(0, 0, sz.GetWidth(), sz.GetHeight()),
                                           col_from, col_to, wxRIGHT);
@@ -6080,6 +6082,11 @@ void Sidebar::auto_calc_flushing_volumes_internal(const int modify_id, const int
 
     const std::vector<int>& min_flush_volumes = get_min_flush_volumes(full_config, extruder_id);
 
+    const std::vector<std::string>& filament_ids = full_config.option<ConfigOptionStrings>("filament_ids")->values;
+    auto get_filament_id = [&filament_ids](int idx) -> std::string {
+        return (idx >= 0 && idx < (int)filament_ids.size()) ? filament_ids[idx] : std::string();
+    };
+
     ConfigOptionFloat* flush_multi_opt = project_config.option<ConfigOptionFloat>("flush_multiplier");
     float flush_multiplier = flush_multi_opt ? flush_multi_opt->getFloat() : 1.f;
     std::vector<double> matrix = init_matrix;
@@ -6123,11 +6130,13 @@ void Sidebar::auto_calc_flushing_volumes_internal(const int modify_id, const int
                     flushing_volume = Slic3r::g_flush_volume_to_support;
                 }
                 else {
+                    std::string from_filament_id = get_filament_id(from_idx);
+                    std::string to_filament_id = get_filament_id(modify_id);
                     for (int j = 0; j < multi_colours[from_idx].size(); ++j) {
                         const wxColour& from = multi_colours[from_idx][j];
                         for (int k = 0; k < multi_colours[modify_id].size(); ++k) {
                             const wxColour& to = multi_colours[modify_id][k];
-                            int volume = calculator.calc_flush_vol(from.Alpha(), from.Red(), from.Green(), from.Blue(), to.Alpha(), to.Red(), to.Green(), to.Blue());
+                            int volume = calculator.calc_flush_vol(from_filament_id, to_filament_id, from.Alpha(), from.Red(), from.Green(), from.Blue(), to.Alpha(), to.Red(), to.Green(), to.Blue());
                             flushing_volume = std::max(flushing_volume, volume);
                         }
                     }
@@ -6151,11 +6160,13 @@ void Sidebar::auto_calc_flushing_volumes_internal(const int modify_id, const int
                     flushing_volume = Slic3r::g_flush_volume_to_support;
                 }
                 else {
+                    std::string from_filament_id = get_filament_id(modify_id);
+                    std::string to_filament_id = get_filament_id(to_idx);
                     for (int j = 0; j < multi_colours[modify_id].size(); ++j) {
                         const wxColour& from = multi_colours[modify_id][j];
                         for (int k = 0; k < multi_colours[to_idx].size(); ++k) {
                             const wxColour& to = multi_colours[to_idx][k];
-                            int volume = calculator.calc_flush_vol(from.Alpha(), from.Red(), from.Green(), from.Blue(), to.Alpha(), to.Red(), to.Green(), to.Blue());
+                            int volume = calculator.calc_flush_vol(from_filament_id, to_filament_id, from.Alpha(), from.Red(), from.Green(), from.Blue(), to.Alpha(), to.Red(), to.Green(), to.Blue());
                             flushing_volume = std::max(flushing_volume, volume);
                         }
                     }
@@ -6261,6 +6272,8 @@ public:
         bool is_collapsed{false};
         bool show{false};
     } sidebar_layout;
+    // Snapshot of sidebar_layout.is_collapsed captured the moment the user
+    std::optional<bool> m_pre_assemble_sidebar_collapsed;
     MainFrame *main_frame;
 
     MenuFactory menus;
@@ -6697,6 +6710,8 @@ public:
     void on_slicing_update(SlicingStatusEvent&);
     void on_slicing_completed(wxCommandEvent&);
     void on_process_completed(SlicingProcessCompletedEvent&);
+    // report mesh stats + GPU/OpenGL info for one sliced plate
+    void track_slice_mesh_stat();
     void on_export_began(wxCommandEvent&);
     void on_export_finished(wxCommandEvent&);
     void on_slicing_began();
@@ -6929,7 +6944,7 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
         "brim_width", "brim_object_gap", "brim_type", "nozzle_diameter", "single_extruder_multi_material",
         "enable_prime_tower", "wipe_tower_x", "wipe_tower_y", "prime_tower_width", "prime_tower_brim_width", "prime_tower_skip_points", "prime_tower_enable_framework","prime_tower_max_speed",
         "prime_tower_rib_wall","prime_tower_extra_rib_length", "prime_tower_rib_width","prime_tower_fillet_wall", "prime_tower_infill_gap","filament_prime_volume","filament_prime_volume_nc",
-        "extruder_colour", "filament_colour", "filament_type", "material_colour", "printable_height", "extruder_printable_height", "printer_model", "printer_technology",
+        "extruder_colour", "filament_colour", "filament_type", "filament_is_support", "material_colour", "printable_height", "extruder_printable_height", "printer_model", "printer_technology",
         // These values are necessary to construct SlicingParameters by the Canvas3D variable layer height editor.
         "layer_height", "initial_layer_print_height", "min_layer_height", "max_layer_height",
         "brim_width", "wall_loops", "wall_filament", "sparse_infill_density", "sparse_infill_filament", "top_shell_layers",
@@ -7679,6 +7694,7 @@ void Plater::priv::select_view_3D(const std::string& name, bool no_slice)
     }
     else if (name == "Assemble") {
         BOOST_LOG_TRIVIAL(info) << "select assemble view";
+        assemble_view->get_canvas3d()->active_view();
         set_current_panel(assemble_view, no_slice);
     }
 
@@ -8019,6 +8035,8 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
         const bool type_3mf = std::regex_match(path.string(), pattern_3mf);
         // const bool type_zip_amf = !type_3mf && std::regex_match(path.string(), pattern_zip_amf);
         const bool type_any_amf = !type_3mf && std::regex_match(path.string(), pattern_any_amf);
+        const bool type_step = boost::algorithm::iends_with(path.string(), ".stp") ||
+                               boost::algorithm::iends_with(path.string(), ".step");
         // const bool type_prusa   = std::regex_match(path.string(), pattern_prusa);
         const bool may_have_texture = type_3mf
             || boost::algorithm::iends_with(path.string(), ".obj")
@@ -8313,7 +8331,13 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         // Only process external standard 3MF files; the BBS's own 3MF files already have complete color processing logic
                         ObjDialogInOut color_dialog_in_out;
                         if (extract_colors_to_obj_dialog(&model, color_group_map, volume_color_data, color_dialog_in_out)) {
-                            const std::vector<std::string> extruder_colours = wxGetApp().plater()->get_extruder_colors_from_plater_config();
+                            std::vector<std::string> extruder_colours;
+                            {
+                                const auto& all_colours = wxGetApp().plater()->get_extruder_colors_from_plater_config();
+                                size_t num_physical = sidebar->combos_filament().size();
+                                for (size_t i = 0; i < num_physical && i < all_colours.size(); ++i)
+                                    extruder_colours.push_back(all_colours[i]);
+                            }
                             color_dialog_in_out.model = &model;
                             color_dialog_in_out.input_type = ObjDialogInOut::FormatType::Standard3mf;
                             color_dialog_in_out.volume_colors = volume_color_data;
@@ -8646,14 +8670,19 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                     makerlab_id     = in_out.ml_id;
 
                     if (!boost::iends_with(path.string(), ".obj")) { return; }
-                    const std::vector<std::string> extruder_colours = wxGetApp().plater()->get_extruder_colors_from_plater_config();
+                    std::vector<std::string> extruder_colours;
+                    {
+                        const auto& all_colours = wxGetApp().plater()->get_extruder_colors_from_plater_config();
+                        size_t num_physical = sidebar->combos_filament().size();
+                        for (size_t i = 0; i < num_physical && i < all_colours.size(); ++i)
+                            extruder_colours.push_back(all_colours[i]);
+                    }
                     ObjColorDialog                 color_dlg(nullptr, in_out, extruder_colours);
                     if (color_dlg.ShowModal() != wxID_OK) {
                         in_out.filament_ids.clear();
                     }
                 };
-                if (boost::iends_with(path.string(), ".stp") ||
-                    boost::iends_with(path.string(), ".step")) {
+                if (type_step) {
                         double linear = string_to_double_decimal_point(wxGetApp().app_config->get("linear_defletion"));
                         if (linear <= 0) linear = 0.003;
                         double angle = string_to_double_decimal_point(wxGetApp().app_config->get("angle_defletion"));
@@ -8862,6 +8891,82 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
             return empty_result;
         }
 
+        const bool step_subassembly_split = type_step && model.objects.size() > 1;
+        std::vector<Vec3d> step_object_position_compensations;
+        if (step_subassembly_split) {
+            BoundingBoxf3 step_assembly_bbox;
+            std::vector<BoundingBoxf3> step_object_bboxes;
+            step_object_bboxes.reserve(model.objects.size());
+            for (const ModelObject* model_object : model.objects) {
+                const BoundingBoxf3 object_bbox = model_object->raw_mesh_bounding_box();
+                step_object_bboxes.emplace_back(object_bbox);
+                step_assembly_bbox.merge(object_bbox);
+            }
+            if (step_assembly_bbox.defined) {
+                step_object_position_compensations.reserve(step_object_bboxes.size());
+                for (const BoundingBoxf3& object_bbox : step_object_bboxes) {
+                    Vec3d compensation = Vec3d::Zero();
+                    if (object_bbox.defined) {
+                        compensation.x() = object_bbox.center().x() - step_assembly_bbox.center().x();
+                        compensation.y() = object_bbox.center().y() - step_assembly_bbox.center().y();
+                        compensation.z() = object_bbox.min.z() - step_assembly_bbox.min.z();
+                    }
+                    step_object_position_compensations.emplace_back(compensation);
+                }
+            }
+        }
+
+        auto apply_step_object_position_compensations = [this](const std::vector<size_t>& loaded_idxs, const std::vector<Vec3d>& compensations) {
+            if (compensations.empty())
+                return false;
+            const size_t count = std::min(loaded_idxs.size(), compensations.size());
+            if (count == 0)
+                return false;
+
+            ModelObject* anchor_object = nullptr;
+            for (size_t loaded_idx : loaded_idxs) {
+                if (loaded_idx >= q->model().objects.size())
+                    continue;
+                ModelObject* object = q->model().objects[loaded_idx];
+                if (object != nullptr && !object->instances.empty()) {
+                    anchor_object = object;
+                    break;
+                }
+            }
+            if (anchor_object == nullptr)
+                return false;
+
+            const Vec3d anchor_offset = anchor_object->instances.front()->get_offset();
+            for (size_t idx = 0; idx < count; ++idx) {
+                if (loaded_idxs[idx] >= q->model().objects.size())
+                    continue;
+                ModelObject* object = q->model().objects[loaded_idxs[idx]];
+                if (object == nullptr)
+                    continue;
+
+                const Vec3d& compensation = compensations[idx];
+                for (ModelInstance* instance : object->instances) {
+                    Vec3d offset = instance->get_offset();
+                    offset.x() = anchor_offset.x() + compensation.x();
+                    offset.y() = anchor_offset.y() + compensation.y();
+                    offset.z() += compensation.z();
+                    instance->set_offset(offset);
+                    instance->set_assemble_transformation(instance->get_transformation());
+                }
+                // BBS: keep each volume's assemble transformation in sync with its base transformation
+                for (ModelVolume *mv : object->volumes) {
+                    if (mv != nullptr && !mv->is_assemble_initialized()) {
+                        mv->set_assemble_transformation(mv->get_transformation());
+                    }
+                }
+                object->invalidate_bounding_box();
+                BOOST_LOG_TRIVIAL(info) << "STEP import: restore sub-assembly relative position for object \""
+                                        << object->name << "\", compensation="
+                                        << compensation.x() << "," << compensation.y() << "," << compensation.z();
+            }
+            return count > 0;
+        };
+
         int model_idx = 0;
         for (ModelObject *model_object : model.objects) {
             if (!type_3mf && !type_any_amf)
@@ -8904,6 +9009,13 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                 q->model().load_from(model);
                 load_auxiliary_files();
             }
+            const bool assembly_tree_json_brought_in = !model.get_assembly_tree_json_str().empty();
+            if (assembly_tree_json_brought_in)
+                q->model().set_assembly_tree_json_str(model.get_assembly_tree_json_str());
+            const bool steps_json_brought_in = !model.get_assembly_steps_json_str().empty();
+            if (steps_json_brought_in)
+                q->model().set_assembly_steps_json_str(model.get_assembly_steps_json_str());
+
             TextureImportResult texture_import_result;
             int texture_progress_start = progress_percent;
             int texture_progress_compute_end = progress_percent;
@@ -8943,6 +9055,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                 }
             }
 
+            const size_t prev_object_count = q->model().objects.size();
             auto update_import_progress = [&dlg, &progress_percent](int percent, const wxString& msg) {
                 progress_percent = percent;
                 dlg.Update(percent, msg);
@@ -8982,6 +9095,49 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                 q->skip_thumbnail_invalid = false;
                 return empty_result;
             }
+            {//deal step for assembly_tree
+                if (assembly_tree_json_brought_in && prev_object_count == 0) {
+                    std::string tree_error;
+                    if (!AssemblyTreeData::from_json_string(q->model().get_assembly_tree_json_str(), q->model().get_assembly_tree_data(), &tree_error)) {
+                        BOOST_LOG_TRIVIAL(warning) << "Plater::load_files: failed to restore assembly tree from JSON: " << tree_error;
+                    }
+                }
+
+                if (steps_json_brought_in) {
+                    std::string steps_error;
+                    float assembly_part_number_label_font_size = 0.0f;
+                    if (!AssemblyStepsTreeData::from_json_string(q->model().get_assembly_steps_json_str(), q->model().get_assembly_steps_tree_data(), q->model(), &steps_error, &assembly_part_number_label_font_size)) {
+                        BOOST_LOG_TRIVIAL(warning) << "Plater::load_files: failed to restore assembly steps tree from JSON: " << steps_error;
+                    }
+                    if (assembly_part_number_label_font_size > 0.1f && wxGetApp().app_config) {
+                        std::ostringstream ss;
+                        ss << std::fixed << std::setprecision(2) << assembly_part_number_label_font_size;
+                        wxGetApp().app_config->set("assembly_part_number_label_font_size", ss.str());
+                    }
+                }
+                const bool step_position_compensated = apply_step_object_position_compensations(loaded_idxs, step_object_position_compensations);
+                if (type_step && !model.step_import_tree_nodes.empty() && !loaded_idxs.empty()) {
+                    BOOST_LOG_TRIVIAL(info) << "STEP import: forward tree to assemble canvas, node_count=" << model.step_import_tree_nodes.size()
+                                            << ", loaded_object_count=" << loaded_idxs.size();
+                    if (GLCanvas3D *assemble_canvas = q->get_assmeble_canvas3D()) {
+                        assemble_canvas->append_step_import_to_assembly_tree(model.step_import_tree_nodes, loaded_idxs, model.step_import_path);
+                    }
+                }
+                if (step_position_compensated) {
+                    update();
+                    for (const size_t idx : loaded_idxs) wxGetApp().obj_list()->update_info_items(idx);
+                    object_list_changed();
+                }
+                if (step_subassembly_split && !loaded_idxs.empty()) {
+                    q->get_notification_manager()
+                        ->bbl_show_sole_text_notification(NotificationType::CustomNotification,
+                                                          _u8L("The imported STEP file is split by sub-assembly, so some objects may not be placed on the build plate at first.\n"
+                                                               "It is expected if they are placed on the build plate later after move,rotate gizmo or similar operations.\n"
+                                                               "The overall assembly can be checked from the assembly thumbnail or by entering the assembly view."),
+                                                          true, 0, false);
+                }
+            }
+
             obj_idxs.insert(obj_idxs.end(), loaded_idxs.begin(), loaded_idxs.end());
             if (import_obj_or_stl) {
                 for (int i = 0; i < loaded_idxs.size(); i++) {
@@ -9250,6 +9406,11 @@ std::vector<size_t> Plater::priv::load_model_objects(const ModelObjectPtrs& mode
                     if (!model_object->instances[i]->is_assemble_initialized()) {
                         model_object->instances[i]->set_assemble_transformation(model_object->instances[i]->get_transformation());
                     }
+                }
+                // BBS: also initialize per-volume assemble transformation so the assembly view can render new volumes correctly even before any explicit per-volume edit.
+                for (ModelVolume *mv : model_object->volumes) {
+                    if (mv != nullptr && !mv->is_assemble_initialized())
+                        mv->set_assemble_transformation(mv->get_transformation());
                 }
             }
         }
@@ -11044,7 +11205,13 @@ void Plater::priv::reload_from_disk()
         const auto& path = input_paths[i].string();
         auto        obj_color_fun = [this, &path](ObjDialogInOut &in_out) {
             if (!boost::iends_with(path, ".obj")) { return; }
-            const std::vector<std::string> extruder_colours = wxGetApp().plater()->get_extruder_colors_from_plater_config();
+            std::vector<std::string> extruder_colours;
+            {
+                const auto& all_colours = wxGetApp().plater()->get_extruder_colors_from_plater_config();
+                size_t num_physical = sidebar->combos_filament().size();
+                for (size_t i = 0; i < num_physical && i < all_colours.size(); ++i)
+                    extruder_colours.push_back(all_colours[i]);
+            }
             ObjColorDialog                 color_dlg(nullptr, in_out, extruder_colours);
             if (color_dlg.ShowModal() != wxID_OK) {
                 in_out.filament_ids.clear();
@@ -11337,6 +11504,12 @@ void Plater::priv::set_current_panel(wxPanel* panel, bool no_slice)
     bool force_render = (current_panel != nullptr);
 #endif // __WXMAC__
 
+    // Switching INTO the assembly view also collapses the sidebar and re-shows
+    const bool entering_assemble = (panel == assemble_view && current_panel != panel);
+    std::unique_ptr<wxWindowUpdateLocker> assemble_switch_locker;
+    if (entering_assemble)
+        assemble_switch_locker = std::make_unique<wxWindowUpdateLocker>(q);
+
     //BBS: add slice logic when switch to preview page
     auto do_reslice = [this, no_slice]() {
             // see: Plater::priv::object_list_changed()
@@ -11356,7 +11529,7 @@ void Plater::priv::set_current_panel(wxPanel* panel, bool no_slice)
 
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": from set_current_panel, no_slice %1%, export_in_progress %2%, model_fits %3%, m_is_slicing %4%, mixed_broken %5%")%no_slice%export_in_progress%model_fits%m_is_slicing%mixed_broken;
 
-            if (!no_slice && !this->model.objects.empty() && !export_in_progress && model_fits && current_has_print_instances && !mixed_broken)
+            if (!no_slice && !current_plate->is_slice_result_valid() && !this->model.objects.empty() && !export_in_progress && model_fits && current_has_print_instances && !mixed_broken)
             {
                 //if already running in background, not relice here
                 //BBS: add more judge for slicing
@@ -11419,6 +11592,17 @@ void Plater::priv::set_current_panel(wxPanel* panel, bool no_slice)
     // Add sidebar and toolbar collapse logic
     if (panel == view3D || panel == preview) {
         this->enable_sidebar(!q->only_gcode_mode());
+    }
+    // Auto-collapse the sidebar each time the user transitions INTO the
+    if (panel == assemble_view && current_panel != panel) {
+        m_pre_assemble_sidebar_collapsed = sidebar_layout.is_collapsed;
+        this->collapse_sidebar(true);
+    }
+    // Mirror: when the user transitions OUT of the assembly view, restore the
+    if (panel != assemble_view && current_panel == assemble_view
+            && m_pre_assemble_sidebar_collapsed.has_value()) {
+        this->collapse_sidebar(*m_pre_assemble_sidebar_collapsed);
+        m_pre_assemble_sidebar_collapsed.reset();
     }
     if (panel == preview) {
         if (q->only_gcode_mode()) {
@@ -11568,6 +11752,8 @@ void Plater::priv::set_current_panel(wxPanel* panel, bool no_slice)
             notification_manager->set_canvas_type(preview->get_canvas3d()->get_canvas_type());
     }
     else if (current_panel == assemble_view) {
+        // Switching into the assembly view also collapses the sidebar (above),
+        wxBusyCursor wait;
         if (notification_manager != nullptr)
             notification_manager->set_canvas_type(assemble_view->get_canvas3d()->get_canvas_type());
         if (old_panel == view3D) {
@@ -11593,12 +11779,33 @@ void Plater::priv::set_current_panel(wxPanel* panel, bool no_slice)
             }
         }
 
+        // Force the pending sidebar-collapse / panel layout to settle synchronously
+        if (wxWindow* panel_container = assemble_view->GetParent())
+            panel_container->Layout();
+        // Reset the cached size to force a resize on the next render() so the GL
+        assemble_view->get_canvas3d()->reset_old_size();
         assemble_view->set_as_dirty();
+        // Paint the prepared scene now so the first presented GL frame is the
+        assemble_view->get_canvas3d()->render();
         // BBS
         //view_toolbar.select_item("Assemble");
     }
 
     current_panel->SetFocusFromKbd();
+
+#ifdef __WXMAC__
+    // STUDIO-18472: the newly shown canvas marks itself dirty and expects its
+    // first frame (incl. the scene reloaded above) to be drawn from wxEVT_IDLE.
+    // After the Filament Manager WKWebView churn idle is starved on macOS, so the
+    // tab would otherwise stay blank for a few seconds. Arm the render-fallback
+    // timer so it paints promptly; it stands down once real idle resumes.
+    if (current_panel == view3D)
+        view3D->get_canvas3d()->kick_render_fallback();
+    else if (current_panel == preview)
+        preview->get_canvas3d()->kick_render_fallback();
+    else if (current_panel == assemble_view)
+        assemble_view->get_canvas3d()->kick_render_fallback();
+#endif // __WXMAC__
 
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": successfully, exit");
 }
@@ -12014,6 +12221,41 @@ bool Plater::priv::warnings_dialog()
 
 }
 
+// report mesh stats + GPU/OpenGL info for the just-sliced plate.
+// Emitted once per successfully sliced plate from on_process_completed().
+void Plater::priv::track_slice_mesh_stat()
+{
+    // Use the plate that was actually sliced, not whichever plate the user has selected in the UI.
+    PartPlate *cur_plate = background_process.get_current_plate();
+    if (!cur_plate) return;
+
+    ModelObjectPtrs objs = cur_plate->get_objects_on_this_plate();
+    if (objs.empty()) return; // gcode-only reload, empty plate — nothing to report
+
+    json   mesh_arr = json::array(); // counts only, no part names (compliance)
+    size_t total    = 0;
+    for (ModelObject *o : objs) {
+        if (!o) continue;
+        size_t fc = o->facets_count();
+        total += fc;
+        mesh_arr.push_back(fc); // per-part facet count
+    }
+
+    const auto &gl = OpenGLManager::get_gl_info();
+    json        j;
+    j["plate_index"]  = cur_plate->get_index();
+    j["part_count"]   = objs.size();
+    j["mesh_facets"]  = mesh_arr;
+    j["mesh_total"]   = total;
+    j["gpu_renderer"] = gl.get_renderer();
+    j["gpu_vendor"]   = gl.get_vendor();
+    j["gl_version"]   = gl.get_version();
+
+    // BOOST_LOG_TRIVIAL(warning) << j.dump(2);
+
+    if (wxGetApp().getAgent()) wxGetApp().getAgent()->track_event("slice_mesh_stat", j.dump());
+}
+
 //BBS: add project slice logic
 void Plater::priv::on_process_completed(SlicingProcessCompletedEvent &evt)
 {
@@ -12053,8 +12295,7 @@ void Plater::priv::on_process_completed(SlicingProcessCompletedEvent &evt)
     // This bool stops showing export finished notification even when process_completed_with_error is false
     bool has_error = false;
     if (evt.error()) {
-        std::string opt_key;
-        auto message = evt.format_error_message(&opt_key);
+        auto message = evt.format_error_message();
         if (evt.critical_error()) {
             if (q->m_tracking_popup_menu) {
                 // We don't want to pop-up a message box when tracking a pop-up menu.
@@ -12071,7 +12312,7 @@ void Plater::priv::on_process_completed(SlicingProcessCompletedEvent &evt)
                 const PrintObject *print_object = this->background_process.m_fff_print->get_object(ObjectID(oid));
                 if (print_object) { ptrs.push_back(print_object->model_object()); }
             }
-            notification_manager->push_slicing_error_notification(message.first, ptrs, opt_key);
+            notification_manager->push_slicing_error_notification(message.first, ptrs);
         }
         if (evt.invalidate_plater())
         {
@@ -12095,6 +12336,32 @@ void Plater::priv::on_process_completed(SlicingProcessCompletedEvent &evt)
     //BBS: set the current plater's slice result to valid
     if (!this->background_process.empty())
         this->background_process.get_current_plate()->update_slice_result_valid_state(evt.success());
+
+    // mesh stats per plate + GPU/OpenGL info
+    if (!has_error && !evt.cancelled() && evt.success()) {
+        track_slice_mesh_stat();
+        // Re-push warnings from completed PrintObject steps that were not re-run
+        // but whose UI notifications were cleared by on_slicing_began().
+        if (this->printer_technology == ptFFF) {
+            const Print *print = this->background_process.m_fff_print;
+            for (const PrintObject *obj : print->objects()) {
+                const ModelObject *model_obj = obj->model_object();
+                ObjectID           oid       = obj->id();
+                for (int step = 0; step < (int)posCount; ++step) {
+                    auto state = obj->step_state_with_warnings(static_cast<PrintObjectStep>(step));
+                    if (state.state != PrintStateBase::DONE)
+                        continue;
+                    for (const auto &w : state.warnings) {
+                        if (w.current) {
+                            notification_manager->push_slicing_warning_notification(
+                                w.message, false, model_obj, oid, step, w.message_id);
+                            add_warning(w, oid.id);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     //BBS: update the action button according to the current plate's status
     bool ready_to_slice = !this->partplate_list.get_curr_plate()->is_slice_result_valid();
@@ -17309,6 +17576,10 @@ int Plater::new_project(bool skip_confirm, bool silent, const wxString &project_
     if (!skip_confirm && (result = close_with_confirm(check)) == wxID_CANCEL)
         return wxID_CANCEL;
 
+    if (auto *assemble_canvas = get_assmeble_canvas3D()) {
+        assemble_canvas->new_project_clear_assembly_steps_tree_view(true);
+    }
+
     reset_flags_when_new_or_close_project();
     get_notification_manager()->clear_all();
 
@@ -17592,6 +17863,9 @@ int Plater::save_project(bool saveAs)
         return wxID_NO;
     if (filename == "<cancel>")
         return wxID_CANCEL;
+
+    if (auto *assemble_canvas = get_assmeble_canvas3D())
+        assemble_canvas->prepare_assembly_steps_for_project_save();
 
     //BBS export 3mf without gcode
     auto save_strategy = SaveStrategy::SplitModel | SaveStrategy::ShareMesh;
@@ -19809,9 +20083,17 @@ void Plater::reset_with_confirm()
 // BBS: save logic
 int GUI::Plater::close_with_confirm(std::function<bool(bool)> second_check)
 {
+    auto restore_assemble_sidebar = [this]() {
+        if (p->m_pre_assemble_sidebar_collapsed.has_value()) {
+            p->collapse_sidebar(*p->m_pre_assemble_sidebar_collapsed);
+            p->m_pre_assemble_sidebar_collapsed.reset();
+        }
+    };
+
     if (up_to_date(false, false)) {
         if (second_check && !second_check(false)) return wxID_CANCEL;
         model().set_backup_path("");
+        restore_assemble_sidebar();
         return wxID_NO;
     }
 
@@ -19826,6 +20108,7 @@ int GUI::Plater::close_with_confirm(std::function<bool(bool)> second_check)
         if (dlg.get_checkbox_state())
             wxGetApp().app_config->set("save_project_choise", result == wxID_YES ? "yes" : "no");
         if (result == wxID_YES) {
+            restore_assemble_sidebar();
             result = save_project();
             if (result == wxID_CANCEL) {
                 if (choise.empty())
@@ -19862,19 +20145,6 @@ void Plater::delete_all_objects_from_model()
 {
     p->delete_all_objects_from_model();
 }
-
-void Plater::set_selected_visible(bool visible)
-{
-    if (p->get_curr_selection().is_empty())
-        return;
-
-    Plater::TakeSnapshot snapshot(this, "Set Selected Objects Visible in AssembleView");
-    get_ui_job_worker().cancel_all();
-    p->m_ui_jobs.cancel_all();
-
-    p->get_current_canvas3D()->set_selected_visible(visible);
-}
-
 
 void Plater::remove_selected()
 {
@@ -22181,6 +22451,11 @@ void Plater::on_config_change(const DynamicPrintConfig &config)
             p->sidebar->update_mixed_filament_list();
             continue;
         }
+        if (opt_key == "filament_is_support") {
+            p->config->set_key_value(opt_key, config.option(opt_key)->clone());
+            p->sidebar->update_mixed_filament_list();
+            continue;
+        }
         if (opt_key == "material_colour") {
             update_scheduled = true; // update should be scheduled (for update 3DScene)
         }
@@ -23241,6 +23516,16 @@ Camera& Plater::get_camera()
     return p->get_current_camera();
 }
 
+void Plater::mark_assemble_view_requires_zoom_to_volumes()
+{
+    if (p->assemble_view) {
+        const auto& p_camera = p->assemble_view->get_override_camera();
+        if (p_camera) {
+            p_camera->requires_zoom_to_volumes = true;
+        }
+    }
+}
+
 const Camera& Plater::get_picking_camera() const
 {
     return p->picking_camera;
@@ -24078,6 +24363,42 @@ void Plater::update_slicing_context_to_current_partplate()
     p->preview->update_gcode_result(p->partplate_list.get_current_slice_result());
 }
 
+// Sum the real mesh (solid) volume in mm^3 of every selected volume, scaling
+// each by the determinant of its world transform (instance matrix * volume
+// matrix). Shared by the prepare view (object info) and the assembly view
+// (assembly info) so both report the same kind of volume.
+// When only_model_parts is true, modifier / negative volumes are skipped so the
+// result reflects pure material volume (used by the assembly view). When false,
+// every selected volume is counted, preserving the prepare view's behavior of
+// reporting the mesh volume of a single selected modifier part.
+static double selection_real_mesh_volume(const Selection& selection, bool only_model_parts = true)
+{
+    double volume_val = 0.0;
+    const Model* model = selection.get_model();
+    if (model == nullptr)
+        return volume_val;
+    for (unsigned int gl_vol_idx : selection.get_volume_idxs()) {
+        const GLVolume* gl_vol = selection.get_volume(gl_vol_idx);
+        if (gl_vol == nullptr)
+            continue;
+        const int obj_id  = gl_vol->object_idx();
+        const int vol_id  = gl_vol->volume_idx();
+        const int inst_id = gl_vol->instance_idx();
+        if (obj_id < 0 || obj_id >= (int) model->objects.size())
+            continue;
+        const ModelObject* mo = model->objects[obj_id];
+        if (mo == nullptr || vol_id < 0 || vol_id >= (int) mo->volumes.size() ||
+            inst_id < 0 || inst_id >= (int) mo->instances.size())
+            continue;
+        const ModelVolume* mv = mo->volumes[vol_id];
+        if (mv == nullptr || (only_model_parts && !mv->is_model_part()))
+            continue;
+        const Transform3d t = mo->instances[inst_id]->get_matrix() * mv->get_matrix();
+        volume_val += mv->mesh().stats().volume * std::fabs(t.matrix().block(0, 0, 3, 3).determinant());
+    }
+    return volume_val;
+}
+
 //BBS: show object info
 void Plater::show_object_info()
 {
@@ -24170,11 +24491,9 @@ void Plater::show_object_info()
     else
         info_text += (boost::format(_utf8(L("Size: %1% x %2% x %3% mm\n"))) %size(0) %size(1) %size(2)).str();
 
-    const TriangleMeshStats& stats = vol ? vol->mesh().stats() : model_object->get_object_stl_stats();
-    double volume_val = stats.volume;
-    if (vol)
-        volume_val *= std::fabs(t.matrix().block(0, 0, 3, 3).determinant());
-    volume_val = volume_val * pow(koef,3);
+    // Preserve the prepare view's original per-branch filtering: a single.
+    const bool only_model_parts = (vol == nullptr);
+    double volume_val = selection_real_mesh_volume(selection, only_model_parts) * pow(koef, 3);
     if (imperial_units)
         info_text += (boost::format(_utf8(L("Volume: %1% in³\n"))) %volume_val).str();
     else
@@ -24249,10 +24568,14 @@ void Plater::show_assembly_info()
         size2 *= koef;
     }
 
+    // Report the real mesh (solid) volume to stay consistent with the prepare
+    // view's object info, instead of the selection bounding-box volume.
+    double volume_val = selection_real_mesh_volume(t_selection) * pow(koef, 3);
+
     if (imperial_units)
-        info_text += (boost::format(_utf8(L("Volume: %1% in³\n"))) % (size0 * size1 * size2)).str();
+        info_text += (boost::format(_utf8(L("Volume: %1% in³\n"))) % volume_val).str();
     else
-        info_text += (boost::format(_utf8(L("Volume: %1% mm³\n"))) % (size0 * size1 * size2)).str();
+        info_text += (boost::format(_utf8(L("Volume: %1% mm³\n"))) % volume_val).str();
 
     if (imperial_units)
         info_text += (boost::format(_utf8(L("Size: %1% x %2% x %3% in\n"))) % size0 % size1 % size2).str();

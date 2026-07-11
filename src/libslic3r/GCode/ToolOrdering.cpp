@@ -709,10 +709,11 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
 	it_per_layer_extruder_override = per_layer_extruder_switches.begin();
     unsigned int extruder_override = 0;
 
-    // Pre-compute 1-based IDs of gradient mixed filament slots for per-object tracking.
-    // per_part_slots_1based is the subset of gradient_slots_1based for which per-part gradient is
-    // enabled (filament_mixed_gradient_per_part[i] = true). Used by the per-volume collection
-    // pass that runs alongside the existing per-object pass below.
+    // Pre-compute 1-based IDs of mixed filament slots for per-object tracking.
+    // mixed_slots_1based covers ALL mixed slots (needed by calc_slot_lh for
+    // accurate layer height when a slot skips layers). gradient_slots_1based
+    // and per_part_slots_1based are subsets for gradient-specific logic.
+    std::set<unsigned int> mixed_slots_1based;
     std::set<unsigned int> gradient_slots_1based;
     std::set<unsigned int> per_part_slots_1based;
     {
@@ -725,6 +726,11 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
             if (!is_mixed[i])
                 continue;
             auto comps = parse_mixed_components(i < comp_strs.size() ? comp_strs[i] : "");
+            if (comps.size() < 2)
+                continue;
+            mixed_slots_1based.insert(static_cast<unsigned int>(i + 1));
+            // Gradient/per-part are only defined for 2-component slots; keep their
+            // tracking limited to them (mirrors the is_gradient guard at resolve time).
             if (comps.size() != 2)
                 continue;
             if (i >= grad_flags.size() || !grad_flags[i])
@@ -820,14 +826,16 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
                 layer_tools.has_object = true;
         }
 
-        // Record gradient slot usage for this object at this layer (for per-object gradient).
-        if (!gradient_slots_1based.empty()) {
+        // Record mixed slot usage for this object at this layer.
+        // All mixed slots are tracked (not just gradient) so that calc_slot_lh
+        // can compute accurate layer heights even when a slot skips layers.
+        if (!mixed_slots_1based.empty()) {
             size_t layer_idx = static_cast<size_t>(&layer_tools - m_layer_tools.data());
             std::set<unsigned int> seen;
             for (size_t ei = ext_snapshot; ei < layer_tools.extruders.size(); ++ei) {
                 unsigned int ext_1based = layer_tools.extruders[ei];
-                if (gradient_slots_1based.count(ext_1based) && seen.insert(ext_1based).second)
-                    m_gradient_object_layers[ext_1based - 1][&object].push_back(layer_idx);
+                if (mixed_slots_1based.count(ext_1based) && seen.insert(ext_1based).second)
+                    m_mixed_object_layers[ext_1based - 1][&object].push_back(layer_idx);
             }
         }
 
@@ -1007,6 +1015,84 @@ void ToolOrdering::fill_wipe_tower_partitions(const PrintConfig &config, coordf_
                 }
             }
             break;
+        }
+    }
+
+    // Ensure wipe tower vertical continuity:
+    //
+    // (1) Any existing LayerTools sandwiched between two has_wipe_tower layers must itself be a
+    //     wipe-tower layer. The LayerTools entry already exists, but it has neither object nor
+    //     support geometry (has_object == false && has_support == false), so the marking pass
+    //     above leaves has_wipe_tower == false. Happens e.g. when one object is fully floating
+    //     above another and the support_top_z_distance / support_bottom_z_distance gap leaves an
+    //     interior layer with no object and no support (e.g. B top z=20.4, A first layer z=20.8,
+    //     the z=20.6 LayerTools entry exists but stays unmarked).
+    //
+    // (2) When two adjacent has_wipe_tower layers are farther apart than max_layer_height and no
+    //     LayerTools entry exists between them, insert virtual wipe-tower-only layers to bridge
+    //     the gap. Happens with raft: BambuStudio's raft contact layer can be thicker than
+    //     max_layer_height (e.g. raft base top z=0.2, raft contact top z=0.5 — gap 0.3 > 0.28),
+    //     and there is no LayerTools entry between those two z values.
+    //
+    // wipe_tower_partitions has already been max-propagated downward above, so partition counts
+    // on the filled-in / inserted layers stay consistent.
+    {
+        int first_wt_idx = -1;
+        int last_wt_idx  = -1;
+        for (int i = 0; i < (int)m_layer_tools.size(); ++i)
+            if (m_layer_tools[i].has_wipe_tower) {
+                if (first_wt_idx < 0) first_wt_idx = i;
+                last_wt_idx = i;
+            }
+        for (int i = first_wt_idx + 1; i < last_wt_idx; ++i) {
+            LayerTools &lt = m_layer_tools[i];
+            lt.has_wipe_tower = true;
+            // GCode::process_layer emits wipe-tower G-code inside `for (extruder_id : layer_tools.extruders)`.
+            // An empty extruders vector here would silently skip wipe tower output, leaving the tower
+            // physically floating. Seed from the nearest non-empty neighbor so the loop actually runs.
+            if (lt.extruders.empty()) {
+                unsigned int seed_extruder = 0;
+                bool         found_seed    = false;
+                for (int j = i - 1; j >= 0; --j)
+                    if (!m_layer_tools[j].extruders.empty()) {
+                        seed_extruder = m_layer_tools[j].extruders.back();
+                        found_seed = true;
+                        break;
+                    }
+                if (!found_seed)
+                    for (int j = i + 1; j < (int)m_layer_tools.size(); ++j)
+                        if (!m_layer_tools[j].extruders.empty()) {
+                            seed_extruder = m_layer_tools[j].extruders.front();
+                            found_seed = true;
+                            break;
+                        }
+                if (found_seed)
+                    lt.extruders.push_back(seed_extruder);
+            }
+        }
+
+        // Walk adjacent has_wipe_tower pairs and split oversized gaps. Re-evaluate the same i
+        // after each insertion so very large gaps get split into multiple layers.
+        for (int i = 0; i + 1 < (int)m_layer_tools.size(); ) {
+            LayerTools &lt      = m_layer_tools[i];
+            LayerTools &lt_next = m_layer_tools[i + 1];
+            if (!lt.has_wipe_tower || !lt_next.has_wipe_tower) {
+                ++i;
+                continue;
+            }
+            coordf_t gap = lt_next.print_z - lt.print_z;
+            if (gap <= max_layer_height + EPSILON) {
+                ++i;
+                continue;
+            }
+            LayerTools lt_new(0.5 * (lt.print_z + lt_next.print_z));
+            lt_new.has_wipe_tower = true;
+            if (!lt_next.extruders.empty())
+                lt_new.extruders.push_back(lt_next.extruders.front());
+            else if (!lt.extruders.empty())
+                lt_new.extruders.push_back(lt.extruders.back());
+            lt_new.wipe_tower_partitions = lt_next.wipe_tower_partitions;
+            m_layer_tools.insert(m_layer_tools.begin() + i + 1, lt_new);
         }
     }
 
@@ -1362,6 +1448,14 @@ FilamentGroupContext build_filament_group_context(
     context.speed_info.group_with_time = print->config().group_algo_with_time;
     context.speed_info.filament_change_time  = print->config().machine_load_filament_time + print->config().machine_unload_filament_time;
     context.speed_info.extruder_change_time = print->config().machine_switch_extruder_time;
+    {
+        double load_time   = print->config().machine_load_filament_time;
+        double unload_time = print->config().machine_unload_filament_time;
+        context.speed_info.change_time_params.standard_load_time   = static_cast<float>(load_time);
+        context.speed_info.change_time_params.standard_unload_time = static_cast<float>(unload_time);
+        context.speed_info.change_time_params.selector_load_time   = static_cast<float>(load_time / 2);
+        context.speed_info.change_time_params.selector_unload_time = static_cast<float>(unload_time / 2);
+    }
 
     context.machine_info.machine_filament_info = machine_filament_info;
     context.machine_info.max_group_size = std::move(group_size);
@@ -1807,20 +1901,20 @@ MultiNozzleUtils::LayeredNozzleGroupResult ToolOrdering::get_recommended_filamen
         auto context = build_filament_group_context(
             print,layer_filaments,physical_unprintables,geometric_unprintables, unprintable_volumes, mode, nozzle_status);
 
-        if (has_multiple_nozzle) {
-            if(mode == FilamentMapMode::fmmManual){
-                auto manual_filament_map = print_config.filament_map.values;
-                std::transform(manual_filament_map.begin(), manual_filament_map.end(), manual_filament_map.begin(), [](int v) { return v - 1; });
-                ret = calc_filament_group_for_manual_multi_nozzle(manual_filament_map,context);
-            }
-            else if(mode == FilamentMapMode::fmmAutoForMatch){
-                ret = calc_filament_group_for_match_multi_nozzle(context);
-            }
-            else{
-                FilamentGroupMultiNozzle fg(context);
-                ret = fg.calc_filament_group_by_pam();
-            }
+        if (has_multiple_nozzle && mode == FilamentMapMode::fmmManual) {
+            auto manual_filament_map = print_config.filament_map.values;
+            std::transform(manual_filament_map.begin(), manual_filament_map.end(), manual_filament_map.begin(), [](int v) { return v - 1; });
+            ret = calc_filament_group_for_manual_multi_nozzle(manual_filament_map, context);
+        } else if (has_multiple_nozzle && mode == FilamentMapMode::fmmAutoForMatch) {
+            ret = calc_filament_group_for_match_multi_nozzle(context);
+        } else {
+            FilamentGroup fg(context);
+            if (!has_multiple_nozzle)
+                fg.get_custom_seq = create_custom_seq_function(print_config, false);
+            ret = fg.calc_filament_group();
+        }
 
+        if (has_multiple_nozzle) {
             auto result_opt = LayeredNozzleGroupResult::create(ret, context.nozzle_info.nozzle_list, used_filaments);
             if (!result_opt) return LayeredNozzleGroupResult();
             auto result = *result_opt;
@@ -1833,11 +1927,6 @@ MultiNozzleUtils::LayeredNozzleGroupResult ToolOrdering::get_recommended_filamen
                 }
             }
             return result;
-        }
-        else{
-            FilamentGroup fg(context);
-            fg.get_custom_seq = create_custom_seq_function(print_config,false);
-            ret = fg.calc_filament_group();
         }
     }
 
@@ -2130,20 +2219,20 @@ void ToolOrdering::resolve_mixed_filaments(const PrintConfig &config)
     for (size_t i = 0; i < is_mixed.size(); ++i)
         if (is_gradient[i]) gradient_runs[static_cast<unsigned int>(i)] = {};
 
-    // Build per-slot sets of all layer indices where any slot-using object has a layer.
-    // Used by gradient run detection: a gap is real only if the slot is absent at
-    // a layer belonging to one of its own objects, not just absent because another
-    // object with different layer heights contributed a layer here.
+    // Build per-slot sets of all layer indices where any slot-owning object has a
+    // layer.  Used by gradient run detection (a gap is real only if the slot is
+    // absent at a layer belonging to one of its own objects) and by calc_slot_lh
+    // to keep prev_relevant_z_for_slot current even when a slot skips many layers.
     std::map<unsigned int, std::set<size_t>> slot_relevant_layers;
-    if (!gradient_runs.empty()) {
-        for (auto &[slot_idx, obj_map] : m_gradient_object_layers) {
-            for (auto &[obj, _] : obj_map) {
-                auto it = m_object_all_layer_indices.find(obj);
-                if (it != m_object_all_layer_indices.end())
-                    slot_relevant_layers[slot_idx].insert(it->second.begin(), it->second.end());
-            }
+    for (auto &[slot_idx, obj_map] : m_mixed_object_layers) {
+        for (auto &[obj, _] : obj_map) {
+            auto it = m_object_all_layer_indices.find(obj);
+            if (it != m_object_all_layer_indices.end())
+                slot_relevant_layers[slot_idx].insert(it->second.begin(), it->second.end());
         }
+    }
 
+    if (!gradient_runs.empty()) {
         for (size_t li = 0; li < m_layer_tools.size(); ++li) {
             if (li == 0) continue;
             const auto &lt = m_layer_tools[li];
@@ -2216,7 +2305,7 @@ void ToolOrdering::resolve_mixed_filaments(const PrintConfig &config)
     };
 
     std::map<unsigned int, std::map<const PrintObject*, PerObjRunState>> per_obj_runs;
-    for (auto &[slot, obj_map] : m_gradient_object_layers) {
+    for (auto &[slot, obj_map] : m_mixed_object_layers) {
         if (slot >= is_gradient.size() || !is_gradient[slot])
             continue;
         for (auto &[obj, layer_indices] : obj_map) {
@@ -2426,7 +2515,7 @@ void ToolOrdering::resolve_mixed_filaments(const PrintConfig &config)
 
                     auto runs_slot_it = per_obj_runs.find(ext);
                     if (runs_slot_it != per_obj_runs.end()) {
-                        auto slot_it = m_gradient_object_layers.find(ext);
+                        auto slot_it = m_mixed_object_layers.find(ext);
                         for (auto &[obj, st] : runs_slot_it->second) {
                             auto &layer_indices = slot_it->second[obj];
                             if (!std::binary_search(layer_indices.begin(), layer_indices.end(), layer_idx))
