@@ -427,11 +427,6 @@ private:
     // that doesn't use the slot) from spurious gaps (another object's layer).
     std::map<const PrintObject*, std::vector<size_t>> m_object_all_layer_indices;
 
-    // All layer indices (in m_layer_tools) where each object has any layer.
-    // Used by gradient run detection to distinguish real gaps (object has a layer
-    // that doesn't use the slot) from spurious gaps (another object's layer).
-    std::map<const PrintObject*, std::vector<size_t>> m_object_all_layer_indices;
-
     // Per-volume gradient tracking: slot(0-based) -> (PrintObject*, ModelVolume id) -> list of
     // layer indices where the given volume contributes to the slot. Populated by collect_extruders
     // alongside m_mixed_object_layers when per_part gradient is enabled for the slot AND the
