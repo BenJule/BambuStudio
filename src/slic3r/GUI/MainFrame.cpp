@@ -49,9 +49,11 @@
 #include "../Utils/MacDarkMode.hpp"
 
 #include <fstream>
+#include <memory>
 #include <string_view>
 
 #include "GUI_App.hpp"
+#include "GUI_Utils.hpp"
 #include "UnsavedChangesDialog.hpp"
 #include "MsgDialog.hpp"
 #include "Notebook.hpp"
@@ -450,10 +452,21 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
 
 
     sizer->Add(m_main_sizer, 1, wxEXPAND);
+#ifdef __WXGTK__
+    // On Wayland the window is not yet realized during construction.
+    // SetSizerAndFit/SetSizeHints both call gtk_window_resize before the
+    // compositor has mapped the window, triggering the 'width > 0' assertion.
+    // Use SetSizer (no implicit Fit) and defer all size operations to on_window_geometry.
+    SetMinClientSize(wxSize(400, 300));
+    SetSizer(sizer);
+#else
     SetSizerAndFit(sizer);
+#endif
     // initialize layout from config
     update_layout();
+#ifndef __WXGTK__
     sizer->SetSizeHints(this);
+#endif
 
     // BBS: fix taskbar overlay on windows
 #ifdef WIN32
@@ -485,6 +498,24 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     });
 #endif // WIN32
     // BBS
+#ifdef __WXGTK__
+    // SetSize/SetMinSize with explicit positive values are safe before Wayland
+    // realization. Apply the default geometry now — before persist_window_geometry
+    // restores any saved size — so the restore/sanitize callbacks run after.
+    const wxSize min_size = wxGetApp().get_min_size();
+    SetMinSize(min_size);
+    SetSize(wxSize(FromDIP(1200), FromDIP(800)));
+    Layout();
+    // SetSizeHints computes the sizer's minimum size and may call gtk_window_resize
+    // with a zero extent before the window is realized. Defer it to the first
+    // wxEVT_SHOW via on_window_geometry, guarded so it runs only once.
+    auto hint_done = std::make_shared<bool>(false);
+    on_window_geometry(this, [this, hint_done]() {
+        if (*hint_done) return;
+        *hint_done = true;
+        if (auto* s = GetSizer()) s->SetSizeHints(this);
+    });
+#else
     Fit();
 
     const wxSize min_size = wxGetApp().get_min_size(); //wxSize(76*wxGetApp().em_unit(), 49*wxGetApp().em_unit());
@@ -493,6 +524,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     SetSize(wxSize(FromDIP(1200), FromDIP(800)));
 
     Layout();
+#endif
 
     update_title();
 
