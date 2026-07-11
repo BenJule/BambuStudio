@@ -1,4 +1,5 @@
 #include "libslic3r/Technologies.hpp"
+#include "libslic3r_build_time.h"
 #include "GUI_App.hpp"
 #include "GUI_Init.hpp"
 #include "GUI_ObjectList.hpp"
