@@ -1,2 +1,15 @@
-# Base version — the 4th segment is auto-computed from git commit count at build time
+# Included by CMakeLists.txt.
+
+set(SLIC3R_APP_NAME "BambuStudio")
+set(SLIC3R_APP_KEY "BambuStudio")
+
+if(NOT DEFINED BBL_RELEASE_TO_PUBLIC)
+    set(BBL_RELEASE_TO_PUBLIC "0")
+endif()
+
+if(NOT DEFINED BBL_INTERNAL_TESTING)
+    set(BBL_INTERNAL_TESTING "1")
+endif()
+
+# The fourth version segment is computed from the Git commit count.
 set(SLIC3R_VERSION_BASE "02.08.00")
