@@ -6,12 +6,18 @@ set -e
 ROOT=$(dirname "$(readlink -f "$0")")/..
 
 BASE=$(grep 'set(SLIC3R_VERSION_BASE' "$ROOT/version.inc" | cut -d '"' -f2)
-if [ -z "$BASE" ]; then
+if [ -n "$BASE" ]; then
+    # Fork-Schema: Basisversion + Anzahl Commits (Dev-Builds)
+    COUNT=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo "0")
+    VERSION="${BASE}.${COUNT}"
+else
+    # Upstream-Schema (Release-Branches): komplette Version steht direkt drin
+    VERSION=$(grep 'set(SLIC3R_VERSION ' "$ROOT/version.inc" | cut -d '"' -f2)
+fi
+if [ -z "$VERSION" ]; then
     echo "Error: could not read version from version.inc" >&2
     exit 1
 fi
-COUNT=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo "0")
-VERSION="${BASE}.${COUNT}"
 
 PKGNAME="bambustudio"
 ARCH="amd64"
