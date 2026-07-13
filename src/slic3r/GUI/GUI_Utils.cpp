@@ -602,5 +602,11 @@ void WikiPanel::msw_rescale()
     }
 }
 
+bool dark_mode_follow_system_enabled()
+{
+    return wxGetApp().app_config &&
+           wxGetApp().app_config->get("dark_mode_follow_system") == "1";
+}
+
 }
 }
