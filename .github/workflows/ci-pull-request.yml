@@ -28,7 +28,7 @@ jobs:
       code:   ${{ steps.check.outputs.code }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920  # v2.20.0
         with:
           egress-policy: audit
 
@@ -106,7 +106,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920  # v2.20.0
         with:
           egress-policy: audit
 
@@ -120,7 +120,7 @@ jobs:
 
       - name: Cache deps
         id: cache-deps
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
         with:
           path: deps/build/destdir
           key: pkg-deps-debian-trixie_deb-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
@@ -167,7 +167,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920  # v2.20.0
         with:
           egress-policy: audit
 
@@ -182,7 +182,7 @@ jobs:
 
       - name: Cache deps
         id: cache-deps
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
         with:
           path: deps/build/destdir
           key: pkg-deps-fedora42_rpm-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
