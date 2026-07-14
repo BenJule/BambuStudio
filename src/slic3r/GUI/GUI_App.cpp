@@ -24,13 +24,9 @@
 #include <exception>
 #include <cstdlib>
 #include <chrono>
-#include <fstream>
 #include <regex>
 #include <thread>
 #include <string_view>
-#ifdef __linux__
-#include <sys/utsname.h>
-#endif
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
@@ -39,6 +35,11 @@
 #include <boost/nowide/convert.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
+#include "Printer/LiveViewTrackContext.h"
 
 #include <wx/stdpaths.h>
 #include <wx/imagpng.h>
@@ -75,6 +76,7 @@
 #include "GUI_Utils.hpp"
 #include "3DScene.hpp"
 #include "MainFrame.hpp"
+#include "slic3r/GUI/Widgets/WebView.hpp"
 #include "Plater.hpp"
 #include "GLCanvas3D.hpp"
 #include "EncodedFilament.hpp"
@@ -121,6 +123,7 @@
 #include "ModelMall.hpp"
 #include "HintNotification.hpp"
 #include "BBLUtil.hpp"
+#include "fila_manager/wgtFilaManagerFeature.h"
 
 //#ifdef WIN32
 //#include "BaseException.h"
@@ -349,23 +352,24 @@ public:
         int top_margin = FromDIP(75 * m_scale);
         int width = bmp.GetWidth();
 
-        // draw title centered, then version centered below it
-        // GetTextExtent does not handle '\n', so the old side-by-side split_width layout
-        // broke when the version string became multiline (commit count + dev timestamp).
-        int text_padding = FromDIP(4 * m_scale);
+        // draw title and version
+        int text_padding = FromDIP(3 * m_scale);
         memDc.SetFont(m_constant_text.title_font);
         int title_height = memDc.GetTextExtent(m_constant_text.title).GetHeight();
-        wxRect title_rect(wxPoint(0, top_margin), wxPoint(width, top_margin + title_height));
-        memDc.SetTextForeground(StateColor::darkModeColorFor(wxColour(38, 46, 48)));
-        memDc.DrawLabel(m_constant_text.title, title_rect, wxALIGN_CENTER | wxALIGN_TOP);
-        // version below title; account for multiline (dev timestamp adds \n)
+        int title_width = memDc.GetTextExtent(m_constant_text.title).GetWidth();
         memDc.SetFont(m_constant_text.version_font);
-        int version_line_height = memDc.GetTextExtent("A").GetHeight();
-        int version_lines = (int)m_constant_text.version.Freq('\n') + 1;
-        wxRect version_rect(wxPoint(0, top_margin + title_height + text_padding),
-                            wxPoint(width, top_margin + title_height + text_padding + version_lines * version_line_height));
+        int version_height = memDc.GetTextExtent(m_constant_text.version).GetHeight();
+        int version_width = memDc.GetTextExtent(m_constant_text.version).GetWidth();
+        int split_width = (width + title_width - version_width) / 2;
+        wxRect title_rect(wxPoint(0, top_margin), wxPoint(split_width - text_padding, top_margin + title_height));
+        memDc.SetTextForeground(StateColor::darkModeColorFor(wxColour(38, 46, 48)));
+        memDc.SetFont(m_constant_text.title_font);
+        memDc.DrawLabel(m_constant_text.title, title_rect, wxALIGN_RIGHT | wxALIGN_BOTTOM);
+        //BBS align bottom of title and version text
+        wxRect version_rect(wxPoint(split_width + text_padding, top_margin), wxPoint(width, top_margin + title_height - text_padding));
+        memDc.SetFont(m_constant_text.version_font);
         memDc.SetTextForeground(StateColor::darkModeColorFor(wxColor(134, 134, 134)));
-        memDc.DrawLabel(m_constant_text.version, version_rect, wxALIGN_CENTER | wxALIGN_TOP);
+        memDc.DrawLabel(m_constant_text.version, version_rect, wxALIGN_LEFT | wxALIGN_BOTTOM);
 
 #if BBL_INTERNAL_TESTING
         wxString versionText = BBL_INTERNAL_TESTING == 1 ? _L("Internal Version") : _L("Beta Version");
@@ -1335,7 +1339,7 @@ void GUI_App::post_init()
         CallAfter([this] {
             bool cw_showed = this->config_wizard_startup();
 
-            std::string http_url = get_slicer_update_url(app_config->get_country_code());
+            std::string http_url = get_http_url(app_config->get_country_code());
             std::string language = GUI::into_u8(current_language_code());
             std::string network_ver = Slic3r::NetworkAgent::get_version();
             bool        sys_preset  = app_config->get("sync_system_preset") == "true";
@@ -1441,8 +1445,25 @@ GUI_App::GUI_App()
     this->init_app_config();
     this->init_download_path();
 
+#if defined(__WXOSX__)
+    m_macos_pending_pump_timer.Bind(wxEVT_TIMER, &GUI_App::on_macos_pending_pump, this);
+#endif
+
     reset_to_active();
 }
+
+#if defined(__WXOSX__)
+void GUI_App::on_macos_pending_pump(wxTimerEvent& WXUNUSED(evt))
+{
+    // STUDIO-18472: drain wx pending events ourselves. After the Filament Manager
+    // WKWebView churn the macOS run loop no longer reliably wakes to call
+    // ProcessPendingEvents() from its observer, which strands deferred actions
+    // (project restore, tab-bar page switches posted via wxPostEvent). The
+    // HasPendingEvents() guard makes this a no-op on the common (healthy) path.
+    if (wxTheApp && wxTheApp->HasPendingEvents())
+        wxTheApp->ProcessPendingEvents();
+}
+#endif
 
 void GUI_App::shutdown()
 {
@@ -1501,48 +1522,6 @@ std::string GUI_App::get_http_url(std::string country_code, std::string path)
 
     url += path.empty() ? "v1/iot-service/api/slicer/resource" : path;
     return url;
-}
-
-// Returns the URL used for in-app slicer update checks.
-// On Linux, appends ?distro=<ID>&arch=<machine> so the server can return
-// the correct platform-specific download link.
-// Falls back to get_http_url() when no custom URL is configured.
-std::string GUI_App::get_slicer_update_url(std::string country_code)
-{
-    std::string base = app_config->get("slicer_update_url");
-    if (base.empty())
-        base = "https://apt.s3-dev.ovh/v1/iot-service/api/slicer/resource";
-
-#ifdef __linux__
-    std::string distro;
-    {
-        std::ifstream f("/etc/os-release");
-        std::string line;
-        while (std::getline(f, line)) {
-            if (boost::starts_with(line, "ID=")) {
-                distro = line.substr(3);
-                if (distro.size() >= 2 && distro.front() == '"' && distro.back() == '"')
-                    distro = distro.substr(1, distro.size() - 2);
-                boost::to_lower(distro);
-                break;
-            }
-        }
-    }
-
-    std::string arch;
-    struct utsname u;
-    if (uname(&u) == 0)
-        arch = u.machine;
-
-    if (!distro.empty() || !arch.empty()) {
-        base += '?';
-        if (!distro.empty()) base += "distro=" + distro;
-        if (!distro.empty() && !arch.empty()) base += '&';
-        if (!arch.empty()) base += "arch=" + arch;
-    }
-#endif
-
-    return base;
 }
 
 std::string GUI_App::get_model_http_url(std::string country_code)
@@ -1801,23 +1780,6 @@ int GUI_App::download_plugin(std::string name, std::string package_name, Install
     return result;
 }
 
-#if defined(__linux__)
-// Clear the executable-stack ELF flag on a freshly written plugin .so.
-// Debian Trixie (kernel ≥ 6.1 + AppArmor) blocks dlopen() of .so files whose
-// GNU_STACK section is marked RWE. The Bambu networking plugin ships with that
-// flag set. Clearing it here — once, at install/copy time — avoids re-patching
-// on every startup and eliminates any race with a concurrent dlopen().
-static void clear_plugin_execstack(const std::string& path)
-{
-    std::string cmd = "patchelf --clear-execstack \"" + path + "\" 2>/dev/null";
-    if (std::system(cmd.c_str()) != 0) {
-        cmd = "execstack -c \"" + path + "\" 2>/dev/null";
-        std::system(cmd.c_str());
-    }
-    BOOST_LOG_TRIVIAL(info) << "[clear_plugin_execstack] patched " << path;
-}
-#endif
-
 int GUI_App::install_plugin(std::string name, std::string package_name, InstallProgressFn pro_fn, WasCancelledFn cancel_fn)
 {
     bool cancel = false;
@@ -1910,10 +1872,6 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
                             return InstallStatusUnzipFailed;
                         }
                     }
-#if defined(__linux__)
-                    if (boost::algorithm::iends_with(dest_file, ".so"))
-                        clear_plugin_execstack(dest_path.string());
-#endif
                 }
                 catch (const std::exception& e)
                 {
@@ -2123,21 +2081,29 @@ void GUI_App::init_networking_callbacks()
             }
             if (return_code < 0) { //#define MQTTASYNC_SUCCESS 0
                 GUI::wxGetApp().CallAfter([this] {
-                    static bool is_showing = false;
-                    if (is_showing) return;
-                    is_showing = true;
+                    m_homepage_server_connect_failed = true;
+                    sync_left_server_connect_status();
+
+                    static bool s_mqtt_connect_failed_dialog_shown = false;
+                    if (s_mqtt_connect_failed_dialog_shown) return;
+                    if (app_config && app_config->get("suppress_cloud_device_server_warning") == "1") return;
+                    s_mqtt_connect_failed_dialog_shown = true;
                     BOOST_LOG_TRIVIAL(trace) << "static: server connection failed";
-                    MessageDialog msg_dlg(nullptr, _L("Failed to connect to the cloud device server. Please check your network and firewall."), "", wxOK);
+                    RichMessageDialog msg_dlg(nullptr, _L("Failed to connect to the cloud device server. Please check your network and firewall."), "", wxOK);
+                    msg_dlg.ShowCheckBox(_L("Don't show this warning again"));
                     msg_dlg.ShowModal();
-                    is_showing = false;
+                    if (msg_dlg.IsCheckBoxChecked() && app_config)
+                        app_config->set("suppress_cloud_device_server_warning", "1");
                 });
                 return;
             }
             GUI::wxGetApp().CallAfter([this] {
-                if (is_closing())
-                    return;
-                BOOST_LOG_TRIVIAL(trace) << "static: server connected";
-                m_agent->set_user_selected_machine(m_agent->get_user_selected_machine());
+                    if (is_closing())
+                        return;
+                    m_homepage_server_connect_failed = false;
+                    sync_left_server_connect_status();
+                    BOOST_LOG_TRIVIAL(trace) << "static: server connected";
+                    m_agent->set_user_selected_machine(m_agent->get_user_selected_machine());
                     if (this->is_enable_multi_machine()) {
                         auto evt = new wxCommandEvent(EVT_UPDATE_MACHINE_LIST);
                         wxQueueEvent(this, evt);
@@ -2925,6 +2891,41 @@ class wxBoostLog : public wxLog
     }
 };
 
+// Populate process-wide live-view track context (client + session).
+// Called once during GUI_App::OnInit, before any tunnel-using code can emit
+// a track event.
+//
+// Fields filled here are the ones we can know reliably at startup. Other
+// fields (region / network_type / os_version) are intentionally left empty
+// — they can be filled later as the data becomes available; build_envelope
+// just skips empty strings.
+static void init_live_view_track_context(AppConfig* app_config)
+{
+    namespace track = BambuLiveViewTrack;
+
+    track::ClientInfo client;
+    client.client_ver = SLIC3R_VERSION;
+    if (app_config) {
+        client.client_id = app_config->get("slicer_uuid");
+    }
+#if defined(_WIN32)
+    client.platform = "windows";
+#elif defined(__APPLE__)
+    client.platform = "macos";
+#else
+    client.platform = "linux";
+#endif
+
+    track::SessionInfo session;
+    session.session_id = boost::uuids::to_string(boost::uuids::random_generator()());
+    session.start_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+
+    auto& ctx = track::LiveViewTrackContext::instance();
+    ctx.init_client(client);
+    ctx.init_session(session);
+}
+
 std::string get_system_info()
 {
     std::stringstream out;
@@ -3018,6 +3019,8 @@ bool GUI_App::on_init_inner()
 
     BOOST_LOG_TRIVIAL(info) << get_system_info();
 
+    init_live_view_track_context(app_config);
+
 // initialize label colors and fonts
     init_label_colours();
     // initSysFont must run before init_fonts() (which consumes Label statics),
@@ -3087,11 +3090,23 @@ bool GUI_App::on_init_inner()
     load_language(wxString(), true);
 #ifdef _MSW_DARK_MODE
 
-#ifndef __WINDOWS__
-    wxSystemAppearance app = wxSystemSettings::GetAppearance();
-    GUI::wxGetApp().app_config->set("dark_color_mode", app.IsDark() ? "1" : "0");
-    GUI::wxGetApp().app_config->save();
-#endif // __APPLE__
+    // One-time migration to the Light/Dark/Follow-system selector. Before it existed,
+    // dark_mode() followed the OS appearance whenever dark_color_mode was not "1". Run this
+    // after the config has been loaded so it sees the user's real dark_color_mode (and an
+    // absent dark_mode_follow_system), and only an explicit "Dark" opts out of following the OS.
+    if (app_config->get("dark_mode_follow_system").empty())
+        app_config->set("dark_mode_follow_system", app_config->get("dark_color_mode") == "1" ? "0" : "1");
+
+    {
+        // Follow the OS appearance only when the user chose "Follow system" — on all
+        // platforms. An explicit Light/Dark choice (now available on Linux too) must
+        // not be overwritten on every start.
+        wxSystemAppearance app = wxSystemSettings::GetAppearance();
+        if (app_config->get("dark_mode_follow_system") == "1") {
+            app_config->set("dark_color_mode", app.IsDark() ? "1" : "0");
+            app_config->save();
+        }
+    }
 
 
     bool init_dark_color_mode = dark_mode();
@@ -3160,6 +3175,11 @@ bool GUI_App::on_init_inner()
     }
 
     BBLSplashScreen * scrn = nullptr;
+
+    // BBS: ensure the splash screen is torn down on every exit path safely
+    ScopeGuard delete_scrn([&scrn]() {
+        if (scrn) scrn->Destroy();
+    });
     const bool show_splash_screen = true;
     if (show_splash_screen) {
         // make a bitmap with dark grey banner on the left side
@@ -3176,7 +3196,7 @@ bool GUI_App::on_init_inner()
 
         BOOST_LOG_TRIVIAL(info) << "begin to show the splash screen...";
         //BBS use BBL splashScreen
-        scrn = new BBLSplashScreen(bmp, wxSPLASH_CENTRE_ON_SCREEN | wxSPLASH_TIMEOUT, 10000, splashscreen_pos);
+        scrn = new BBLSplashScreen(bmp, wxSPLASH_CENTRE_ON_SCREEN, 0, splashscreen_pos);
         // Process pending paint events so the splash is drawn immediately on all
         // platforms. Without this, GTK never paints the window before the heavy
         // loading work begins, leaving a black window until the app is ready.
@@ -3362,30 +3382,41 @@ bool GUI_App::on_init_inner()
     // Let the libslic3r know the callback, which will translate messages on demand.
     Slic3r::I18N::set_translate_callback(libslic3r_translate_callback);
 
-    // Initialize Filament Manager store & sync
-    if (!m_fila_manager_store) {
-        m_fila_manager_store = new wgtFilaManagerStore();
-        m_fila_manager_store->load();
-        BOOST_LOG_TRIVIAL(info) << "Filament Manager store initialized";
-    }
-    if (!m_fila_manager_sync) {
-        m_fila_manager_sync = new wgtFilaManagerSync(m_fila_manager_store);
-        BOOST_LOG_TRIVIAL(info) << "Filament Manager sync initialized";
-    }
-    // Cloud layer — owns HTTP client, high-level sync and the serialization dispatcher.
-    if (!m_fila_manager_cloud_client) {
-        m_fila_manager_cloud_client = new wgtFilaManagerCloudClient();
-        BOOST_LOG_TRIVIAL(info) << "Filament Manager cloud client initialized";
-    }
-    if (!m_fila_manager_cloud_sync) {
-        m_fila_manager_cloud_sync = new wgtFilaManagerCloudSync(m_fila_manager_store,
-                                                                m_fila_manager_cloud_client);
-        BOOST_LOG_TRIVIAL(info) << "Filament Manager cloud sync initialized";
-    }
-    if (!m_fila_manager_cloud_disp) {
-        m_fila_manager_cloud_disp = new wgtFilaManagerCloudDispatcher(m_fila_manager_cloud_sync,
-                                                                     m_fila_manager_cloud_client);
-        BOOST_LOG_TRIVIAL(info) << "Filament Manager cloud dispatcher initialized";
+#ifdef __APPLE__
+    constexpr bool is_macos = true;
+#else
+    constexpr bool is_macos = false;
+#endif
+    m_disable_fila_manager = is_fila_manager_disabled_by_config(
+        app_config->get(FilaManagerEnabledConfigKey), is_macos);
+    if (m_disable_fila_manager) {
+        BOOST_LOG_TRIVIAL(info) << "Filament Manager disabled by " << FilaManagerEnabledConfigKey;
+    } else {
+        // Initialize Filament Manager store & sync
+        if (!m_fila_manager_store) {
+            m_fila_manager_store = new wgtFilaManagerStore();
+            m_fila_manager_store->load();
+            BOOST_LOG_TRIVIAL(info) << "Filament Manager store initialized";
+        }
+        if (!m_fila_manager_sync) {
+            m_fila_manager_sync = new wgtFilaManagerSync(m_fila_manager_store);
+            BOOST_LOG_TRIVIAL(info) << "Filament Manager sync initialized";
+        }
+        // Cloud layer — owns HTTP client, high-level sync and the serialization dispatcher.
+        if (!m_fila_manager_cloud_client) {
+            m_fila_manager_cloud_client = new wgtFilaManagerCloudClient();
+            BOOST_LOG_TRIVIAL(info) << "Filament Manager cloud client initialized";
+        }
+        if (!m_fila_manager_cloud_sync) {
+            m_fila_manager_cloud_sync = new wgtFilaManagerCloudSync(m_fila_manager_store,
+                                                                    m_fila_manager_cloud_client);
+            BOOST_LOG_TRIVIAL(info) << "Filament Manager cloud sync initialized";
+        }
+        if (!m_fila_manager_cloud_disp) {
+            m_fila_manager_cloud_disp = new wgtFilaManagerCloudDispatcher(m_fila_manager_cloud_sync,
+                                                                         m_fila_manager_cloud_client);
+            BOOST_LOG_TRIVIAL(info) << "Filament Manager cloud dispatcher initialized";
+        }
     }
 
     BOOST_LOG_TRIVIAL(info) << "create the main window";
@@ -3527,8 +3558,6 @@ bool GUI_App::on_init_inner()
     flush_logs();
 
     BOOST_LOG_TRIVIAL(info) << "finished the gui app init";
-    //BBS: delete splash screen
-    delete scrn;
     return true;
 }
 
@@ -3579,9 +3608,6 @@ void GUI_App::copy_network_if_available()
 
                 static constexpr const auto perms = fs::owner_read | fs::owner_write | fs::group_read | fs::others_read;
                 fs::permissions(dest_path, perms);
-#if defined(__linux__)
-                clear_plugin_execstack(dest_path);
-#endif
                 BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Copying network library successfully.";
             }
         }
@@ -3728,7 +3754,9 @@ bool GUI_App::dark_mode()
     // proper dark mode was first introduced.
     return wxPlatformInfo::Get().CheckOSVersion(10, 14) && mac_dark_mode();
 #else
-    return wxGetApp().app_config->get("dark_color_mode") == "1" ? true : check_dark_mode();
+    if (wxGetApp().app_config->get("dark_mode_follow_system") == "1")
+        return check_dark_mode();
+    return wxGetApp().app_config->get("dark_color_mode") == "1";
     //const unsigned luma = get_colour_approx_luma(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
     //return luma < 128;
 #endif
@@ -4166,6 +4194,21 @@ void GUI_App::recreate_GUI(const wxString &msg_name)
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "recreate_GUI enter";
     m_is_recreating_gui = true;
 
+#if defined(__WXOSX__)
+    // macOS root cause (STUDIO-18472): switching language rebuilds the MainFrame and
+    // defers destruction of the old one (old_main_frame->Destroy() below), which only
+    // completes once wxEVT_IDLE fires. If the old frame still hosts a live Filament
+    // Manager WKWebView (e.g. the language was changed while that tab was visible, or
+    // the asynchronous about:blank teardown from a tab switch had not finished yet),
+    // its React app keeps the CFRunLoop busy and starves idle app-wide, so the old
+    // frame is never collected and the new frame cannot render or switch tabs.
+    // Proactively suspend it here so the old frame is guaranteed quiet before its
+    // deferred destruction, independent of which tab was visible or how fast the user
+    // reached Preferences. No-op off macOS.
+    if (mainframe && mainframe->web_device())
+        mainframe->web_device()->Suspend();
+#endif
+
     update_http_extra_header();
 
     mainframe->shutdown();
@@ -4221,6 +4264,17 @@ void GUI_App::recreate_GUI(const wxString &msg_name)
     update_publish_status();
 
     m_is_recreating_gui = false;
+
+#if defined(__WXOSX__)
+    // STUDIO-18472: a GUI rebuild just happened (and trigger_restore_project()
+    // queued EVT_RESTORE_PROJECT). From here on the macOS run loop may fail to
+    // wake for wx pending events after the Filament Manager WKWebView churn, so
+    // arm the pending-event pump for the rest of the session. This dispatches
+    // the deferred restore promptly (prepare canvas no longer stays blank) and
+    // keeps later tab-bar page switches (posted via wxPostEvent) responsive.
+    if (!m_macos_pending_pump_timer.IsRunning())
+        m_macos_pending_pump_timer.Start(30);
+#endif
 
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "recreate_GUI exit";
 }
@@ -4561,12 +4615,25 @@ void GUI_App::get_login_info()
             GUI::wxGetApp().run_script_left(strJS);
         }
         else {
+            m_homepage_server_connect_failed = false;
             m_agent->user_logout();
             std::string logout_cmd = m_agent->build_logout_cmd();
             wxString strJS = wxString::Format("window.postMessage(%s)", logout_cmd);
             GUI::wxGetApp().run_script_left(strJS);
         }
     }
+    sync_left_server_connect_status();
+}
+
+void GUI_App::sync_left_server_connect_status()
+{
+    json msg           = json::object();
+    msg["sequence_id"] = "10001";
+    msg["command"]     = "homepage_server_connect_status";
+    msg["failed"]      = m_homepage_server_connect_failed ? 1 : 0;
+
+    wxString strJS = wxString::Format("window.postMessage(%s)", msg.dump(-1, ' ', false, json::error_handler_t::ignore));
+    GUI::wxGetApp().run_script_left(strJS);
 }
 
 bool GUI_App::is_user_login()
@@ -4607,11 +4674,15 @@ void GUI_App::request_user_login(int online_login)
 
 void GUI_App::request_user_logout()
 {
+    m_homepage_server_connect_failed = false;
+    sync_left_server_connect_status();
+
     if (m_agent && m_agent->is_user_login()) {
         m_load_last_machine.is_list_ok = false;
         m_load_last_machine.is_mqtt_ok = false;
         // Update data first before showing dialogs
         m_agent->user_logout(true);
+        WebView::ClearBambulabTokenCookies();
         if (auto obj = m_device_manager->get_selected_machine();
             obj && obj->is_cloud_mode_printer()) {
             m_device_manager->record_user_last_machine("");
@@ -4633,15 +4704,15 @@ void GUI_App::request_user_logout()
         GUI::wxGetApp().stop_sync_user_preset();
 
         // Drop queued cloud ops so they don't fire against a stale user.
-        if (m_fila_manager_cloud_disp) {
+        if (!m_disable_fila_manager && m_fila_manager_cloud_disp) {
             m_fila_manager_cloud_disp->clear_pending();
         }
         // STUDIO-18155: 清 AMS auto-push 节流账本，避免账号 A 的 cooldown
         // 影响登入账号 B 后第一次 sync 触发 push 的时机。
-        if (m_fila_manager_cloud_sync) {
+        if (!m_disable_fila_manager && m_fila_manager_cloud_sync) {
             m_fila_manager_cloud_sync->throttle().clear_all();
         }
-        if (mainframe && mainframe->web_device()) {
+        if (!m_disable_fila_manager && mainframe && mainframe->web_device()) {
             mainframe->web_device()->NotifyFilamentSessionState();
         }
     }
@@ -5295,10 +5366,10 @@ void GUI_App::on_user_login_handle(wxCommandEvent &evt)
 
         // Trigger filament-manager cloud pull on the dispatcher queue; no-op if
         // already pulling.  Runs after login so auth token is available.
-        if (m_fila_manager_cloud_disp) {
+        if (!m_disable_fila_manager && m_fila_manager_cloud_disp) {
             m_fila_manager_cloud_disp->enqueue_pull();
         }
-        if (mainframe && mainframe->web_device()) {
+        if (!m_disable_fila_manager && mainframe && mainframe->web_device()) {
             mainframe->web_device()->NotifyFilamentSessionState();
         }
     }
@@ -5409,15 +5480,12 @@ void GUI_App::check_new_version(bool show_tips, int by_user)
 #ifdef __LINUX__
     platform = "linux";
 #endif
-    std::string base_url    = get_slicer_update_url(app_config->get_country_code());
-    std::string sep         = (base_url.find('?') != std::string::npos) ? "&" : "?";
-    std::string query_params = (boost::format("%1%name=slicer&version=%2%&guide_version=%3%")
-        % sep
+    std::string query_params = (boost::format("?name=slicer&version=%1%&guide_version=%2%")
         % VersionInfo::convert_full_version(SLIC3R_VERSION)
         % VersionInfo::convert_full_version("0.0.0.1")
         ).str();
 
-    std::string url = base_url + query_params;
+    std::string url = get_http_url(app_config->get_country_code()) + query_params;
     Slic3r::Http http = Slic3r::Http::get(url);
 
     http.header("accept", "application/json")
@@ -5579,10 +5647,19 @@ void GUI_App::check_beta_version(bool show_tips_when_no_beta)
                                 }
                             }
                         }
+                        // Newest beta located and scheduled; stop scanning older entries.
+                        return;
                     }
                 }
-                return;
             }
+            // No beta release exists across all GitHub releases (e.g. the newest
+            // release is stable). Fall back to the regular "no new version" toast
+            // instead of silently returning after inspecting only the first entry.
+            CallAfter([this, show_tips_when_no_beta]() {
+                if (show_tips_when_no_beta) {
+                    this->no_new_version();
+                }
+            });
         }
         catch (...) {
             ;
@@ -5895,11 +5972,6 @@ std::string GUI_App::format_display_version()
         else
             ++j;
     }
-
-    std::string dev_ts = SLIC3R_DEV_TIMESTAMP;
-    if (!dev_ts.empty())
-        version_display += "\n-dev." + dev_ts;
-
     return version_display;
 }
 

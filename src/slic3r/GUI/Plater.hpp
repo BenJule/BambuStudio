@@ -478,11 +478,11 @@ public:
     void trigger_restore_project(int skip_confirm = 0);
     bool delete_object_from_model(size_t obj_idx, bool refresh_immediately = true); // BBS support refresh immediately
     void delete_all_objects_from_model(); //BBS delete all objects from model
-    void set_selected_visible(bool visible);
     void remove_selected();
     void increase_instances(size_t num = 1);
     void decrease_instances(size_t num = 1);
     void set_number_of_copies(/*size_t num*/);
+    void fill_bed_with_copies();
     void fill_bed_with_instances();
     bool is_selection_empty() const;
     void scale_selection_to_fit_print_volume();
@@ -757,6 +757,7 @@ public:
 
     const Camera& get_camera() const;
     Camera& get_camera();
+    void mark_assemble_view_requires_zoom_to_volumes();
     const Camera& get_picking_camera() const;
     Camera& get_picking_camera();
 

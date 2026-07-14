@@ -13,6 +13,7 @@
 #include "Widgets/Label.hpp"
 #include "Widgets/CheckBox.hpp"
 #include "Widgets/ComboBox.hpp"
+#include <wx/checkbox.h>
 #include "Widgets/TextInput.hpp"
 #include "../slic3r/Utils/CalibUtils.hpp"
 #include "DeviceCore/DevNozzleRack.h"
@@ -77,6 +78,7 @@ public:
     std::vector<wxColour> m_ams_colors;
     std::vector<ColorPicker*> m_color_pickers;
     std::vector<ColorPicker*> m_ams_color_pickers;
+    TextInput*               m_hex_input{nullptr};
 
 public:
     ColorPickerPopup(wxWindow* parent);
@@ -125,6 +127,10 @@ public:
     std::string    ams_setting_id;
 
     bool           m_is_third;
+    // View-only mode: when set, the dialog can be opened to inspect filament
+    // info but every editing control is disabled and no command is sent.
+    // Used for 2D mode (laser/cut), mirroring the official-spool read-only flow.
+    bool           m_view_only = false;
     wxString       m_brand_filament;
     wxString       m_brand_sn;
     wxString       m_brand_tmp;
@@ -138,6 +144,7 @@ public:
     struct FilamentInfos {
         std::string filament_id;
         std::string setting_id;
+        bool        is_user_preset { false };
     };
 
 protected:
@@ -146,6 +153,9 @@ protected:
     void on_dpi_changed(const wxRect &suggested_rect) override;
     void on_select_nozzle_id(wxCommandEvent &evt);
     void on_select_filament(wxCommandEvent& evt);
+    void on_filament_filter_changed(wxCommandEvent& evt);
+    void update_filament_compatibility_hint();
+    void apply_filament_profile_filter();
     void on_select_cali_result(wxCommandEvent &evt);
     void on_select_nozzle_pos_id(wxCommandEvent &evt);
     void on_select_ok(wxCommandEvent &event);
@@ -167,7 +177,8 @@ protected:
                             wxArrayString&                           filament_items,
                             std::map<std::string, FilamentInfos>&    map_filament_items,
                             std::unordered_map<wxString, wxString>&  query_filament_vendors,
-                            std::unordered_map<wxString, wxString>&  query_filament_types);
+                            std::unordered_map<wxString, wxString>&  query_filament_types,
+                            std::unordered_map<wxString, bool>&      query_filament_is_user_preset);
 
     Preset* get_filament_by_id(const std::string& filament_id, bool is_system);
 
@@ -178,6 +189,8 @@ protected:
     wxPanel *           m_panel_SN;
     wxStaticText *      m_sn_number;
     wxStaticText *      warning_text;
+    wxStaticText *      m_filament_compatibility_hint { nullptr };
+    wxCheckBox *         m_show_only_user_presets { nullptr };
     //wxPanel *           m_panel_body;
     wxStaticText *      m_title_filament;
     wxStaticText *      m_title_nozzle_type;
@@ -202,7 +215,7 @@ protected:
     TextInput*          m_input_k_val;
     wxStaticText*       m_n_param;
     TextInput*          m_input_n_val;
-    int                 m_filament_selection;
+    int                 m_filament_selection { -1 };
 
     int m_pa_cali_select_id = 0;
     bool m_pa_data_pending{false};
@@ -215,7 +228,10 @@ protected:
     ComboBox * m_comboBox_nozzle_type;
     ComboBox * m_comboBox_cali_result;
     TextInput*       m_readonly_filament;
+    TextInput*       m_input_filament_filter;
 
+    wxArrayString    m_filament_items;
+    wxArrayString                         m_all_filament_items;
     std::map<std::string, FilamentInfos> map_filament_items;
 };
 

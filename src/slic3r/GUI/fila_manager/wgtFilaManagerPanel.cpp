@@ -2,6 +2,9 @@
 #include "wgtFilaManagerStore.h"
 
 #include <wx/sizer.h>
+#include <stdexcept>
+#include <boost/nowide/fstream.hpp>
+#include <wx/filedlg.h>
 #include <boost/log/trivial.hpp>
 
 #include "slic3r/GUI/GUI_App.hpp"
@@ -18,6 +21,15 @@
 #include <sstream>
 
 namespace Slic3r { namespace GUI {
+
+namespace {
+
+std::string normalize_ams_rfid_for_web(const std::string& tray_uuid, const std::string& tag_uid)
+{
+    return tag_uid.size() == 16 && tag_uid.substr(12, 2) == "01" ? tray_uuid : std::string();
+}
+
+} // namespace
 
 /* ================================================================
  *  Construction / lifecycle
@@ -243,6 +255,44 @@ void wgtFilaManagerPanel::register_handlers()
             if (mgr) mgr->set_selected_machine(dev_id);
         }
         send_response(seq, 0, build_ams_data());
+    };
+
+    m_handlers["export_spool_inventory"] = [this](int seq, const nlohmann::json&) {
+        wxFileDialog dialog(
+            this,
+            wxString("Export filament inventory"),
+            wxEmptyString,
+            "filament_inventory_backup.json",
+            "JSON files (*.json)|*.json",
+            wxFD_SAVE | wxFD_OVERWRITE_PROMPT
+        );
+
+        if (dialog.ShowModal() == wxID_CANCEL) {
+            send_response(seq, 1, {{"cancelled", true}});
+            return;
+        }
+
+        try {
+            const wxString wx_path = dialog.GetPath();
+            const std::string path = wx_path.ToUTF8().data();
+
+            boost::nowide::ofstream ofs(path);
+            if (!ofs)
+                throw std::runtime_error("failed to open export file");
+
+            nlohmann::json root = {
+                {"spools", build_spool_list()}
+            };
+            ofs << root.dump(2);
+            ofs.close();
+
+            if (!ofs)
+                throw std::runtime_error("failed to write export file");
+
+            send_response(seq, 0, {{"path", path}});
+        } catch (const std::exception& e) {
+            send_response(seq, -1, {{"error", std::string("export failed: ") + e.what()}});
+        }
     };
 
     /* ---- Spool CRUD ---- */
@@ -473,7 +523,8 @@ nlohmann::json wgtFilaManagerPanel::build_ams_data()
                         t["slot_id"]   = slot_id;
                         t["is_exists"] = tray && tray->is_exists;
                         if (tray && tray->is_exists) {
-                            t["tag_uid"]    = tray->tag_uid;
+                            t["tag_uid"]    = normalize_ams_rfid_for_web(tray->uuid, tray->tag_uid);
+                            t["tray_id_name"] = tray->tray_id_name;
                             t["setting_id"] = tray->setting_id;
                             t["fila_type"]  = tray->m_fila_type;
                             t["sub_brands"] = tray->sub_brands;

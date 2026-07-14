@@ -436,9 +436,11 @@ public:
     void rotate(unsigned int object_idx, unsigned int instance_idx, unsigned int volume_idx, const Transform3d &overwrite_tran);
     //BBS: add partplate related logic
     void notify_instance_update(int object_idx, int instance_idx);
+    // Public escape hatch: invalidate the cached selection bounding boxes
+    void mark_bounding_boxes_dirty() { set_bounding_boxes_dirty(); }
     // BBS
     EMode get_volume_selection_mode(){ return m_volume_selection_mode;}
-    void set_volume_selection_mode(EMode mode) { if (!m_volume_selection_locked) m_volume_selection_mode = mode; }
+    void  set_volume_selection_mode(EMode mode);
     void lock_volume_selection_mode() { m_volume_selection_locked = true; }
     void unlock_volume_selection_mode() { m_volume_selection_locked = false; }
 

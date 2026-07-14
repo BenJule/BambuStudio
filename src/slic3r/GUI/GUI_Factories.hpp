@@ -151,12 +151,13 @@ private:
     void        append_menu_item_reload_from_disk(wxMenu* menu);
     void        append_menu_item_replace_with_stl(wxMenu* menu);
     void        append_menu_item_change_extruder(wxMenu* menu);
-    void        append_menu_item_set_visible(wxMenu* menu);
+    void        append_menu_items_assembly_steps(wxMenu* menu);
     void        append_menu_item_delete(wxMenu* menu);
     void        append_menu_item_delete_all_cutter(wxMenu *menu);
     void        append_menu_item_scale_selection_to_fit_print_volume(wxMenu* menu);
     void        append_menu_items_convert_unit(wxMenu* menu); // Add "Conver/Revert..." menu items (from/to inches/meters) after "Reload From Disk"
     void        append_menu_items_flush_options(wxMenu* menu);
+    void        append_menu_item_link_copies_as_instances(wxMenu *menu);
     void        append_menu_item_merge_to_multipart_object(wxMenu *menu);
     void        append_menu_item_merge_to_single_object(wxMenu* menu);
     void        append_menu_item_merge_parts_to_single_part(wxMenu *menu);
@@ -166,7 +167,7 @@ private:
     void        append_menu_item_edit_text(wxMenu *menu);
     void        append_menu_item_edit_svg(wxMenu *menu);
 
-    //void        append_menu_items_instance_manipulation(wxMenu *menu);
+    void        append_menu_items_instance_manipulation(wxMenu *menu);
     //void        update_menu_items_instance_manipulation(MenuType type);
     //BBS add bbl menu item
     void        append_menu_item_clone(wxMenu* menu);

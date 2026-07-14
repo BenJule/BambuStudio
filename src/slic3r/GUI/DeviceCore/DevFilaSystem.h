@@ -59,6 +59,7 @@ public:
     std::string              nozzle_temp_min;
     std::string              xcam_info;
     std::string              uuid;
+    std::string              tray_id_name;
     DevFilaColorType         ctype = DevFilaColorType::CTYPE_SINGLE;
     float                    k        = 0.0f; // k range: 0 ~ 0.5
     float                    n        = 0.0f; // k range: 0.6 ~ 2.0
@@ -69,6 +70,7 @@ public:
     bool            is_exists = false;
     int             hold_count = 0;
     int             remain = 0;         // filament remain: 0 ~ 100
+    int             remain_g = -1;      // accurate remaining weight in grams; -1 means not edited / not provided by firmware
 
     std::optional<int>                      current_extruder_id;// the ams is used on the extruder currently
     std::set<int>                           binded_extruder_set;// the ams can be used on the binded extruders
