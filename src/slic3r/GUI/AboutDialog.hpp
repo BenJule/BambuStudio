@@ -8,7 +8,9 @@
 #include "GUI_Utils.hpp"
 #include "wxExtensions.hpp"
 
-namespace Slic3r { 
+class wxWebView;
+
+namespace Slic3r {
 namespace GUI {
 
 class AboutDialogLogo : public wxPanel
@@ -54,6 +56,23 @@ private:
 
 
 
+// Modal dialog that embeds the live contributor network
+// (resources/web/contribute/index.html) in a WebView. Light/Dark is driven by
+// BambuStudio via a ?theme= URL parameter; the page has no theme switch itself.
+class ContributorDialog : public DPIDialog
+{
+public:
+    ContributorDialog(wxWindow *parent = nullptr);
+    ~ContributorDialog() {}
+
+protected:
+    void on_dpi_changed(const wxRect &suggested_rect) override;
+
+private:
+    wxWebView *m_webview { nullptr };
+};
+
+
 class AboutDialog : public DPIDialog
 {
     ScalableBitmap  m_logo_bitmap;
@@ -66,11 +85,12 @@ public:
 
 protected:
     void on_dpi_changed(const wxRect &suggested_rect) override;
-    
+
 private:
     void onLinkClicked(wxHtmlLinkEvent &event);
     void onCloseDialog(wxEvent &);
     void onCopyrightBtn(wxEvent &);
+    void onContributorBtn(wxEvent &);
     void onCopyToClipboard(wxEvent&);
 };
 
