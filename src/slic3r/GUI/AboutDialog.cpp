@@ -7,8 +7,13 @@
 #include "MainFrame.hpp"
 #include "format.hpp"
 #include "Widgets/Button.hpp"
+#include "Widgets/WebView.hpp"
 
 #include <wx/clipbrd.h>
+#include <wx/webview.h>
+
+#include <algorithm>
+#include <boost/filesystem.hpp>
 
 namespace Slic3r {
 namespace GUI {
@@ -405,9 +410,22 @@ AboutDialog::AboutDialog()
     button_portions->SetCornerRadius(FromDIP(12));
     button_portions->SetMinSize(wxSize(FromDIP(120), FromDIP(24)));
 
+    //Add "Contributor" button (opens the live contributor network) next to the license button
+    Button* button_contributor = new Button(this, _L("Contributor"));
+    button_contributor->SetBackgroundColor(report_bg);
+    button_contributor->SetBorderColor(report_bd);
+    button_contributor->SetTextColor(report_text);
+    button_contributor->SetFont(Label::Body_12);
+    button_contributor->SetCornerRadius(FromDIP(12));
+    button_contributor->SetMinSize(wxSize(FromDIP(120), FromDIP(24)));
+
+    wxBoxSizer *copyright_button_hor = new wxBoxSizer(wxHORIZONTAL);
+    copyright_button_hor->Add(button_contributor, 0, wxRIGHT, FromDIP(10));
+    copyright_button_hor->Add(button_portions, 0, 0, 0);
+
     wxBoxSizer *copyright_button_ver = new wxBoxSizer(wxVERTICAL);
     copyright_button_ver->Add( 0, 0, 0, wxTOP, FromDIP(10));
-    copyright_button_ver->Add(button_portions, 0, wxALL,0);
+    copyright_button_ver->Add(copyright_button_hor, 0, wxALL, 0);
 
     copyright_hor_sizer->AddStretchSpacer();
     copyright_hor_sizer->Add(copyright_button_ver, 0, wxRIGHT, FromDIP(20));
@@ -415,6 +433,7 @@ AboutDialog::AboutDialog()
     ver_sizer->Add(copyright_hor_sizer, 0, wxEXPAND ,0);
     ver_sizer->Add( 0, 0, 0, wxTOP, FromDIP(30));
     button_portions->Bind(wxEVT_BUTTON, &AboutDialog::onCopyrightBtn, this);
+    button_contributor->Bind(wxEVT_BUTTON, &AboutDialog::onContributorBtn, this);
 
     wxGetApp().UpdateDlgDarkUI(this);
 	SetSizer(main_sizer);
@@ -462,6 +481,48 @@ void AboutDialog::onCopyrightBtn(wxEvent &)
 {
     CopyrightsDialog dlg;
     dlg.ShowModal();
+}
+
+void AboutDialog::onContributorBtn(wxEvent &)
+{
+    ContributorDialog dlg(this);
+    dlg.ShowModal();
+}
+
+// -----------------------------------------
+// ContributorDialog
+// -----------------------------------------
+ContributorDialog::ContributorDialog(wxWindow *parent)
+    : DPIDialog(parent != nullptr ? parent : static_cast<wxWindow *>(wxGetApp().mainframe),
+                wxID_ANY, _L("Contributors"), wxDefaultPosition, wxDefaultSize,
+                wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
+{
+    std::string icon_path = (boost::format("%1%/images/BambuStudioTitle.ico") % resources_dir()).str();
+    SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
+
+    wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
+
+    // Build a file:// URL to the bundled page and hand BambuStudio's current
+    // theme to it (the page has no theme switch of its own).
+    std::string url = (boost::filesystem::path(resources_dir()) / "web/contribute/index.html").make_preferred().string();
+    std::replace(url.begin(), url.end(), '\\', '/');
+    url = "file:///" + url + (wxGetApp().dark_mode() ? "?theme=dark" : "?theme=light");
+
+    m_webview = WebView::CreateWebView(this, from_u8(url));
+    sizer->Add(m_webview, 1, wxEXPAND, 0);
+
+    SetSizer(sizer);
+    SetMinSize(wxSize(FromDIP(760), FromDIP(560)));
+    SetSize(wxSize(FromDIP(960), FromDIP(720)));
+    wxGetApp().UpdateDlgDarkUI(this);
+    Layout();
+    CenterOnParent();
+}
+
+void ContributorDialog::on_dpi_changed(const wxRect &suggested_rect)
+{
+    Fit();
+    Refresh();
 }
 
 void AboutDialog::onCopyToClipboard(wxEvent&)
