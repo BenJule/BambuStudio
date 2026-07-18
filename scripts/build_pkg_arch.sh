@@ -1,100 +1,120 @@
 #!/bin/bash
-# Build an Arch Linux .pkg.tar.zst from the already-compiled build/package/ directory.
-# Run after BuildLinux.sh -s has completed.
+# Build a pacman (.pkg.tar.zst) package from the already-compiled build/package/
+# directory (Arch Linux). Mirrors scripts/build_deb.sh; run after BuildLinux.sh -s.
+# fpm's pacman target is used so packaging works as root (makepkg refuses root).
 set -e
 
 ROOT=$(dirname "$(readlink -f "$0")")/..
 
 BASE=$(grep 'set(SLIC3R_VERSION_BASE' "$ROOT/version.inc" | cut -d '"' -f2)
-if [ -z "$BASE" ]; then
+if [ -n "$BASE" ]; then
+    COUNT=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo "0")
+    VERSION="${BASE}.${COUNT}"
+else
+    VERSION=$(grep 'set(SLIC3R_VERSION ' "$ROOT/version.inc" | cut -d '"' -f2)
+fi
+if [ -z "$VERSION" ]; then
     echo "Error: could not read version from version.inc" >&2
     exit 1
 fi
-COUNT=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo "0")
-VERSION="${BASE}.${COUNT}"
 
-ARCH=$(uname -m)
-APPDIR="$ROOT/build/package"
 PKGNAME="bambustudio"
-PKGDIR="$ROOT/build/pkgbuild"
+ARCH="x86_64"
+APPDIR="$ROOT/build/package"
+PKGDIR="$ROOT/build/${PKGNAME}-pkgroot"
+OUTFILE="$ROOT/build/${PKGNAME}-${VERSION}-1-${ARCH}.pkg.tar.zst"
 
 if [ ! -f "$APPDIR/bin/bambu-studio" ]; then
     echo "Error: build/package/bin/bambu-studio not found." >&2
-    echo "Run './BuildLinux.sh -sf' first." >&2
+    echo "Run './BuildLinux.sh -s' first." >&2
     exit 1
 fi
 
-echo "Building .pkg.tar.zst for BambuStudio ${VERSION}..."
+SUDO=""
+[ "$(id -u)" -ne 0 ] && SUDO="sudo"
+
+if ! command -v fpm >/dev/null 2>&1; then
+    echo "Installing fpm..."
+    $SUDO pacman -Sy --needed --noconfirm ruby gcc make fakeroot
+    export PATH="$PATH:$(ruby -e 'print Gem.user_dir')/bin:/usr/bin/core_perl"
+    # Ruby 3.4 dropped erb from the default gems; fpm needs it explicitly.
+    gem install --user-install --no-document erb fpm
+fi
+export PATH="$PATH:$(ruby -e 'print Gem.user_dir')/bin"
+
+echo "Building pacman package for BambuStudio ${VERSION}..."
 rm -rf "$PKGDIR"
-# Use a staging dir OUTSIDE of pkg/ — makepkg clears pkg/<pkgname>/ before
-# calling package(), so pre-populating that path would leave it empty.
-STAGING="$PKGDIR/staging"
-mkdir -p "$STAGING/usr/bin"
-mkdir -p "$STAGING/usr/lib/${PKGNAME}"
-mkdir -p "$STAGING/usr/share/applications"
-for SIZE in 32x32 128x128 192x192; do
-    mkdir -p "$STAGING/usr/share/icons/hicolor/${SIZE}/apps"
-done
+mkdir -p "$PKGDIR"
 
-install -m 755 "$APPDIR/bin/bambu-studio" "$STAGING/usr/lib/${PKGNAME}/"
-find "$APPDIR/bin" -name "*.so*" -exec install -m 755 {} "$STAGING/usr/lib/${PKGNAME}/" \;
-cp -r "$APPDIR/resources" "$STAGING/usr/lib/${PKGNAME}/"
+mkdir -p "$PKGDIR/usr/bin"
+mkdir -p "$PKGDIR/usr/lib/$PKGNAME/bin"
+mkdir -p "$PKGDIR/usr/share/applications"
+mkdir -p "$PKGDIR/usr/share/icons/hicolor/192x192/apps"
+mkdir -p "$PKGDIR/usr/share/icons/hicolor/128x128/apps"
+mkdir -p "$PKGDIR/usr/share/icons/hicolor/32x32/apps"
 
-cat > "$STAGING/usr/bin/${PKGNAME}" << 'WRAPPER'
+cp "$APPDIR/bin/bambu-studio" "$PKGDIR/usr/lib/$PKGNAME/bin/"
+
+find "$APPDIR/bin" -name "*.so*" \
+    ! -name "libgtk*"     ! -name "libgdk*"      ! -name "libgdk-pixbuf*" \
+    ! -name "libglib*"    ! -name "libgobject*"   ! -name "libgio*" \
+    ! -name "libgmodule*" ! -name "libgthread*" \
+    ! -name "libX*"       ! -name "libxcb*"       ! -name "libxkbcommon*" \
+    ! -name "libwayland*" \
+    ! -name "libdbus*"    ! -name "libudev*"      \
+    ! -name "libsecret*"  ! -name "libfontconfig*" \
+    ! -name "libfreetype*" ! -name "libpango*"    ! -name "libcairo*" \
+    ! -name "libatk*"     ! -name "libharfbuzz*"  \
+    -exec cp {} "$PKGDIR/usr/lib/$PKGNAME/" \;
+
+cp -r "$APPDIR/resources" "$PKGDIR/usr/lib/$PKGNAME/"
+
+cat > "$PKGDIR/usr/bin/$PKGNAME" <<'WRAPPER'
 #!/bin/bash
-export LD_LIBRARY_PATH="/usr/lib/bambustudio${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-exec /usr/lib/bambustudio/bambu-studio "$@"
+export LD_LIBRARY_PATH="/usr/lib/bambustudio${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec /usr/lib/bambustudio/bin/bambu-studio "$@"
 WRAPPER
-chmod 755 "$STAGING/usr/bin/${PKGNAME}"
+chmod 755 "$PKGDIR/usr/bin/$PKGNAME"
 
-sed 's|^Exec=.*|Exec=/usr/bin/'"${PKGNAME}"' %U|' \
+sed 's|^Exec=.*|Exec=/usr/bin/bambustudio %U|' \
     "$APPDIR/BambuStudio.desktop" \
-    > "$STAGING/usr/share/applications/${PKGNAME}.desktop"
+    > "$PKGDIR/usr/share/applications/$PKGNAME.desktop"
 
-for SIZE in 32x32 128x128 192x192; do
-    SRC="$APPDIR/usr/share/icons/hicolor/${SIZE}/apps/BambuStudio.png"
-    DST="$STAGING/usr/share/icons/hicolor/${SIZE}/apps/${PKGNAME}.png"
-    [ -f "$SRC" ] && install -m 644 "$SRC" "$DST"
+for SIZE in 192x192 128x128 32x32; do
+    SRC="$APPDIR/usr/share/icons/hicolor/$SIZE/apps/BambuStudio.png"
+    DST="$PKGDIR/usr/share/icons/hicolor/$SIZE/apps/$PKGNAME.png"
+    [ -f "$SRC" ] && cp "$SRC" "$DST"
 done
 
-# Write PKGBUILD — package() copies from our staging dir into makepkg's pkgdir
-STAGING_ABS="$(realpath "$STAGING")"
-cat > "$PKGDIR/PKGBUILD" << EOF
-pkgname=${PKGNAME}
-pkgver=${VERSION//-/_}
-pkgrel=1
-pkgdesc="BambuStudio 3D printing slicer"
-arch=('${ARCH}')
-url="https://bambulab.com"
-license=('AGPL3')
-depends=('gtk3' 'glib2' 'dbus' 'libsecret' 'webkit2gtk-4.1' 'libxkbcommon' 'mesa')
-# !debug: don't split a separate -debug package; !strip: keep the already-built
-# binaries intact (stripping here would split debug symbols out into a tiny
-# second package and the upload step could pick the wrong one).
-options=('!debug' '!strip')
-
-package() {
-    cp -r "${STAGING_ABS}/." "\${pkgdir}/"
-}
+POST=$(mktemp)
+cat > "$POST" <<'EOF'
+#!/bin/bash
+update-desktop-database /usr/share/applications 2>/dev/null || true
+gtk-update-icon-cache /usr/share/icons/hicolor 2>/dev/null || true
 EOF
 
-cd "$PKGDIR"
-# makepkg refuses to run as root. In the GitHub Actions container we run as root,
-# so create a temporary unprivileged user and run makepkg as that user.
-if [[ $EUID -eq 0 ]]; then
-    useradd -m builduser 2>/dev/null || true
-    chown -R builduser "$PKGDIR"
-    su builduser -c "cd '$PKGDIR' && makepkg --noextract --nodeps --nocheck -f" 2>&1
-else
-    makepkg --noextract --nodeps --nocheck -f 2>&1
-fi
+rm -f "$OUTFILE"
+fpm -s dir -t pacman -f \
+    --name "$PKGNAME" --version "$VERSION" --iteration 1 --architecture "$ARCH" \
+    --license "AGPL-3.0" --vendor "Bambu Lab" --url "https://bambulab.com" \
+    --category "Graphics" \
+    --description "BambuStudio 3D printing slicer.
+Supports Bambu Lab 3D printers. Based on PrusaSlicer." \
+    --depends gtk3 \
+    --depends webkit2gtk-4.1 \
+    --depends mesa \
+    --depends glu \
+    --depends dbus \
+    --depends libsecret \
+    --depends libxkbcommon \
+    --depends gstreamer \
+    --depends gst-plugins-base \
+    --depends gst-plugins-good \
+    --depends zenity \
+    --after-install "$POST" \
+    --after-remove "$POST" \
+    -C "$PKGDIR" -p "$OUTFILE" \
+    usr
 
-# Match only the main package (bambustudio-<version>), never bambustudio-debug-*.
-# The version always starts with a digit, so anchor the pattern on that.
-PKG=$(find "$PKGDIR" -name "${PKGNAME}-[0-9]*.pkg.tar.zst" ! -name "${PKGNAME}-debug-*" | head -1)
-if [ -z "$PKG" ]; then
-    echo "Error: no .pkg.tar.zst found after makepkg" >&2
-    exit 1
-fi
-cp "$PKG" "$ROOT/build/"
-echo "Created: $ROOT/build/$(basename "$PKG")"
+rm -f "$POST"
+echo "Created: $OUTFILE"
