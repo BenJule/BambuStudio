@@ -527,7 +527,7 @@ ContributorDialog::ContributorDialog(wxWindow *parent)
     // theme to it (the page has no theme switch of its own).
     std::string url = (boost::filesystem::path(resources_dir()) / "web/contribute/index.html").make_preferred().string();
     std::replace(url.begin(), url.end(), '\\', '/');
-    url = "file:///" + url + (wxGetApp().dark_mode() ? "?theme=dark" : "?theme=light");
+    url = "file://" + url + (wxGetApp().dark_mode() ? "?theme=dark" : "?theme=light");
 
     m_webview = WebView::CreateWebView(this, from_u8(url));
     sizer->Add(m_webview, 1, wxEXPAND, 0);
