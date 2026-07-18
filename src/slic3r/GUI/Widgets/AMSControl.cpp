@@ -372,6 +372,16 @@ void AMSControl::on_retry()
     post_event(wxCommandEvent(EVT_AMS_RETRY));
 }
 
+void AMSControl::dismiss_filament_hint(const std::string& ams_id, const std::string& slot_id)
+{
+    auto it = m_ams_item_list.find(ams_id);
+    if (it == m_ams_item_list.end() || !it->second) return;
+    auto libs = it->second->get_can_lib_list();
+    auto lib_it = libs.find(slot_id);
+    if (lib_it != libs.end() && lib_it->second)
+        lib_it->second->set_new_filament_hint(false);
+}
+
 AMSControl::~AMSControl()
 {
     if (m_ams_dry_ctr_win) {
@@ -1121,6 +1131,7 @@ void AMSControl::UpdateAms(const std::string   &series_name,
             }
         }
 
+
         for (auto ams_prv : m_ams_preview_list) {
             std::string id = ams_prv.second->get_ams_id();
             auto item = m_ams_item_list.find(id);
@@ -1694,8 +1705,8 @@ void AMSControl::SetAmsStep(std::string ams_id, std::string canid, int extruder_
     }
 
     bool in_same_page = ams->IsShown() && (ams->get_parent_book_index() == ams->get_parent_book()->GetSelection());/*ams->IsShown() maybe wrong*/
-    const auto& pos = ams->get_panel_pos();
-    const auto& left = (pos == AMSPanelPos::LEFT_PANEL);
+    auto pos = ams->get_panel_pos();
+    bool left = (pos == AMSPanelPos::LEFT_PANEL);
     const auto& model = ams->get_ams_model();
     auto length = -1;
     auto in_pair = IsInSlotPair(ams_id);
@@ -1753,6 +1764,9 @@ void AMSControl::SetAmsStep(std::string ams_id, std::string canid, int extruder_
         } else if (model == DevAmsType::AMS_LITE) {
             length = 206;
             in_same_page = true;
+            // AMS_LITE_MIXED on the right
+            left = false;
+            pos = AMSPanelPos::RIGHT_PANEL;
         }
     }
 
@@ -1827,7 +1841,7 @@ void AMSControl::on_filament_load(wxCommandEvent &event)
     const auto& filament_id = get_filament_id(m_current_ams, GetCurrentCan(m_current_ams));
     if (filament_id.empty())
     {
-        MessageDialog msg_dlg(nullptr, _L("Filament type is unknown which is required to perform this action. Please set target filament's informations."),
+        MessageDialog msg_dlg(nullptr, _L("Filament type is unknown which is required to perform this action. Please set target filament's information."),
                               wxEmptyString, wxICON_WARNING | wxOK);
         msg_dlg.ShowModal();
         return;

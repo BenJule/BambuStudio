@@ -4400,9 +4400,6 @@ void TabFilament::build()
             else if (opt_key == "nozzle_temperature_initial_layer") {
                 m_config_manipulation.check_nozzle_temperature_initial_layer_range(&filament_config);
             }
-            else if (opt_key == "chamber_temperatures") {
-                m_config_manipulation.check_chamber_temperature(&filament_config);
-            }
 
             on_value_change(opt_key, value);
         };
@@ -6505,6 +6502,23 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection* presets /*= nullptr
 {
     if (presets == nullptr) presets = m_presets;
 
+    // The unsaved-changes dialog builds its list of modified options from the options searcher,
+    // which is filtered to the current view mode. In Simple mode that hides modified advanced
+    // options, so they would be silently dropped when transferring changes to another preset.
+    // Temporarily rebuild the searcher at comAdvanced so all modified options are compared and
+    // transferable, then restore it to the current view mode on the way out.
+    //
+    // We reuse the global (sidebar) searcher on purpose rather than a local instance: the
+    // searcher only turns a config option into a displayable row if it has a group/category,
+    // and that group/category map is filled incrementally by the live settings tabs (see
+    // OptionsSearcher::add_key). A freshly constructed local searcher would have an empty map
+    // and therefore build an empty tree. The RAII guard guarantees the view-mode searcher is
+    // restored on every exit path (cancel / save / transfer / force).
+    struct SearcherModeGuard {
+        ~SearcherModeGuard() { wxGetApp().sidebar().update_searcher(); }
+    } searcher_mode_guard;
+    wxGetApp().sidebar().update_searcher(comAdvanced);
+
     UnsavedChangesDialog dlg(m_type, presets, new_printer_name, no_transfer);
 
     auto handle_save_action = [&dlg, this, presets]() {
@@ -7844,7 +7858,7 @@ void Tab::sync_excluder()
         }
     }
     if (config_to_apply.empty()) {
-        MessageDialog md(wxGetApp().plater(), _L("No modifications need to be copied."), _L("Copy paramters"), wxICON_INFORMATION | wxOK);
+        MessageDialog md(wxGetApp().plater(), _L("No modifications need to be copied."), _L("Copy parameters"), wxICON_INFORMATION | wxOK);
         md.ShowModal();
         return;
     }
@@ -7852,7 +7866,7 @@ void Tab::sync_excluder()
     std::string pt = m_preset_bundle->printers.get_edited_preset().get_printer_type(m_preset_bundle);
     std::string active_nozzle_name = DevPrinterConfigUtil::get_toolhead_display_name(pt, active_index, ToolHeadComponent::Nozzle, ToolHeadNameCase::LowerCase);
     std::string other_nozzle_name  = DevPrinterConfigUtil::get_toolhead_display_name(pt, 1 - active_index, ToolHeadComponent::Nozzle, ToolHeadNameCase::LowerCase);
-    wxString title  = wxString::Format(_L("Modify paramters of %s"), _L(active_nozzle_name));
+    wxString title  = wxString::Format(_L("Modify parameters of %s"), _L(active_nozzle_name));
     wxString header = wxString::Format(_L("Do you want to modify the following parameters of the %s to that of the %s?"),
                                        _L(active_nozzle_name), _L(other_nozzle_name));
     UnsavedChangesDialog dlg(title, header, &config_origin, from_index, dest_index, active_index == 0, active_nozzle);

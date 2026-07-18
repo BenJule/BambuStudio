@@ -10,6 +10,8 @@
 #include "MTUtils.hpp"
 #include "TriangleMeshSlicer.hpp"
 #include "TriangleSelector.hpp"
+#include "AABBTreeIndirect.hpp"
+#include <queue>
 
 #include "Format/AMF.hpp"
 #include "Format/svg.hpp"
@@ -26,6 +28,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/nowide/iostream.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 #include "SVG.hpp"
 #include <Eigen/Dense>
@@ -111,6 +116,7 @@ Model& Model::assign_copy(const Model &rhs)
     this->m_assembly_tree_json_str  = rhs.m_assembly_tree_json_str;
     this->m_assembly_steps_tree_data = rhs.m_assembly_steps_tree_data;
     this->m_assembly_steps_json_str = rhs.m_assembly_steps_json_str;
+    this->m_assembly_model_json_str = rhs.m_assembly_model_json_str;
     this->texture_mesh = rhs.texture_mesh;
 
     return *this;
@@ -167,6 +173,7 @@ Model& Model::assign_copy(Model &&rhs)
     this->m_assembly_tree_json_str   = std::move(rhs.m_assembly_tree_json_str);
     this->m_assembly_steps_tree_data = std::move(rhs.m_assembly_steps_tree_data);
     this->m_assembly_steps_json_str  = std::move(rhs.m_assembly_steps_json_str);
+    this->m_assembly_model_json_str  = std::move(rhs.m_assembly_model_json_str);
 
     return *this;
 }
@@ -230,7 +237,7 @@ Model Model::read_from_step(const std::string&                                  
             goto _finished;
         }
     }
-    
+
     status = step_file.mesh(&model, is_cb_cancel, is_split_compound, linear_defletion, angle_defletion);
 
 _finished:
@@ -1066,6 +1073,30 @@ std::string Model::get_backup_path()
     {
         auto pid = get_current_pid();
         boost::filesystem::path parent_path(temporary_dir());
+        // Guard against a system temp dir that is low on free space — most often a
+        // small RAM-backed tmpfs /tmp on Linux, which a multi-GB multi-colour
+        // G-code export can overflow (surfaced to the user as "Is the disk full?").
+        // When the temp volume is nearly full, fall back to a folder on the
+        // user-data volume (always on real disk) if it offers materially more room.
+        // Best-effort only: any filesystem error leaves the default temp dir in place.
+        try {
+            namespace fs = boost::filesystem;
+            const boost::uintmax_t min_free  = boost::uintmax_t(2) << 30; // 2 GiB headroom
+            const boost::uintmax_t temp_free = fs::space(parent_path).available;
+            if (temp_free < min_free && !data_dir().empty()) {
+                fs::path fallback = fs::path(data_dir()) / "tmp";
+                fs::create_directories(fallback);
+                if (fs::space(fallback).available > temp_free) {
+                    BOOST_LOG_TRIVIAL(warning) << boost::format(
+                        "backup temp dir %1% low on space (%2% MiB free); falling back to %3%")
+                        % PathSanitizer::sanitize(parent_path) % (temp_free >> 20)
+                        % PathSanitizer::sanitize(fallback);
+                    parent_path = fallback;
+                }
+            }
+        } catch (const std::exception &ex) {
+            BOOST_LOG_TRIVIAL(warning) << "backup temp dir space check failed, using default: " << ex.what();
+        }
         std::time_t t = std::time(0);
         std::tm* now_time = std::localtime(&t);
         std::stringstream buf;
@@ -1172,7 +1203,9 @@ void Model::load_from(Model& model)
     m_assembly_tree_data       = model.m_assembly_tree_data;
     m_assembly_tree_json_str  = model.m_assembly_tree_json_str;
     m_assembly_steps_tree_data = model.m_assembly_steps_tree_data;
-    m_assembly_steps_json_str = model.m_assembly_steps_json_str;    model.design_info.reset();
+    m_assembly_steps_json_str = model.m_assembly_steps_json_str;
+    m_assembly_model_json_str = model.m_assembly_model_json_str;
+    model.design_info.reset();
     model.model_info.reset();
     model.profile_info.reset();
     model.calib_pa_pattern.reset();
@@ -2113,6 +2146,14 @@ void ModelObject::clone_for_cut(ModelObject **obj)
     (*obj)->input_file.clear();
 }
 
+const std::string &ModelVolume::ensure_part_guid(bool force) const
+{
+    // Lazily assign a stable identity used for cross-model (prepare <-> assembly) part mapping.
+    if (m_part_guid.empty() || force)
+        m_part_guid = boost::uuids::to_string(boost::uuids::random_generator()());
+    return m_part_guid;
+}
+
 bool ModelVolume::is_the_only_one_part() const
 {
     if (m_type != ModelVolumeType::MODEL_PART)
@@ -2696,6 +2737,13 @@ void ModelObject::split(ModelObjectPtrs* new_objects)
                 if (new_vol->mmu_segmentation_facets.timestamp() == volume->mmu_segmentation_facets.timestamp())
                     new_vol->mmu_segmentation_facets.reset(); // BBS: let next assign take effect
                 new_vol->mmu_segmentation_facets.assign(volume->mmu_segmentation_facets);
+
+                // Splitting a multi-volume object is a 1:1 move of each volume into its own object: the
+                // geometry is unchanged, so the part keeps its identity. Carry over the assembly GUIDs
+                // (add_volume's new-mesh ctor does not copy them) so the assembly view, which froze the
+                // pre-split state, still resolves these parts by part_guid and is not disturbed.
+                new_vol->set_part_guid(volume->part_guid());
+                new_vol->set_assembly_src_guid(volume->assembly_src_guid());
             }
 
             // BBS: clear volume's config, as we already set them into object
@@ -2762,9 +2810,21 @@ ModelObjectPtrs ModelObject::merge_volumes(std::vector<int>& vol_indeces)
 
 #if 1
     TriangleMesh mesh;
+    // BBS: preserve painting across the merge. its_merge() appends faces in
+    // order (only vertex indices are offset), so face f of the merged mesh maps
+    // exactly to the captured per-part triangles below. Capture before
+    // reset_mesh() empties the source volumes.
+    std::vector<std::string> merged_supported, merged_seam, merged_mmu, merged_fuzzy;
     for (int i : vol_indeces) {
         auto volume = volumes[i];
         if (!volume->mesh().empty()) {
+            const size_t nf = volume->mesh().its.indices.size();
+            for (size_t f = 0; f < nf; ++f) {
+                merged_supported.emplace_back(volume->supported_facets.get_triangle_as_string((int)f));
+                merged_seam.emplace_back(volume->seam_facets.get_triangle_as_string((int)f));
+                merged_mmu.emplace_back(volume->mmu_segmentation_facets.get_triangle_as_string((int)f));
+                merged_fuzzy.emplace_back(volume->fuzzy_skin_facets.get_triangle_as_string((int)f));
+            }
             const auto volume_matrix = volume->get_matrix();
             TriangleMesh mesh_(volume->mesh());
             mesh_.transform(volume_matrix, true);
@@ -2784,6 +2844,13 @@ ModelObjectPtrs ModelObject::merge_volumes(std::vector<int>& vol_indeces)
 #endif
 
     ModelVolume* vol = upper->add_volume(mesh);
+    // BBS: re-apply the painting captured above onto the merged volume.
+    for (size_t f = 0; f < merged_mmu.size() && f < mesh.its.indices.size(); ++f) {
+        if (!merged_supported[f].empty()) vol->supported_facets.set_triangle_from_string((int)f, merged_supported[f]);
+        if (!merged_seam[f].empty())      vol->seam_facets.set_triangle_from_string((int)f, merged_seam[f]);
+        if (!merged_mmu[f].empty())       vol->mmu_segmentation_facets.set_triangle_from_string((int)f, merged_mmu[f]);
+        if (!merged_fuzzy[f].empty())     vol->fuzzy_skin_facets.set_triangle_from_string((int)f, merged_fuzzy[f]);
+    }
     for (int i = 0; i < volumes.size();i++) {
         if (std::find(vol_indeces.begin(), vol_indeces.end(), i) != vol_indeces.end()) {
             vol->name = "Merged Parts";
@@ -3124,6 +3191,106 @@ void ModelVolume::reset_extra_facets() {
     this->mmu_segmentation_facets.reset();
 }
 
+// ---- BBS: best-effort paint re-projection across mesh-rebuilding ops ----------
+// Walk a TriangleSelector's split tree for source face s; return the first
+// non-NONE leaf state (collapses sub-triangle painting to the dominant intent).
+static EnforcerBlockerType reproj_first_leaf(TriangleSelector &sel, int root_idx)
+{
+    const auto &tris = sel.get_triangles();
+    if (root_idx < 0 || root_idx >= (int)tris.size()) return EnforcerBlockerType::NONE;
+    std::queue<int> q;
+    q.push(root_idx);
+    while (!q.empty()) {
+        int i = q.front(); q.pop();
+        const auto &t = tris[i];
+        if (!t.valid()) continue;
+        if (!t.is_split()) {
+            if (t.get_state() != EnforcerBlockerType::NONE)
+                return t.get_state();
+        } else {
+            for (int c : t.children) if (c >= 0) q.push(c);
+        }
+    }
+    return EnforcerBlockerType::NONE;
+}
+
+// Per-face dominant state of one annotation layer over `mesh`.
+static void reproj_per_face_states(const TriangleMesh &mesh, const FacetsAnnotation &ann,
+                                   std::vector<EnforcerBlockerType> &out)
+{
+    out.assign(mesh.its.indices.size(), EnforcerBlockerType::NONE);
+    if (ann.empty() || mesh.its.indices.empty()) return;
+    TriangleSelector sel(mesh);
+    sel.deserialize(ann.get_data(), true);
+    for (int f = 0; f < (int)mesh.its.indices.size(); ++f)
+        out[f] = reproj_first_leaf(sel, f);
+}
+
+// Write per-face states onto `mesh`'s annotation layer (NONE entries skipped).
+static void reproj_apply_states(const TriangleMesh &mesh,
+                                const std::vector<EnforcerBlockerType> &states,
+                                FacetsAnnotation &out)
+{
+    out.reset();
+    bool any = false;
+    TriangleSelector sel(mesh);
+    const int n = std::min<int>((int)states.size(), (int)mesh.its.indices.size());
+    for (int f = 0; f < n; ++f) {
+        if (states[f] != EnforcerBlockerType::NONE) { sel.set_facet(f, states[f]); any = true; }
+    }
+    if (any) out.set(sel);
+}
+
+// Map each face of new_mesh to the nearest face of old_mesh (by centroid), then
+// transfer the four precomputed old per-face state vectors onto new annotations.
+static void reproj_transfer(const TriangleMesh &old_mesh, const TriangleMesh &new_mesh,
+                            const std::vector<EnforcerBlockerType> &o_sup,
+                            const std::vector<EnforcerBlockerType> &o_seam,
+                            const std::vector<EnforcerBlockerType> &o_mmu,
+                            const std::vector<EnforcerBlockerType> &o_fuzzy,
+                            FacetsAnnotation &d_sup, FacetsAnnotation &d_seam,
+                            FacetsAnnotation &d_mmu, FacetsAnnotation &d_fuzzy)
+{
+    d_sup.reset(); d_seam.reset(); d_mmu.reset(); d_fuzzy.reset();
+    if (old_mesh.its.indices.empty() || new_mesh.its.indices.empty()) return;
+    auto tree = AABBTreeIndirect::build_aabb_tree_over_indexed_triangle_set(
+        old_mesh.its.vertices, old_mesh.its.indices);
+    const int nf = (int)new_mesh.its.indices.size();
+    std::vector<EnforcerBlockerType> n_sup(nf, EnforcerBlockerType::NONE), n_seam = n_sup, n_mmu = n_sup, n_fuzzy = n_sup;
+    for (int f = 0; f < nf; ++f) {
+        const Vec3i &idx = new_mesh.its.indices[f];
+        Vec3f c = (new_mesh.its.vertices[idx[0]] + new_mesh.its.vertices[idx[1]] + new_mesh.its.vertices[idx[2]]) / 3.f;
+        size_t hit = size_t(-1);
+        Vec3f hp;
+        double d2 = AABBTreeIndirect::squared_distance_to_indexed_triangle_set(
+            old_mesh.its.vertices, old_mesh.its.indices, tree, c, hit, hp);
+        if (d2 < 0. || hit == size_t(-1) || hit >= o_sup.size()) continue;
+        n_sup[f]   = o_sup[hit];
+        n_seam[f]  = o_seam[hit];
+        n_mmu[f]   = o_mmu[hit];
+        n_fuzzy[f] = o_fuzzy[hit];
+    }
+    reproj_apply_states(new_mesh, n_sup,   d_sup);
+    reproj_apply_states(new_mesh, n_seam,  d_seam);
+    reproj_apply_states(new_mesh, n_mmu,   d_mmu);
+    reproj_apply_states(new_mesh, n_fuzzy, d_fuzzy);
+}
+
+void ModelVolume::set_mesh_keep_paint(TriangleMesh &&mesh_in)
+{
+    const TriangleMesh old_mesh = this->mesh(); // copy before replacing
+    std::vector<EnforcerBlockerType> o_sup, o_seam, o_mmu, o_fuzzy;
+    reproj_per_face_states(old_mesh, this->supported_facets,        o_sup);
+    reproj_per_face_states(old_mesh, this->seam_facets,             o_seam);
+    reproj_per_face_states(old_mesh, this->mmu_segmentation_facets, o_mmu);
+    reproj_per_face_states(old_mesh, this->fuzzy_skin_facets,       o_fuzzy);
+    this->set_mesh(std::move(mesh_in));
+    reproj_transfer(old_mesh, this->mesh(), o_sup, o_seam, o_mmu, o_fuzzy,
+                    this->supported_facets, this->seam_facets,
+                    this->mmu_segmentation_facets, this->fuzzy_skin_facets);
+}
+// ------------------------------------------------------------------------------
+
 ModelMaterial* ModelVolume::material() const
 {
     return this->object->get_model()->get_material(m_material_id);
@@ -3228,7 +3395,10 @@ std::vector<int> ModelVolume::get_extruders() const
 
     std::vector<int> volume_extruders = mmuseg_extruders;
     int volume_extruder_id = this->extruder_id();
-    if (m_mmuseg_extruders_has_0_extruder && volume_extruder_id > 0) {
+    // Slicing ignores MMU paint on non-model-part volumes (modifiers, etc.),
+    // so their volume extruder is always effective regardless of paint coverage.
+    bool paint_affects_slicing = this->is_model_part();
+    if ((!paint_affects_slicing || m_mmuseg_extruders_has_0_extruder) && volume_extruder_id > 0) {
         volume_extruders.push_back(volume_extruder_id);
     }
 
@@ -3499,10 +3669,19 @@ size_t ModelVolume::split(unsigned int max_extruders, float scale_det)
     const bool        src_assemble_initialized = this->is_assemble_initialized();
     const Transform3d src_assemble_matrix      = this->get_assemble_transformation().get_matrix();
     std::vector<std::string> tris_split_strs;
+    // BBS: also carry support/seam/fuzzy-skin painting across the split (the
+    // ships[] relationship maps each split face back to its source face).
+    std::vector<std::string> tris_sup_strs, tris_seam_strs, tris_fuzzy_strs;
     auto face_count = m_mesh->its.indices.size();
     tris_split_strs.reserve(face_count);
+    tris_sup_strs.reserve(face_count);
+    tris_seam_strs.reserve(face_count);
+    tris_fuzzy_strs.reserve(face_count);
     for (size_t i = 0; i < face_count; i++) {
         tris_split_strs.emplace_back(mmu_segmentation_facets.get_triangle_as_string(i));
+        tris_sup_strs.emplace_back(supported_facets.get_triangle_as_string(i));
+        tris_seam_strs.emplace_back(seam_facets.get_triangle_as_string(i));
+        tris_fuzzy_strs.emplace_back(fuzzy_skin_facets.get_triangle_as_string(i));
     }
     int last_all_mesh_face_count = 0;
     for (TriangleMesh &mesh : meshes) {
@@ -3516,6 +3695,7 @@ size_t ModelVolume::split(unsigned int max_extruders, float scale_det)
             this->invalidate_convex_hull_2d();
             // Assign a new unique ID, so that a new GLVolume will be generated.
             this->set_new_unique_id();
+            this->ensure_part_guid(true);
             // reset the source to disable reload from disk
             this->source = ModelVolume::Source();
 
@@ -3528,9 +3708,14 @@ size_t ModelVolume::split(unsigned int max_extruders, float scale_det)
             for (size_t i = 0; i < cur_face_count; i++) {
                 if (ships[idx].find(i) != ships[idx].end()) {
                     auto index = ships[idx][i];
-                    if (tris_split_strs[index].size() > 0) {
+                    if (tris_split_strs[index].size() > 0)
                         mmu_segmentation_facets.set_triangle_from_string(i, tris_split_strs[index]);
-                    }
+                    if (tris_sup_strs[index].size() > 0)
+                        supported_facets.set_triangle_from_string(i, tris_sup_strs[index]);
+                    if (tris_seam_strs[index].size() > 0)
+                        seam_facets.set_triangle_from_string(i, tris_seam_strs[index]);
+                    if (tris_fuzzy_strs[index].size() > 0)
+                        fuzzy_skin_facets.set_triangle_from_string(i, tris_fuzzy_strs[index]);
                 }
             }
         } else {
@@ -3539,13 +3724,22 @@ size_t ModelVolume::split(unsigned int max_extruders, float scale_det)
             for (size_t i = 0; i < new_mv->mesh_ptr()->its.indices.size(); i++) {
                 if (ships[idx].find(i) != ships[idx].end()) {
                     auto index = ships[idx][i];
-                    if (tris_split_strs[index].size() > 0) {
+                    if (tris_split_strs[index].size() > 0)
                         new_mv->mmu_segmentation_facets.set_triangle_from_string(i, tris_split_strs[index]);
-                    }
+                    if (tris_sup_strs[index].size() > 0)
+                        new_mv->supported_facets.set_triangle_from_string(i, tris_sup_strs[index]);
+                    if (tris_seam_strs[index].size() > 0)
+                        new_mv->seam_facets.set_triangle_from_string(i, tris_seam_strs[index]);
+                    if (tris_fuzzy_strs[index].size() > 0)
+                        new_mv->fuzzy_skin_facets.set_triangle_from_string(i, tris_fuzzy_strs[index]);
                 }
             }
         }
-        ModelVolume *cur_vol = this->object->volumes[ivolume];
+        ModelVolume *cur_vol = nullptr;
+        if (ivolume >= 0 && ivolume < this->object->volumes.size()) {
+            cur_vol = this->object->volumes[ivolume];
+        }
+        if (!cur_vol) { continue; }
         cur_vol->set_offset(Vec3d::Zero());
         // center_geometry_after_creation() recenters the sub-mesh's local origin by
         // its bbox center. Capture that shift so the inherited assemble transform can
@@ -3556,13 +3750,13 @@ size_t ModelVolume::split(unsigned int max_extruders, float scale_det)
         cur_vol->translate(offset);
         if (src_assemble_initialized)
             cur_vol->set_assemble_from_transform(src_assemble_matrix * Geometry::translation_transform(center_shift));
-        this->object->volumes[ivolume]->name = name + "_" + std::to_string(idx + 1);
+        cur_vol->name = name + "_" + std::to_string(idx + 1);
         //BBS: always set the extruder id the same as original
-        this->object->volumes[ivolume]->config.set("extruder", this->extruder_id());
-        //this->object->volumes[ivolume]->config.set("extruder", auto_extruder_id(max_extruders, extruder_counter));
-        this->object->volumes[ivolume]->m_is_splittable = 0;
+        cur_vol->config.set("extruder", this->extruder_id());
+        //cur_vol->config.set("extruder", auto_extruder_id(max_extruders, extruder_counter));
+        cur_vol->m_is_splittable = 0;
         if (this->is_text()) {
-            this->object->volumes[ivolume]->clear_text_info();
+            cur_vol->clear_text_info();
         }
         ++ idx;
         last_all_mesh_face_count += cur_face_count;

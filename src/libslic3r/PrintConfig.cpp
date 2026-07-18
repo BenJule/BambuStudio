@@ -501,7 +501,8 @@ static const t_config_enum_values s_keys_map_NozzleVolumeType = {
     { "Standard",  nvtStandard },
     { "High Flow", nvtHighFlow },
     { "TPU High Flow", nvtTPUHighFlow },
-    { "Hybrid", nvtHybrid}
+    { "Hybrid", nvtHybrid},
+    { "E3D High Flow", nvtE3DHighFlow }
 };
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(NozzleVolumeType)
 
@@ -1779,7 +1780,7 @@ void PrintConfigDef::init_fff_params()
     def->tooltip = L("Set special auxiliary cooling fan for the first certain layers.");
     def->sidetext = L("layers");
     def->min = 0;
-    def->max = 1000;
+    def->max = 100000;
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionInts { 1 });
 
@@ -1787,7 +1788,7 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Full fan speed at layer");
     def->tooltip = L("Auxiliary fan speed will be ramped up linearly from layer \"For the first\" to maximum at layer \"Full fan speed at layer\". \"Full fan speed at layer\" will be ignored if lower than \"For the first\", in which case the fan will be running at maximum allowed speed at layer \"For the first\" + 1.");
     def->min = 0;
-    def->max = 1000;
+    def->max = 100000;
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionInts { 0 });
 
@@ -1797,7 +1798,7 @@ void PrintConfigDef::init_fff_params()
                      "to get better build plate adhesion and used for auto cooling function");
     def->sidetext = L("layers");
     def->min = 0;
-    def->max = 1000;
+    def->max = 100000;
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionInts { 1 });
 
@@ -2165,7 +2166,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("enable_pressure_advance", coBools);
     def->label = L("Enable pressure advance");
-    def->tooltip = L("Enable pressure advance, auto calibration result will be overwriten once enabled. Useless for Bambu Printer");
+    def->tooltip = L("Enable pressure advance, auto calibration result will be overwritten once enabled. Useless for Bambu Printer");
     def->set_default_value(new ConfigOptionBools{ false });
 
     def = this->add("pressure_advance", coFloats);
@@ -3195,7 +3196,7 @@ void PrintConfigDef::init_fff_params()
     //               "\"full_fan_speed_layer\" will be ignored if lower than \"close_fan_the_first_x_layers\", in which case "
     //               "the fan will be running at maximum allowed speed at layer \"close_fan_the_first_x_layers\" + 1.");
     def->min = 0;
-    def->max = 1000;
+    def->max = 100000;
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionInts { 0 });
 
@@ -3724,7 +3725,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Extruders");
     def->tooltip = L("Filament to print internal sparse infill.");
     def->min = 0;
-    def->mode     = comDevelop;
+    def->mode     = comAdvanced;
     def->set_default_value(new ConfigOptionInt(0));
 
     def = this->add("sparse_infill_line_width", coFloat);
@@ -4356,7 +4357,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Extruders");
     def->tooltip = L("Filament to print walls");
     def->min = 0;
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(0));
 
     def = this->add("inner_wall_line_width", coFloat);
@@ -4643,10 +4644,12 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back(L("High Flow"));
     def->enum_values.push_back(L("Hybrid"));
     def->enum_values.push_back(L("TPU High Flow"));
+    def->enum_values.push_back(L("E3D High Flow"));
     def->enum_labels.push_back(L("Standard"));
     def->enum_labels.push_back(L("High Flow"));
     def->enum_labels.push_back(L("Hybrid"));
     def->enum_labels.push_back(L("TPU High Flow"));
+    def->enum_labels.push_back(L("E3D High Flow"));
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionEnumsGeneric{ NozzleVolumeType::nvtStandard });
 
@@ -4658,10 +4661,12 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back(L("High Flow"));
     def->enum_values.push_back(L("Hybrid"));
     def->enum_values.push_back(L("TPU High Flow"));
+    def->enum_values.push_back(L("E3D High Flow"));
     def->enum_labels.push_back(L("Standard"));
     def->enum_labels.push_back(L("High Flow"));
     def->enum_labels.push_back(L("Hybrid"));
     def->enum_labels.push_back(L("TPU High Flow"));
+    def->enum_labels.push_back(L("E3D High Flow"));
     def->mode = comDevelop;
     def->set_default_value(new ConfigOptionEnumsGeneric{ NozzleVolumeType::nvtStandard });
 
@@ -4712,10 +4717,12 @@ void PrintConfigDef::init_fff_params()
     def->enum_keys_map = &ConfigOptionEnum<NozzleVolumeType>::get_enum_values();
     def->enum_values.push_back(L("Standard"));
     def->enum_values.push_back(L("High Flow"));
-    def->enum_values.push_back("TPU High Flow");
+    def->enum_values.push_back(L("TPU High Flow"));
+    def->enum_values.push_back(L("E3D High Flow"));
     def->enum_labels.push_back(L("Standard"));
     def->enum_labels.push_back(L("High Flow"));
     def->enum_labels.push_back(L("TPU High Flow"));
+    def->enum_labels.push_back(L("E3D High Flow"));
     def->mode = comDevelop;
     def->set_default_value(new ConfigOptionEnumsGeneric{ NozzleVolumeType::nvtStandard });
 
@@ -5030,7 +5037,7 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Extruders");
     def->tooltip = L("Filament to print solid infill");
     def->min = 0;
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(0));
 
     def = this->add("internal_solid_infill_line_width", coFloat);
@@ -9838,6 +9845,11 @@ CLIMiscConfigDef::CLIMiscConfigDef()
     def->label = L("Autosave");
     def->tooltip = L("Automatically export current configuration to the specified file.");
 */
+
+    def = this->add("datadir", coString);
+    def->label = "Configuration data directory";
+    def->tooltip = "Use and store all program settings at the given directory instead of the default location.";
+    def->cli_params = "dir";
 
     def = this->add("outputdir", coString);
     def->label = "Output directory";

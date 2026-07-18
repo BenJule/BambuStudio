@@ -396,6 +396,10 @@ public:
 
     bool get_app_conf_exists() { return m_app_conf_exists; }
     void show_message_box(std::string msg) { wxMessageBox(msg); }
+    // BBS: warn before a mesh-rebuilding op (repair/simplify/smooth/boolean) that
+    // painting is transferred by best-effort approximation and may be imperfect.
+    // Returns true if the user chooses to continue.
+    bool confirm_mesh_paint_warning();
     EAppMode get_app_mode() const { return m_app_mode; }
     Slic3r::DeviceManager* getDeviceManager() { return m_device_manager; }
     bool                   is_blocking_printing(MachineObject *obj_ = nullptr);
@@ -636,7 +640,7 @@ public:
     wxString 		current_language_code_safe() const;
     bool            is_localized() const { return m_wxLocale->GetLocale() != "English"; }
 
-    void            open_preferences(size_t open_on_tab = 0, const std::string& highlight_option = std::string());
+    void            open_preferences();
 
     void            report_consent_common(bool agree, std::string scene, std::string formID);
     virtual bool OnExceptionInMainLoop();
