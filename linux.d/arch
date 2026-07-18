@@ -65,6 +65,26 @@ if [[ -n "$UPDATE_LIB" ]]
 then
     sudo pacman -Syu --noconfirm
     sudo pacman -S --noconfirm --needed ${REQUIRED_DEV_PACKAGES[@]}
+
+    # Arch's modern mesa no longer ships classic OSMesa, which BambuStudio links
+    # against (-lOSMesa). mesa-amber still provides it but conflicts with mesa, so
+    # pull libOSMesa (+ its libglapi dependency) out of the mesa-amber package
+    # without installing it.
+    if [ ! -e /usr/lib/libOSMesa.so ]; then
+        sudo pacman -Sw --noconfirm mesa-amber
+        AMBER=$(ls /var/cache/pacman/pkg/mesa-amber-*.pkg.tar.zst 2>/dev/null | head -1)
+        if [ -n "$AMBER" ]; then
+            TMP=$(mktemp -d)
+            sudo bsdtar -xf "$AMBER" -C "$TMP" usr/lib/libOSMesa.so.8.0.0 usr/lib/libglapi.so.0.0.0
+            sudo cp -a "$TMP"/usr/lib/libOSMesa.so.8.0.0 "$TMP"/usr/lib/libglapi.so.0.0.0 /usr/lib/
+            sudo ln -sf libOSMesa.so.8.0.0 /usr/lib/libOSMesa.so.8
+            sudo ln -sf libOSMesa.so.8    /usr/lib/libOSMesa.so
+            sudo ln -sf libglapi.so.0.0.0 /usr/lib/libglapi.so.0
+            sudo ln -sf libglapi.so.0     /usr/lib/libglapi.so
+            rm -rf "$TMP"
+        fi
+    fi
+
     echo -e "done\n"
     exit 0
 fi

@@ -49,6 +49,20 @@ done
 
 install -m 755 "$APPDIR/bin/bambu-studio" "$STAGING/usr/lib/${PKGNAME}/"
 find "$APPDIR/bin" -name "*.so*" -exec install -m 755 {} "$STAGING/usr/lib/${PKGNAME}/" \;
+
+# Bundle libOSMesa (+ its libglapi dependency). Arch's modern mesa no longer
+# ships classic OSMesa, which BambuStudio links against (-lOSMesa); linux.d/arch
+# extracts them from mesa-amber into /usr/lib during the dependency step, so pull
+# them into the package as well (the launcher sets LD_LIBRARY_PATH to this dir).
+for L in libOSMesa.so.8.0.0 libglapi.so.0.0.0; do
+    [ -e "/usr/lib/$L" ] && install -m 755 "/usr/lib/$L" "$STAGING/usr/lib/${PKGNAME}/"
+done
+(
+    cd "$STAGING/usr/lib/${PKGNAME}"
+    [ -e libOSMesa.so.8.0.0 ] && ln -sf libOSMesa.so.8.0.0 libOSMesa.so.8
+    [ -e libglapi.so.0.0.0 ]  && ln -sf libglapi.so.0.0.0  libglapi.so.0
+    true
+)
 cp -r "$APPDIR/resources" "$STAGING/usr/lib/${PKGNAME}/"
 
 cat > "$STAGING/usr/bin/${PKGNAME}" << 'WRAPPER'
