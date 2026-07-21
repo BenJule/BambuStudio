@@ -60,6 +60,13 @@ std::pair<bool, std::string> GLShadersManager::init()
         , { "ENABLE_ENVIRONMENT_MAP"sv }
 #endif // ENABLE_ENVIRONMENT_MAP
         );
+
+    // used to render objects in 3D editor with Phong shading
+    valid &= append_shader("phong", { glsl_version_prefix + "phong.vs", glsl_version_prefix + "phong.fs" }
+#if ENABLE_ENVIRONMENT_MAP
+        , { "ENABLE_ENVIRONMENT_MAP"sv }
+#endif // ENABLE_ENVIRONMENT_MAP
+    );
     // used to render variable layers heights in 3d editor
     valid &= append_shader("variable_layer_height", { glsl_version_prefix + "variable_layer_height.vs", glsl_version_prefix + "variable_layer_height.fs" });
     // used to render highlight contour around selected triangles inside the multi-material gizmo
@@ -96,6 +103,9 @@ std::pair<bool, std::string> GLShadersManager::init()
     valid &= append_shader("mainframe_composite", { glsl_version_prefix + "mainframe_composite.vs", glsl_version_prefix + "mainframe_composite.fs" });
 
     valid &= append_shader("fxaa", { glsl_version_prefix + "fxaa.vs", glsl_version_prefix + "fxaa.fs" });
+
+    // used to apply screen-space ambient occlusion
+    valid &= append_shader("ssao", { glsl_version_prefix + "ssao.vs", glsl_version_prefix + "ssao.fs" });
 
     valid &= append_shader("gaussian_blur33", { glsl_version_prefix + "gaussian_blur33.vs", glsl_version_prefix + "gaussian_blur33.fs" });
 

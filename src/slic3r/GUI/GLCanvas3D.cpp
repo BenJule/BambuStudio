@@ -2840,20 +2840,50 @@ void GLCanvas3D::render(bool only_init)
         }
     }
 
-    const bool off_screen_rendering_enabled = ogl_manager.is_fxaa_enabled();
+    const bool realistic_ssao_enabled =
+        m_canvas_type == ECanvasType::CanvasView3D &&
+        _get_current_render_stage() ==
+            GUI::ERenderPipelineStage::Normal &&
+        !m_gizmos.is_paint_gizmo() &&
+        OpenGLManager::get_gl_info()
+            .is_version_greater_or_equal_to(3, 1) &&
+        wxGetApp().app_config != nullptr &&
+        wxGetApp().app_config->get_bool(
+            SETTING_OPENGL_REALISTIC_MODE) &&
+        wxGetApp().app_config->get_bool(
+            SETTING_OPENGL_REALISTIC_PHONG) &&
+        wxGetApp().app_config->get_bool(
+            SETTING_OPENGL_PHONG_SSAO);
 
-    if (m_picking_enabled && EPickingEffect::Silhouette == picking_effect) {
+    const bool off_screen_rendering_enabled =
+        ogl_manager.is_fxaa_enabled() ||
+        realistic_ssao_enabled;
+
+    if (m_picking_enabled &&
+        EPickingEffect::Silhouette == picking_effect) {
         _render_silhouette_effect();
     }
 
     std::string write_to_framebuffer_name{};
+
     if (off_screen_rendering_enabled) {
         write_to_framebuffer_name = "mainframe";
-        OpenGLManager::FrameBufferModifier main_frame(ogl_manager, write_to_framebuffer_name, ogl_manager.get_msaa_type());
+
+        OpenGLManager::FrameBufferModifier main_frame(
+            ogl_manager,
+            write_to_framebuffer_name,
+            ogl_manager.get_msaa_type());
+
+        main_frame.set_depth_texture(
+            realistic_ssao_enabled);
     }
     else {
-        write_to_framebuffer_name = OpenGLManager::s_back_frame;
-        OpenGLManager::FrameBufferModifier main_frame(ogl_manager, write_to_framebuffer_name);
+        write_to_framebuffer_name =
+            OpenGLManager::s_back_frame;
+
+        OpenGLManager::FrameBufferModifier main_frame(
+            ogl_manager,
+            write_to_framebuffer_name);
     }
 
 #if ENABLE_RENDER_PICKING_PASS
@@ -2944,7 +2974,15 @@ void GLCanvas3D::render(bool only_init)
     _render_selection_sidebar_hints();
     _render_current_gizmo();
 
-    _rebuild_postprocessing_pipeline(p_ogl_manager, write_to_framebuffer_name, OpenGLManager::s_back_frame, viewport[2], viewport[3]);
+    _rebuild_postprocessing_pipeline(
+        p_ogl_manager,
+        write_to_framebuffer_name,
+        OpenGLManager::s_back_frame,
+        viewport[2],
+        viewport[3],
+        realistic_ssao_enabled,
+        static_cast<float>(camera.get_near_z()),
+        static_cast<float>(camera.get_far_z()));
 
 #if ENABLE_RENDER_PICKING_PASS
     }
@@ -7541,7 +7579,15 @@ void GLCanvas3D::render_thumbnail_framebuffer(const std::shared_ptr<OpenGLManage
     if (thumbnail_params.post_processing_enabled) {
          // fxaa pass
         write_to_framebuffer_name = "thumbnail_fb_aa";
-        _rebuild_postprocessing_pipeline(p_ogl_manager, thumbnail_fb_name, write_to_framebuffer_name, w, h);
+        _rebuild_postprocessing_pipeline(
+            p_ogl_manager,
+            thumbnail_fb_name,
+            write_to_framebuffer_name,
+            w,
+            h,
+            false,
+            0.0f,
+            0.0f);
          // end fxaa pass
     }
 
@@ -8722,13 +8768,48 @@ void GLCanvas3D::_render_objects(GLVolumeCollection &cur_volumes, GLVolumeCollec
     else
         cur_volumes.set_show_sinking_contours(!m_gizmos.is_hiding_instances());
 
-    const auto& shader = wxGetApp().get_shader("gouraud");
+    const GUI::ERenderPipelineStage render_pipeline_stage = _get_current_render_stage();
+
+    const bool realistic_view_supported =
+        OpenGLManager::get_gl_info()
+            .is_version_greater_or_equal_to(3, 1);
+
+    const bool realistic_view_allowed =
+        realistic_view_supported &&
+        m_canvas_type == ECanvasType::CanvasView3D &&
+        render_pipeline_stage == GUI::ERenderPipelineStage::Normal &&
+        !in_paint_gizmo &&
+        !m_gizmos.is_paint_gizmo();
+
+    const bool realistic_view_requested =
+        wxGetApp().app_config != nullptr &&
+        wxGetApp().app_config->get_bool(
+            SETTING_OPENGL_REALISTIC_MODE);
+
+    const bool phong_requested =
+        wxGetApp().app_config != nullptr &&
+        wxGetApp().app_config->get_bool(
+            SETTING_OPENGL_REALISTIC_PHONG);
+
+    auto shader = wxGetApp().get_shader("gouraud");
+    bool using_phong_shader = false;
+
+    if (realistic_view_allowed &&
+        realistic_view_requested &&
+        phong_requested) {
+        const auto& phong_shader =
+            wxGetApp().get_shader("phong");
+
+        if (phong_shader) {
+            shader = phong_shader;
+            using_phong_shader = true;
+        }
+    }
     ECanvasType canvas_type = this->m_canvas_type;
     std::array<float, 4> body_color  = canvas_type == ECanvasType::CanvasAssembleView ? std::array<float, 4>({1.0f, 1.0f, 0.0f, 1.0f}) ://yellow
                                                                                         std::array<float, 4>({1.0f, 1.0f, 1.0f, 1.0f});//white
     bool                 partly_inside_enable = canvas_type == ECanvasType::CanvasAssembleView ? false : true;
     auto printable_height_option = GUI::wxGetApp().preset_bundle->printers.get_edited_preset().config.option<ConfigOptionFloatsNullable>("extruder_printable_height");
-    const GUI::ERenderPipelineStage render_pipeline_stage = _get_current_render_stage();
 
     const auto& camera = get_active_camera();
     std::vector<std::array<float, 4>> colors = get_active_colors();
@@ -8736,6 +8817,9 @@ void GLCanvas3D::_render_objects(GLVolumeCollection &cur_volumes, GLVolumeCollec
         if (GUI::ERenderPipelineStage::Silhouette != render_pipeline_stage)
         {
             wxGetApp().bind_shader(shader);
+
+            if (using_phong_shader)
+                shader->set_uniform("enable_ssao", false);
         }
         switch (type)
         {
@@ -11867,7 +11951,15 @@ void GLCanvas3D::_init_fullscreen_mesh()
     s_full_screen_mesh.init_from(std::move(geo));
 }
 
-void GLCanvas3D::_rebuild_postprocessing_pipeline(const std::shared_ptr<OpenGLManager>& p_ogl_manager, const std::string& input_framebuffer_name, std::string& output_framebuffer_name, uint32_t width, uint32_t height)
+void GLCanvas3D::_rebuild_postprocessing_pipeline(
+    const std::shared_ptr<OpenGLManager>& p_ogl_manager,
+    const std::string& input_framebuffer_name,
+    std::string& output_framebuffer_name,
+    uint32_t width,
+    uint32_t height,
+    bool enable_ssao,
+    float z_near,
+    float z_far)
 {
     if (!p_ogl_manager) {
         return;
@@ -11882,6 +11974,128 @@ void GLCanvas3D::_rebuild_postprocessing_pipeline(const std::shared_ptr<OpenGLMa
     _init_fullscreen_mesh();
 
     uint32_t output_texture_id = UINT32_MAX;
+
+    if (enable_ssao) {
+        {
+            OpenGLManager::FrameBufferModifier ssao_frame(
+                ogl_manager,
+                "ssaoframe",
+                EMSAAType::Disabled);
+
+            ssao_frame.set_width(width)
+                .set_height(height);
+        }
+
+        glsafe(::glDisable(GL_DEPTH_TEST));
+        glsafe(::glDisable(GL_BLEND));
+
+        const auto& input_frame_buffer =
+            ogl_manager.get_frame_buffer(
+                input_framebuffer_name);
+
+        if (input_frame_buffer) {
+            const uint32_t color_texture_id =
+                input_frame_buffer->get_color_texture();
+
+            const uint32_t depth_texture_id =
+                input_frame_buffer->get_depth_texture();
+
+            if (color_texture_id != UINT32_MAX &&
+                depth_texture_id != UINT32_MAX) {
+                const auto& ssao_shader =
+                    p_ogl_manager->get_shader("ssao");
+
+                if (ssao_shader) {
+                    p_ogl_manager->bind_shader(
+                        ssao_shader);
+
+                    constexpr int color_stage = 0;
+                    constexpr int depth_stage = 1;
+
+                    ssao_shader->set_uniform(
+                        "color_texture",
+                        color_stage);
+
+                    glsafe(::glActiveTexture(
+                        GL_TEXTURE0 + color_stage));
+
+                    glsafe(::glBindTexture(
+                        GL_TEXTURE_2D,
+                        color_texture_id));
+
+                    ssao_shader->set_uniform(
+                        "depth_texture",
+                        depth_stage);
+
+                    glsafe(::glActiveTexture(
+                        GL_TEXTURE0 + depth_stage));
+
+                    glsafe(::glBindTexture(
+                        GL_TEXTURE_2D,
+                        depth_texture_id));
+
+                    const std::array<float, 2>
+                        inverse_texture_size{
+                            1.0f /
+                                static_cast<float>(width),
+                            1.0f /
+                                static_cast<float>(height)
+                        };
+
+                    ssao_shader->set_uniform(
+                        "inv_tex_size",
+                        inverse_texture_size);
+
+                    ssao_shader->set_uniform(
+                        "z_near",
+                        z_near);
+
+                    ssao_shader->set_uniform(
+                        "z_far",
+                        z_far);
+
+                    s_full_screen_mesh.render_geometry();
+
+                    p_ogl_manager->unbind_shader();
+
+                    glsafe(::glActiveTexture(
+                        GL_TEXTURE0));
+
+                    const auto& ssao_frame_buffer =
+                        ogl_manager.get_frame_buffer(
+                            "ssaoframe");
+
+                    if (ssao_frame_buffer) {
+                        output_texture_id =
+                            ssao_frame_buffer
+                                ->get_color_texture();
+
+                        if (output_texture_id ==
+                            UINT32_MAX) {
+                            BOOST_LOG_TRIVIAL(error)
+                                << "Invalid SSAO output texture.";
+                        }
+                    }
+                    else {
+                        BOOST_LOG_TRIVIAL(error)
+                            << "Invalid SSAO framebuffer.";
+                    }
+                }
+                else {
+                    BOOST_LOG_TRIVIAL(error)
+                        << "Invalid SSAO shader.";
+                }
+            }
+            else {
+                BOOST_LOG_TRIVIAL(error)
+                    << "Invalid SSAO input textures.";
+            }
+        }
+        else {
+            BOOST_LOG_TRIVIAL(error)
+                << "Invalid SSAO input framebuffer.";
+        }
+    }
     if (ogl_manager.is_fxaa_enabled()) {
         if (!offscreen_rendering) {
             {
@@ -11903,47 +12117,92 @@ void GLCanvas3D::_rebuild_postprocessing_pipeline(const std::shared_ptr<OpenGLMa
         glsafe(::glDisable(GL_DEPTH_TEST));
         glsafe(::glDisable(GL_BLEND));
 
-        const auto& p_main_frame_buffer = ogl_manager.get_frame_buffer(offscreen_rendering ? input_framebuffer_name : "fxaaframe_temp");
-        if (p_main_frame_buffer) {
-            output_texture_id = p_main_frame_buffer->get_color_texture();
-            if (p_main_frame_buffer->is_texture_valid(output_texture_id)) {
-                const auto& p_fxaa_shader = p_ogl_manager->get_shader("fxaa");
-                if (p_fxaa_shader) {
-                    p_ogl_manager->bind_shader(p_fxaa_shader);
+        if (output_texture_id == UINT32_MAX) {
+            const auto& p_main_frame_buffer =
+                ogl_manager.get_frame_buffer(
+                    offscreen_rendering
+                        ? input_framebuffer_name
+                        : "fxaaframe_temp");
 
-                    const int stage = 0;
-                    p_fxaa_shader->set_uniform("u_sampler", stage);
-                    glsafe(::glActiveTexture(GL_TEXTURE0 + stage));
-                    glsafe(::glBindTexture(GL_TEXTURE_2D, output_texture_id));
+            if (p_main_frame_buffer) {
+                output_texture_id =
+                    p_main_frame_buffer
+                        ->get_color_texture();
+            }
+        }
 
-                    const std::array<float, 4> viewport_size{ static_cast<float>(width), static_cast<float>(height), 1.0f / width, 1.0f / height };
-                    p_fxaa_shader->set_uniform("u_viewport_size", viewport_size);
+        if (output_texture_id != UINT32_MAX) {
+            const auto& p_fxaa_shader =
+                p_ogl_manager->get_shader("fxaa");
 
-                    s_full_screen_mesh.render_geometry();
+            if (p_fxaa_shader) {
+                p_ogl_manager->bind_shader(
+                    p_fxaa_shader);
 
-                    p_ogl_manager->unbind_shader();
+                const int stage = 0;
 
-                    const auto& p_fxaa_frame_buffer = p_ogl_manager->get_frame_buffer("fxaaframe");
-                    if (p_fxaa_frame_buffer) {
-                        output_texture_id = p_fxaa_frame_buffer->get_color_texture();
-                        if (!p_fxaa_frame_buffer->is_texture_valid(output_texture_id)) {
-                            BOOST_LOG_TRIVIAL(error) << "Invalid fxaa texture.";
-                        }
-                    }
-                    else {
-                        BOOST_LOG_TRIVIAL(error) << "Invalid fxaa framebuffer.";
+                p_fxaa_shader->set_uniform(
+                    "u_sampler",
+                    stage);
+
+                glsafe(::glActiveTexture(
+                    GL_TEXTURE0 + stage));
+
+                glsafe(::glBindTexture(
+                    GL_TEXTURE_2D,
+                    output_texture_id));
+
+                const std::array<float, 4>
+                    viewport_size{
+                        static_cast<float>(width),
+                        static_cast<float>(height),
+                        1.0f /
+                            static_cast<float>(width),
+                        1.0f /
+                            static_cast<float>(height)
+                    };
+
+                p_fxaa_shader->set_uniform(
+                    "u_viewport_size",
+                    viewport_size);
+
+                s_full_screen_mesh.render_geometry();
+
+                p_ogl_manager->unbind_shader();
+
+                const auto& p_fxaa_frame_buffer =
+                    p_ogl_manager->get_frame_buffer(
+                        "fxaaframe");
+
+                if (p_fxaa_frame_buffer) {
+                    output_texture_id =
+                        p_fxaa_frame_buffer
+                            ->get_color_texture();
+
+                    if (output_texture_id ==
+                        UINT32_MAX) {
+                        BOOST_LOG_TRIVIAL(error)
+                            << "Invalid fxaa texture.";
                     }
                 }
                 else {
-                    BOOST_LOG_TRIVIAL(error) << "Invalid fxaa shader.";
+                    BOOST_LOG_TRIVIAL(error)
+                        << "Invalid fxaa framebuffer.";
                 }
             }
             else {
-                BOOST_LOG_TRIVIAL(error) << "Invalid main frame texture. Failed to composite main frame.";
+                BOOST_LOG_TRIVIAL(error)
+                    << "Invalid fxaa shader.";
             }
         }
+        else {
+            BOOST_LOG_TRIVIAL(error)
+                << "Invalid main frame texture. "
+                   "Failed to composite main frame.";
+        }
     }
-    else if (offscreen_rendering) {
+    else if (offscreen_rendering &&
+             output_texture_id == UINT32_MAX) {
         const auto& p_main_frame_buffer = ogl_manager.get_frame_buffer(input_framebuffer_name);
         if (p_main_frame_buffer) {
             output_texture_id = p_main_frame_buffer->get_color_texture();

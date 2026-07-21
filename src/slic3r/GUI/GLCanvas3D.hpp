@@ -1467,7 +1467,15 @@ private:
     static bool is_volume_in_plate_boundingbox(const GLVolume &v, int plate_idx, const BoundingBoxf3 &plate_build_volume);
     static void _init_fullscreen_mesh();
 
-    static void _rebuild_postprocessing_pipeline(const std::shared_ptr<OpenGLManager>& p_ogl_manager, const std::string& input_framebuffer_name, std::string& output_framebuffer_name, uint32_t width, uint32_t height);
+    static void _rebuild_postprocessing_pipeline(
+        const std::shared_ptr<OpenGLManager>& p_ogl_manager,
+        const std::string& input_framebuffer_name,
+        std::string& output_framebuffer_name,
+        uint32_t width,
+        uint32_t height,
+        bool enable_ssao,
+        float z_near,
+        float z_far);
 
     static void _render_thumbnail_internal(ThumbnailData& thumbnail_data, const ThumbnailsParams& thumbnail_params, PartPlateList& partplate_list, ModelObjectPtrs& model_objects,
         const GLVolumeCollection& volumes, std::vector<std::array<float, 4>>& extruder_colors,

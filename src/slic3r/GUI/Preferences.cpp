@@ -1509,6 +1509,20 @@ wxWindow *PreferencesDialog::create_3d_tab()
     auto item_zoom_to_mouse = create_item_checkbox(_L("Zoom to mouse position"), scrolled,
                                                    _L("Zoom in towards the mouse pointer's position in the 3D view, rather than the 2D window center."), 50, "zoom_to_mouse");
 
+    auto item_realistic_view = create_item_checkbox(
+        _L("Realistic view"),
+        scrolled,
+        _L("Use per-pixel Phong lighting in the 3D editor. Requires OpenGL 3.1 or newer. Preview, thumbnails, picking and painting tools remain unchanged."),
+        50,
+        SETTING_OPENGL_REALISTIC_MODE);
+
+    auto item_realistic_ssao = create_item_checkbox(
+        _L("Ambient occlusion (SSAO)"),
+        scrolled,
+        _L("Add subtle contact shadows to the realistic 3D editor view. Requires Realistic view and OpenGL 3.1 or newer."),
+        50,
+        SETTING_OPENGL_PHONG_SSAO);
+
     std::vector<wxString> assemble_view_preview_options = {_L("Auto"), _L("Open"), _L("Close")};
     auto                  enable_assemble_view_preview  = create_item_combobox(
         _L("Display overview"), scrolled, _L("Display overview"), "enable_assemble_view_preview", assemble_view_preview_options, {"Auto", "Open", "Close"},
@@ -1575,6 +1589,8 @@ wxWindow *PreferencesDialog::create_3d_tab()
     sizer->Add(item_tooltip_offset, flags);
     sizer->Add(item_toolbar_style, flags);
     sizer->Add(item_zoom_to_mouse, flags);
+    sizer->Add(item_realistic_view, flags);
+    sizer->Add(item_realistic_ssao, flags);
     sizer->Add(item_show_shells, flags);
 #if !BBL_RELEASE_TO_PUBLIC
     auto item_show_bvh_bounds = create_item_checkbox(_L("Show assembly BVH primary bounds"), scrolled, _L("Display the BVH primary bounding box wireframe in assembly view."), 50,
@@ -2014,6 +2030,11 @@ void PreferencesDialog::on_reset_preferences()
         "import_single_svg_and_split",
         "gamma_correct_in_import_obj",
         "enable_lod",
+        SETTING_OPENGL_REALISTIC_MODE,
+        SETTING_OPENGL_REALISTIC_PHONG,
+        SETTING_OPENGL_SHADING_MODEL,
+        SETTING_OPENGL_PHONG_BASIC_PLATE_SHADOWS,
+        SETTING_OPENGL_PHONG_SSAO,
         "enable_advanced_gcode_viewer_",
         "camera_fullscreen_active_monitor_only",
         "max_recent_count",
