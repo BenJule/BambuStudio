@@ -1449,14 +1449,25 @@ GUI_App::GUI_App()
     }
     this->init_download_path();
 
-#if defined(__WXOSX__)
+#if defined(__WXOSX__) || defined(__linux__)
     m_macos_pending_pump_timer.Bind(wxEVT_TIMER, &GUI_App::on_macos_pending_pump, this);
+#endif
+#if defined(__linux__)
+    // On Wayland/KWin (and XWayland under a Wayland compositor) the GTK run loop
+    // does not reliably wake to dispatch wx pending events after popups/dialogs
+    // are posted (e.g. the Filament Manager "Read from AMS" dialog and its
+    // Brand/Material/Color dropdowns), so they only appear after an unrelated
+    // input event (moving the mouse). Arm the same pending-event pump macOS uses,
+    // for the whole session; the HasPendingEvents() guard keeps it a no-op on the
+    // healthy path.
+    if (!m_macos_pending_pump_timer.IsRunning())
+        m_macos_pending_pump_timer.Start(30);
 #endif
 
     reset_to_active();
 }
 
-#if defined(__WXOSX__)
+#if defined(__WXOSX__) || defined(__linux__)
 void GUI_App::on_macos_pending_pump(wxTimerEvent& WXUNUSED(evt))
 {
     // STUDIO-18472: drain wx pending events ourselves. After the Filament Manager

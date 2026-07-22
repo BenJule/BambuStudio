@@ -271,7 +271,7 @@ private:
     bool            m_app_conf_exists{ false };
     EAppMode        m_app_mode{ EAppMode::Editor };
     bool            m_is_recreating_gui{ false };
-#if defined(__WXOSX__)
+#if defined(__WXOSX__) || defined(__linux__)
     // STUDIO-18472: after the Filament Manager WKWebView has churned (tab visit +
     // language-switch GUI rebuilds) macOS stops reliably waking the run loop to
     // dispatch wx pending events (wxQueueEvent / wxPostEvent). This strands
