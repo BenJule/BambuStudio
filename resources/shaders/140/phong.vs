@@ -11,7 +11,7 @@ struct SlopeDetection
 
 uniform mat4 view_model_matrix;
 uniform mat4 projection_matrix;
-uniform mat3 view_normal_matrix;
+uniform mat3 normal_matrix;
 uniform mat4 volume_world_matrix;
 uniform SlopeDetection slope;
 
@@ -36,7 +36,7 @@ out vec3 eye_position;
 void main()
 {
     // First transform the normal into camera space and normalize the result.
-    eye_normal = normalize(view_normal_matrix * v_normal);
+    eye_normal = normalize(normal_matrix * v_normal);
 
     vec4 position = view_model_matrix * vec4(v_position, 1.0);
     eye_position = position.xyz;
