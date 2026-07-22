@@ -1477,6 +1477,10 @@ private:
         float z_near,
         float z_far);
 
+    // Renders world-space normals of the opaque scene into a dedicated
+    // "normalframe" G-buffer that the SSAO post-processing pass samples.
+    void _render_normal_buffer(OpenGLManager& ogl_manager, uint32_t width, uint32_t height);
+
     static void _render_thumbnail_internal(ThumbnailData& thumbnail_data, const ThumbnailsParams& thumbnail_params, PartPlateList& partplate_list, ModelObjectPtrs& model_objects,
         const GLVolumeCollection& volumes, std::vector<std::array<float, 4>>& extruder_colors,
         const std::shared_ptr<GLShaderProgram>& shader,

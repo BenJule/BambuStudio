@@ -2974,6 +2974,10 @@ void GLCanvas3D::render(bool only_init)
     _render_selection_sidebar_hints();
     _render_current_gizmo();
 
+    if (realistic_ssao_enabled) {
+        _render_normal_buffer(ogl_manager, viewport[2], viewport[3]);
+    }
+
     _rebuild_postprocessing_pipeline(
         p_ogl_manager,
         write_to_framebuffer_name,
@@ -11951,6 +11955,60 @@ void GLCanvas3D::_init_fullscreen_mesh()
     s_full_screen_mesh.init_from(std::move(geo));
 }
 
+void GLCanvas3D::_render_normal_buffer(OpenGLManager& ogl_manager, uint32_t width, uint32_t height)
+{
+    if (0 == width || 0 == height)
+        return;
+
+    const auto& shader = wxGetApp().get_shader("normal");
+    if (!shader)
+        return;
+
+    // Bind (creating if needed) a non-MSAA G-buffer of the same size as the
+    // main frame. Binding it also resolves the previously bound MSAA main frame.
+    {
+        OpenGLManager::FrameBufferModifier normal_frame(ogl_manager, "normalframe", EMSAAType::Disabled);
+        normal_frame.set_width(width)
+            .set_height(height);
+    }
+
+    GLfloat prev_clear_color[4];
+    glsafe(::glGetFloatv(GL_COLOR_CLEAR_VALUE, prev_clear_color));
+
+    // Clear to the encoded world-up normal (0, 0, 1) so that background pixels
+    // do not introduce spurious occlusion.
+    glsafe(::glClearColor(0.5f, 0.5f, 1.0f, 1.0f));
+    glsafe(::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+    glsafe(::glEnable(GL_DEPTH_TEST));
+    glsafe(::glDisable(GL_BLEND));
+
+    wxGetApp().bind_shader(shader);
+
+    const auto& camera = get_active_camera();
+    const std::vector<std::array<float, 4>> colors = get_active_colors();
+
+    // Same opaque volume selection as the phong pass, so the normal G-buffer
+    // lines up per-pixel with the shaded color and depth buffers.
+    m_volumes.render(
+        GUI::ERenderPipelineStage::Normal,
+        GLVolumeCollection::ERenderType::Opaque,
+        false,
+        camera,
+        colors,
+        *m_model,
+        [this](const GLVolume& volume) {
+            return m_render_sla_auxiliaries || volume.composite_id.volume_id >= 0;
+        },
+        false,
+        { 1.0f, 1.0f, 1.0f, 1.0f },
+        false,
+        nullptr);
+
+    wxGetApp().unbind_shader();
+
+    glsafe(::glClearColor(prev_clear_color[0], prev_clear_color[1], prev_clear_color[2], prev_clear_color[3]));
+}
+
 void GLCanvas3D::_rebuild_postprocessing_pipeline(
     const std::shared_ptr<OpenGLManager>& p_ogl_manager,
     const std::string& input_framebuffer_name,
@@ -12033,6 +12091,31 @@ void GLCanvas3D::_rebuild_postprocessing_pipeline(
                     glsafe(::glBindTexture(
                         GL_TEXTURE_2D,
                         depth_texture_id));
+
+                    constexpr int normal_stage = 2;
+
+                    const auto& normal_frame_buffer =
+                        ogl_manager.get_frame_buffer(
+                            "normalframe");
+
+                    if (normal_frame_buffer) {
+                        const uint32_t normal_texture_id =
+                            normal_frame_buffer
+                                ->get_color_texture();
+
+                        if (normal_texture_id != UINT32_MAX) {
+                            ssao_shader->set_uniform(
+                                "normal_texture",
+                                normal_stage);
+
+                            glsafe(::glActiveTexture(
+                                GL_TEXTURE0 + normal_stage));
+
+                            glsafe(::glBindTexture(
+                                GL_TEXTURE_2D,
+                                normal_texture_id));
+                        }
+                    }
 
                     const std::array<float, 2>
                         inverse_texture_size{

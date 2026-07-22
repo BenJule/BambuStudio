@@ -104,6 +104,9 @@ std::pair<bool, std::string> GLShadersManager::init()
 
     valid &= append_shader("fxaa", { glsl_version_prefix + "fxaa.vs", glsl_version_prefix + "fxaa.fs" });
 
+    // renders world-space normals into a G-buffer consumed by the SSAO pass
+    valid &= append_shader("normal", { glsl_version_prefix + "normal.vs", glsl_version_prefix + "normal.fs" });
+
     // used to apply screen-space ambient occlusion
     valid &= append_shader("ssao", { glsl_version_prefix + "ssao.vs", glsl_version_prefix + "ssao.fs" });
 
