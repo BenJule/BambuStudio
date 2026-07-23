@@ -1523,6 +1523,13 @@ wxWindow *PreferencesDialog::create_3d_tab()
         50,
         SETTING_OPENGL_PHONG_SSAO);
 
+    auto item_plate_shadow = create_item_checkbox(
+        _L("Plate shadow"),
+        scrolled,
+        _L("Cast a shadow of the objects onto the build plate in the realistic 3D editor view. Requires Realistic view."),
+        50,
+        SETTING_OPENGL_PHONG_BASIC_PLATE_SHADOWS);
+
     std::vector<wxString> assemble_view_preview_options = {_L("Auto"), _L("Open"), _L("Close")};
     auto                  enable_assemble_view_preview  = create_item_combobox(
         _L("Display overview"), scrolled, _L("Display overview"), "enable_assemble_view_preview", assemble_view_preview_options, {"Auto", "Open", "Close"},
@@ -1591,6 +1598,7 @@ wxWindow *PreferencesDialog::create_3d_tab()
     sizer->Add(item_zoom_to_mouse, flags);
     sizer->Add(item_realistic_view, flags);
     sizer->Add(item_realistic_ssao, flags);
+    sizer->Add(item_plate_shadow, flags);
     sizer->Add(item_show_shells, flags);
 #if !BBL_RELEASE_TO_PUBLIC
     auto item_show_bvh_bounds = create_item_checkbox(_L("Show assembly BVH primary bounds"), scrolled, _L("Display the BVH primary bounding box wireframe in assembly view."), 50,
