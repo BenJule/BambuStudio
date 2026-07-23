@@ -2855,6 +2855,20 @@ void GLCanvas3D::render(bool only_init)
         wxGetApp().app_config->get_bool(
             SETTING_OPENGL_PHONG_SSAO);
 
+    const bool plate_shadow_enabled =
+        m_canvas_type == ECanvasType::CanvasView3D &&
+        _get_current_render_stage() ==
+            GUI::ERenderPipelineStage::Normal &&
+        !m_gizmos.is_paint_gizmo() &&
+        wxGetApp().app_config != nullptr &&
+        wxGetApp().app_config->get_bool(
+            SETTING_OPENGL_REALISTIC_MODE) &&
+        wxGetApp().app_config->get_bool(
+            SETTING_OPENGL_REALISTIC_PHONG) &&
+        wxGetApp().app_config->get_bool(
+            SETTING_OPENGL_PHONG_BASIC_PLATE_SHADOWS) &&
+        wxGetApp().get_shader("plate_shadow") != nullptr;
+
     const bool off_screen_rendering_enabled =
         ogl_manager.is_fxaa_enabled() ||
         realistic_ssao_enabled;
@@ -2931,6 +2945,8 @@ void GLCanvas3D::render(bool only_init)
             _render_bed(!camera.is_looking_downward(), show_axes);
         if (!no_partplate) //BBS: add outline logic
             _render_platelist(!camera.is_looking_downward(), only_current, only_body, hover_id, true, show_grid);
+        if (plate_shadow_enabled)
+            _render_plate_shadow(camera);
         _render_objects(m_volumes, GLVolumeCollection::ERenderType::Transparent, b_with_stencil_outline);
         _render_objects(m_paint_outline_volumes, GLVolumeCollection::ERenderType::Transparent, b_with_stencil_outline, true);
     }
@@ -11953,6 +11969,76 @@ void GLCanvas3D::_init_fullscreen_mesh()
     geo.add_triangle(0, 1, 2);
 
     s_full_screen_mesh.init_from(std::move(geo));
+}
+
+void GLCanvas3D::_render_plate_shadow(const Camera& camera)
+{
+    if (m_volumes.empty())
+        return;
+
+    const auto& shader = wxGetApp().get_shader("plate_shadow");
+    if (!shader)
+        return;
+
+    // Planar projection onto the plate plane (world z = 0) along the same world
+    // light direction the phong shader uses ("from above", slightly tilted).
+    const Vec3d to_light = Vec3d(-0.35, -0.35, 0.87).normalized();
+    const Vec3d l = -to_light; // direction the light travels (downwards)
+    Matrix4d flatten = Matrix4d::Identity();
+    flatten(0, 2) = -l.x() / l.z();
+    flatten(1, 2) = -l.y() / l.z();
+    flatten(2, 0) = 0.0;
+    flatten(2, 1) = 0.0;
+    flatten(2, 2) = 0.0;
+    flatten(2, 3) = 0.0;
+
+    const Matrix4d shadow_matrix =
+        camera.get_projection_matrix().matrix() *
+        camera.get_view_matrix().matrix() *
+        flatten;
+
+    wxGetApp().bind_shader(shader);
+    shader->set_uniform("shadow_matrix", shadow_matrix);
+    shader->set_uniform("shadow_color", std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 0.30f });
+
+    // Blend a single, uniform dark layer over the plate: the stencil keeps
+    // overlapping projected triangles from darkening the same pixel twice, depth
+    // testing lets the objects occlude their own footprint, and the polygon
+    // offset keeps the flattened geometry from z-fighting with the plate.
+    glsafe(::glEnable(GL_BLEND));
+    glsafe(::glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    glsafe(::glEnable(GL_DEPTH_TEST));
+    glsafe(::glDepthMask(GL_FALSE));
+    glsafe(::glEnable(GL_POLYGON_OFFSET_FILL));
+    glsafe(::glPolygonOffset(-1.0f, -1.0f));
+    glsafe(::glClearStencil(0));
+    glsafe(::glClear(GL_STENCIL_BUFFER_BIT));
+    glsafe(::glEnable(GL_STENCIL_TEST));
+    glsafe(::glStencilFunc(GL_EQUAL, 0, 0xFF));
+    glsafe(::glStencilOp(GL_KEEP, GL_KEEP, GL_INCR));
+
+    const std::vector<std::array<float, 4>> colors = get_active_colors();
+    m_volumes.render(
+        GUI::ERenderPipelineStage::Normal,
+        GLVolumeCollection::ERenderType::Opaque,
+        true, // disable cull face: project all faces, the stencil keeps one layer
+        camera,
+        colors,
+        *m_model,
+        [](const GLVolume& volume) {
+            return !volume.is_modifier && !volume.is_wipe_tower && volume.composite_id.volume_id >= 0;
+        },
+        false,
+        { 0.0f, 0.0f, 0.0f, 0.0f },
+        false,
+        nullptr);
+
+    glsafe(::glDisable(GL_STENCIL_TEST));
+    glsafe(::glDisable(GL_POLYGON_OFFSET_FILL));
+    glsafe(::glDepthMask(GL_TRUE));
+    glsafe(::glDisable(GL_BLEND));
+    glsafe(::glEnable(GL_CULL_FACE));
+    wxGetApp().unbind_shader();
 }
 
 void GLCanvas3D::_render_normal_buffer(OpenGLManager& ogl_manager, uint32_t width, uint32_t height)

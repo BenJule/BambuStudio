@@ -107,6 +107,9 @@ std::pair<bool, std::string> GLShadersManager::init()
     // renders world-space normals into a G-buffer consumed by the SSAO pass
     valid &= append_shader("normal", { glsl_version_prefix + "normal.vs", glsl_version_prefix + "normal.fs" });
 
+    // flattens objects onto the plate plane for the basic plate shadow
+    valid &= append_shader("plate_shadow", { glsl_version_prefix + "plate_shadow.vs", glsl_version_prefix + "plate_shadow.fs" });
+
     // used to apply screen-space ambient occlusion
     valid &= append_shader("ssao", { glsl_version_prefix + "ssao.vs", glsl_version_prefix + "ssao.fs" });
 

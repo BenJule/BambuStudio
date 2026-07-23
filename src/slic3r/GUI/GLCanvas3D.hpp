@@ -1481,6 +1481,10 @@ private:
     // "normalframe" G-buffer that the SSAO post-processing pass samples.
     void _render_normal_buffer(OpenGLManager& ogl_manager, uint32_t width, uint32_t height);
 
+    // Renders a planar projected shadow of the objects onto the plate plane
+    // (world z = 0) along the realistic-view light direction.
+    void _render_plate_shadow(const Camera& camera);
+
     static void _render_thumbnail_internal(ThumbnailData& thumbnail_data, const ThumbnailsParams& thumbnail_params, PartPlateList& partplate_list, ModelObjectPtrs& model_objects,
         const GLVolumeCollection& volumes, std::vector<std::array<float, 4>>& extruder_colors,
         const std::shared_ptr<GLShaderProgram>& shader,
