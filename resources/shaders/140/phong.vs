@@ -31,12 +31,17 @@ out float color_clip_plane_dot;
 out vec4 world_pos;
 out float world_normal_z;
 out vec3 eye_normal;
+out vec3 world_normal;
 out vec3 eye_position;
 
 void main()
 {
     // First transform the normal into camera space and normalize the result.
     eye_normal = normalize(normal_matrix * v_normal);
+
+    // World-space normal, used to anchor the diffuse key light to the scene
+    // (light "from above") instead of following the camera.
+    world_normal = mat3(volume_world_matrix) * v_normal;
 
     vec4 position = view_model_matrix * vec4(v_position, 1.0);
     eye_position = position.xyz;

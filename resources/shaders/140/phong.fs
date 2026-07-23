@@ -71,6 +71,7 @@ in float color_clip_plane_dot;
 in vec4 world_pos;
 in float world_normal_z;
 in vec3 eye_normal;
+in vec3 world_normal;
 in vec3 eye_position;
 
 out vec4 out_color;
@@ -216,12 +217,20 @@ void main()
     vec3 normal = normalize(eye_normal);
     vec3 view_dir = normalize(-eye_position);
 
-    float NdotL_top = max(dot(normal, LIGHT_TOP_DIR), 0.0);
+    // Diffuse key/fill lights are anchored to the world (Z-up), so the scene
+    // stays lit "from above" as the camera orbits instead of the light riding
+    // along with the camera. Specular/window highlights stay view-dependent,
+    // which is how real glossy highlights behave.
+    vec3 wnormal = normalize(world_normal);
+    const vec3 WORLD_LIGHT_TOP_DIR   = normalize(vec3(-0.35, -0.35, 0.87));
+    const vec3 WORLD_LIGHT_FRONT_DIR = normalize(vec3(0.0, -0.6, 0.8));
+
+    float NdotL_top = max(dot(wnormal, WORLD_LIGHT_TOP_DIR), 0.0);
     float diffuse = INTENSITY_AMBIENT + NdotL_top * LIGHT_TOP_DIFFUSE;
     vec3 half_top = normalize(LIGHT_TOP_DIR + view_dir);
     float specular = LIGHT_TOP_SPECULAR * pow(max(dot(normal, half_top), 0.0), LIGHT_TOP_SHININESS);
 
-    float NdotL_front = max(dot(normal, LIGHT_FRONT_DIR), 0.0);
+    float NdotL_front = max(dot(wnormal, WORLD_LIGHT_FRONT_DIR), 0.0);
     diffuse += NdotL_front * LIGHT_FRONT_DIFFUSE;
     vec3 half_front = normalize(LIGHT_FRONT_DIR + view_dir);
     specular += LIGHT_FRONT_SPECULAR * pow(max(dot(normal, half_front), 0.0), LIGHT_FRONT_SHININESS);
