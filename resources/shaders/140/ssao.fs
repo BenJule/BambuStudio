@@ -33,7 +33,7 @@ void main()
     float up_factor = clamp(normal_center.z * 1.5, 0.0, 1.0);
 
     // Adaptive radius in pixel space
-    int radius = int(mix(2.0, 4.0, center_depth / z_far));
+    int radius = int(mix(4.0, 7.0, center_depth / z_far));
 
     // Optimized sampling pattern
     const ivec2 offsets[12] = ivec2[](
@@ -72,10 +72,13 @@ void main()
             contribution = pow(contribution, 2.0);  // Steeper curve for sharper transition
         }
 
-        // Reduce occlusion on planar surfaces (similar normals)
+        // Reject occlusion on smooth/convex surfaces: if the neighbour normal is
+        // similar, the depth difference comes from surface curvature, not a real
+        // concave feature. Only keep occlusion where normals diverge (crevices,
+        // inside corners, contact with the plate).
         float normal_similarity = dot(normal_center, normal_sample);
-        float planar_factor = smoothstep(0.75, 0.95, normal_similarity);
-        contribution *= (1.0 - planar_factor * 0.6);
+        float planar_factor = smoothstep(0.55, 0.85, normal_similarity);
+        contribution *= (1.0 - planar_factor);
 
         occlusion += contribution;
         valid_samples++;
