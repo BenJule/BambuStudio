@@ -12,4 +12,4 @@ if(NOT DEFINED BBL_INTERNAL_TESTING)
 endif()
 
 # The fourth version segment is computed from the Git commit count.
-set(SLIC3R_VERSION_BASE "02.08.00")
+set(SLIC3R_VERSION_BASE "02.08.01")
