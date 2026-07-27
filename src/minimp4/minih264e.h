@@ -349,7 +349,7 @@ void H264E_set_vbv_state(
 #else
 #include <emmintrin.h>
 #endif
-#elif defined(__ARM_NEON) || defined(__aarch64__)
+#elif defined(__ARM_NEON) || defined(__aarch64__) || defined(_M_ARM64)
 #define H264E_ENABLE_NEON 1
 #include <arm_neon.h>
 #else
