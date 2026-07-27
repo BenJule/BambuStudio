@@ -37,6 +37,9 @@ class wxRect;
 namespace Slic3r {
 namespace GUI {
 
+// Implemented in GUI_Utils.cpp — GUI_App.hpp cannot be included here (circular).
+bool dark_mode_follow_system_enabled();
+
 inline int hex_to_int(const char c)
 {
     return (c >= '0' && c <= '9') ? int(c - '0') : (c >= 'A' && c <= 'F') ? int(c - 'A') + 10 : (c >= 'a' && c <= 'f') ? int(c - 'a') + 10 : -1;
@@ -201,12 +204,16 @@ public:
 
         this->Bind(wxEVT_SYS_COLOUR_CHANGED, [this](wxSysColourChangedEvent& event)
         {
-#ifndef __WINDOWS__
+#ifdef __WINDOWS__
+            if (dark_mode_follow_system_enabled()) {
                 update_dark_config();
                 on_sys_color_changed();
-                event.Skip();
-#endif // __WINDOWS__
-
+            }
+#else
+            update_dark_config();
+            on_sys_color_changed();
+#endif
+            event.Skip();
         });
 
         if (std::is_same<wxDialog, P>::value) {

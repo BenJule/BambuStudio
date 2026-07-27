@@ -240,7 +240,7 @@ void extend_default_config_length(DynamicPrintConfig& config, const DynamicPrint
     auto replace_nil_and_resize = [&](const std::string & key, int length){
         ConfigOption* raw_ptr = config.option(key);
         ConfigOptionVectorBase* opt_vec = static_cast<ConfigOptionVectorBase *>(raw_ptr);
-        if(set_nil_to_default && raw_ptr->is_nil() && defaults.has(key) && std::find(filament_extruder_override_keys.begin(), filament_extruder_override_keys.end(), key) == filament_extruder_override_keys.end()){
+        if(set_nil_to_default && raw_ptr->is_nil() && defaults.has(key) && !is_filament_extruder_override_key(key)){
             opt_vec->clear();
             opt_vec->resize(length, defaults.option(key));
         }
@@ -477,6 +477,10 @@ void Preset::normalize(DynamicPrintConfig &config)
     }
 
     handle_legacy_sla(config);
+
+    // Repair nil/invalid filament_max_volumetric_speed entries carried by corrupted/legacy
+    // project files, before they propagate NaN into slicing speeds (the -35791396 bug).
+    config.repair_nil_filament_max_volumetric_speed();
 }
 
 std::string Preset::remove_invalid_keys(DynamicPrintConfig &config, const DynamicPrintConfig &default_config)
@@ -665,7 +669,7 @@ bool Preset::save(DynamicPrintConfig* parent_config)
         {
             ConfigOption *opt_src = config.option(option);
             ConfigOption *opt_dst = temp_config.option(option, true);
-            if (opt_dst->is_scalar() || !(opt_dst->nullable()))
+            if (opt_dst->is_scalar() || !(opt_dst->nullable()) || is_filament_extruder_override_key(option))
                 opt_dst->set(opt_src);
             else {
                 ConfigOptionVectorBase* opt_vec_src = static_cast<ConfigOptionVectorBase*>(opt_src);
@@ -1048,7 +1052,7 @@ static std::vector<std::string> s_Preset_print_options {
     "ooze_prevention", "standby_temperature_delta", "interface_shells", "line_width", "initial_layer_line_width", "inner_wall_line_width",
     "outer_wall_line_width", "sparse_infill_line_width", "internal_solid_infill_line_width",
     "skin_infill_line_width","skeleton_infill_line_width",
-    "top_surface_line_width", "support_line_width", "infill_wall_overlap", "bridge_flow",
+    "top_surface_line_width", "support_line_width", "infill_wall_overlap", "bridge_flow", "counterbore_hole_bridging",
     "elefant_foot_compensation", "xy_contour_compensation", "xy_hole_compensation", "resolution", "enable_prime_tower", "prime_tower_enable_framework",
     "prime_tower_width", "prime_tower_brim_width", "prime_tower_skip_points","prime_tower_max_speed","enable_tower_interface_features",
     "prime_tower_rib_wall","prime_tower_extra_rib_length","prime_tower_rib_width","prime_tower_fillet_wall","prime_tower_infill_gap","prime_tower_lift_speed","prime_tower_lift_height",
@@ -1155,7 +1159,7 @@ static std::vector<std::string> s_Preset_printer_options {
     "silent_mode",
     // BBS
     "scan_first_layer", "wrapping_detection_layers", "wrapping_exclude_area", "machine_load_filament_time", "machine_unload_filament_time", "machine_pause_gcode", "template_custom_gcode","machine_hotend_change_time",
-    "nozzle_type","auxiliary_fan", "fan_direction", "nozzle_volume","upward_compatible_machine", "z_hop_types","support_chamber_temp_control","support_air_filtration","support_cooling_filter","cooling_filter_enabled","printer_structure","thumbnail_size",
+    "nozzle_type","auxiliary_fan", "fan_direction", "nozzle_volume","upward_compatible_machine", "z_hop_types","support_chamber_temp_control","support_air_filtration","support_cooling_filter","cooling_filter_enabled","printer_structure","farthest_point_timelapse","thumbnail_size",
     "best_object_pos", "head_wrap_detect_zone","printer_notes","print_in_clockwise",
     "enable_long_retraction_when_cut","long_retractions_when_cut","retraction_distances_when_cut",
     //OrcaSlicer
@@ -1573,7 +1577,7 @@ Preset* PresetCollection::get_preset_differed_for_save(Preset& preset)
         {
             ConfigOption *opt_src = preset.config.option(option);
             ConfigOption *opt_dst = temp_config.option(option, true);
-            if (opt_dst->is_scalar() || !(opt_dst->nullable()))
+            if (opt_dst->is_scalar() || !(opt_dst->nullable()) || is_filament_extruder_override_key(option))
                 opt_dst->set(opt_src);
             else {
                 ConfigOptionVectorBase* opt_vec_src = static_cast<ConfigOptionVectorBase*>(opt_src);

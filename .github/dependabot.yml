@@ -6,6 +6,10 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
     labels:
       - "dependencies"
     commit-message:
@@ -17,6 +21,10 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      device-page:
+        patterns:
+          - "*"
     labels:
       - "dependencies"
       - "javascript"
@@ -29,6 +37,10 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      web-e2e:
+        patterns:
+          - "*"
     labels:
       - "dependencies"
       - "javascript"

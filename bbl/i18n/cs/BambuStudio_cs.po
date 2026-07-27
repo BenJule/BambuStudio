@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Bambu Studio\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-01 09:40+0800\n"
+"POT-Creation-Date: 2026-06-25 17:06+0800\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Jakub Hencl <jakub.hencl@seznam.cz>\n"
 "Language-Team: \n"
@@ -1087,7 +1087,7 @@ msgstr "konektory jsou mimo řeznou konturu"
 msgid "connector is out of object"
 msgstr "konektor je mimo objekt"
 
-msgid "connectors is out of object"
+msgid "connectors are out of object"
 msgstr "konektory jsou mimo objekt"
 
 msgid "Some connectors are overlapped"
@@ -1279,13 +1279,13 @@ msgstr ""
 "vlastnost 2 byla nastavena jako vlastnost 1Funkce 1 byla resetována,\n"
 "funkce 2 se stala funkcí 1"
 
-msgid "Warning:please select Plane's feature."
+msgid "Warning: Please select a Plane feature."
 msgstr "Varování: Vyberte prosím vlastnost roviny."
 
-msgid "Warning:please select Point's or Circle's feature."
+msgid "Warning: Please select a Point or Circle feature."
 msgstr "Varování: Vyberte prosím vlastnost bodu nebo kružnice."
 
-msgid "Warning:please select two different mesh."
+msgid "Warning: Please select two different meshes."
 msgstr "Varování: vyberte prosím dvě různé sítě."
 
 msgid "Copy to clipboard"
@@ -1329,6 +1329,9 @@ msgstr "Překlopit podle plochy 2"
 
 msgid "Assemble"
 msgstr "Sestavit"
+
+msgid "Please exit the assembly guide before using this tool."
+msgstr ""
 
 msgid "Please confirm explosion ratio = 1 and select at least two volumes."
 msgstr "Potvrďte prosím, že poměr rozložení = 1, a vyberte alespoň dva objemy."
@@ -1538,31 +1541,31 @@ msgstr "Zapuštěná hloubka"
 msgid "Text Gap"
 msgstr "Odsazení textu"
 
-msgid "Warning:There is a mirror in the text matrix, and dragging it will completely regenerate it."
+msgid "Warning: There is a mirror in the text matrix, and dragging it will completely regenerate it."
 msgstr "Varování: Textová matice je zrcadlená; při přetažení bude zcela znovu vygenerována."
 
-msgid "Warning:Due to font upgrades,previous font may not necessarily be replaced successfully, and recommend you to modify the font."
+msgid "Warning: Due to font upgrades, previous font may not necessarily be replaced successfully. Please modify the font."
 msgstr "Varování: Kvůli aktualizaci písma nemusí být předchozí písmo úspěšně nahrazeno. Doporučujeme písmo upravit."
 
-msgid "Warning:create text fail."
+msgid "Warning: Text creation failed."
 msgstr "Varování: Text se nepodařilo vytvořit."
 
-msgid "Warning:text normal is error."
+msgid "Warning: Text normal has an error."
 msgstr "Varování: Normála textu je chybná."
 
-msgid "Warning:text normal has been reset."
+msgid "Warning: Text normal has been reset."
 msgstr "Varování: Normála textu byla obnovena."
 
-msgid "Warning:current text spacing is not very reasonable. If you continue editing, a more reasonable text spacing will be generated."
+msgid "Warning: Current text spacing is not optimal. If you continue editing, a more reasonable text spacing will be generated."
 msgstr "Varování: Aktuální rozestupy textu nejsou příliš vhodné. Pokud budete pokračovat v úpravách, rozestupy textu budou vygenerovány vhodněji."
 
-msgid "Warning:old matrix has at least two parameters: mirroring, scaling, and rotation. If you continue editing, it may not be correct. Please dragging text or cancel using current pose, save and reedit again."
-msgstr "Varování: Stará matice obsahuje alespoň dva parametry: zrcadlení, škálování a rotaci. Pokud budete pokračovat v úpravách, výsledek nemusí být správný. Přetáhněte text nebo zrušte použití aktuální polohy, uložte změny a poté upravujte znovu."
+msgid "Warning: Old matrix has at least two parameters: mirroring, scaling, and rotation. If you continue editing, it may not be correct. Please drag the text or cancel the current pose, save and reedit again."
+msgstr ""
 
-msgid "Error:Detecting an incorrect mesh id or an unknown error, regenerating text may result in incorrect outcomes.Please drag text,save it then reedit it again."
+msgid "Error: Detecting an incorrect mesh id or an unknown error, regenerating text may result in incorrect outcomes. Please drag text, save it then reedit it again."
 msgstr "Chyba: Bylo zjištěno nesprávné ID sítě nebo došlo k neznámé chybě. Opětovné generování textu může vést k nesprávným výsledkům. Přetáhněte text, uložte jej a poté jej znovu upravte."
 
-msgid "Warning:Due to functional upgrade, rotation information cannot be restored. Please drag or modify text,save it and reedit it will ok."
+msgid "Warning: Due to functional upgrade, rotation information cannot be restored. Please drag or modify text, save it and reedit it to fix the issue."
 msgstr "Varování: Kvůli aktualizaci funkce nelze obnovit informace o rotaci. Přetáhněte nebo upravte text, uložte jej a poté jej znovu upravte."
 
 msgid "Detected that text did not adhere to mesh surface. Please manually drag yellow square to mesh surface that needs to be adhered."
@@ -1781,7 +1784,7 @@ msgstr "V reliéfním tvaru chybí soubor SVG"
 msgid "Missing data of svg file"
 msgstr "Chybí data souboru SVG"
 
-msgid "Tip:If you want to place svg file on another part surface,you should select part first, and then drag svg file to the part surface."
+msgid "Tip: If you want to place an SVG file on another part surface, select the part first, then drag the SVG file to the part surface."
 msgstr "Tip: Pokud chcete umístit SVG soubor na jiný povrch části, nejprve vyberte část a poté SVG soubor přetáhněte na její povrch."
 
 #. TRN - Preview of filename after clear local filepath.
@@ -2199,11 +2202,14 @@ msgstr "Přidat SVG modifikátor"
 msgid "Select settings"
 msgstr "Vyberte nastavení"
 
-msgid "Hide"
-msgstr "Skrýt"
+msgid "Add to New Step"
+msgstr ""
 
-msgid "Show"
-msgstr "Zobrazit"
+msgid "Add to Current Step"
+msgstr ""
+
+msgid "Add to Existing Step"
+msgstr ""
 
 msgid "Delete the selected object"
 msgstr "Smazat vybraný objekt"
@@ -3139,6 +3145,420 @@ msgstr "Maximální teplota nesmí být překročena "
 msgid "The minmum temperature should not be less than "
 msgstr "Minimální teplota by neměla být nižší než "
 
+msgid "Export file Settings"
+msgstr ""
+
+msgid "Homepage  title"
+msgstr ""
+
+msgid "For privacy reasons, image paths are not saved or restored.Just for pdf/md file."
+msgstr ""
+
+msgid "Homepage image"
+msgstr ""
+
+msgid "Second page image"
+msgstr ""
+
+msgid "Browse"
+msgstr "Procházet"
+
+msgid "Image files"
+msgstr ""
+
+msgid "All files"
+msgstr ""
+
+msgid "Open image file"
+msgstr ""
+
+msgid "Step"
+msgstr "Krok"
+
+msgid "Install parts"
+msgstr ""
+
+msgid "Apply the final assembly pose to the objects or parts added in the current step?"
+msgstr ""
+
+msgid "Apply final assembly pose"
+msgstr ""
+
+msgid "Assembly Guide"
+msgstr "Průvodce sestavou"
+
+msgid "PDF files"
+msgstr ""
+
+msgid "Markdown files"
+msgstr ""
+
+msgid "MP4 files"
+msgstr ""
+
+msgid "Export Assembly Guide to PDF"
+msgstr ""
+
+msgid "Export Assembly Guide to Markdown"
+msgstr ""
+
+msgid "Export Assembly Guide to MP4"
+msgstr ""
+
+msgid "Exporting file"
+msgstr ""
+
+msgid "Export"
+msgstr "Exportovat"
+
+msgid "Saving project will automatically switch to end frame"
+msgstr ""
+
+msgid "New Step"
+msgstr ""
+
+msgid "Final assembly"
+msgstr ""
+
+msgid "end frame"
+msgstr ""
+
+msgid "Assembly Structure"
+msgstr ""
+
+msgid "Start your assembly journey from Add Step"
+msgstr ""
+
+msgctxt "AssemblyStructure"
+msgid "Default"
+msgstr ""
+
+msgid "Contain"
+msgstr ""
+
+msgid "Assembly Module"
+msgstr ""
+
+msgid "Click to add objects to the current step"
+msgstr ""
+
+msgid "_copy"
+msgstr ""
+
+msgid "Are you sure you want to delete the current step?"
+msgstr ""
+
+msgid "Delete step"
+msgstr ""
+
+msgid "Model"
+msgstr "Model"
+
+msgid "Volume"
+msgstr ""
+
+msgid "start frame"
+msgstr ""
+
+msgid "transition frame"
+msgstr ""
+
+#, boost-format
+msgid "Plate %1%"
+msgstr ""
+
+msgid "Assembly Step"
+msgstr ""
+
+msgid "Start frame"
+msgstr ""
+
+msgid "End frame"
+msgstr ""
+
+msgid "Transition frame"
+msgstr ""
+
+msgid "Frame"
+msgstr ""
+
+msgid "step"
+msgstr ""
+
+msgid "Play all frames for all steps."
+msgstr ""
+
+msgid "Toggle playback speed."
+msgstr ""
+
+msgid "Play previous frame."
+msgstr ""
+
+msgid "Play next frame."
+msgstr ""
+
+msgid "Set export file parameters"
+msgstr ""
+
+msgid "Camera margin factor for the current frame. The larger the value, the more margin."
+msgstr ""
+
+msgid "Modify camera margin"
+msgstr ""
+
+msgid "Edit step name"
+msgstr ""
+
+msgid "Insert step before"
+msgstr ""
+
+msgid "Insert step after"
+msgstr ""
+
+msgid "Tip"
+msgstr "Tip"
+
+msgid "No step card is currently selected. Pose-changing operations such as move gizmo will affect the actual final-assembly view."
+msgstr ""
+
+msgid "Expand"
+msgstr ""
+
+msgid "Collapse"
+msgstr "Sbalit"
+
+msgid "Options"
+msgstr "Možnosti"
+
+msgid "Go to Wiki"
+msgstr "Přejít na Wiki"
+
+msgid "Copy current step"
+msgstr ""
+
+msgid "Delete current step"
+msgstr ""
+
+msgid "Add some objects to current step"
+msgstr ""
+
+msgid "Copy Step"
+msgstr ""
+
+msgid "Add Step"
+msgstr ""
+
+#, boost-format
+msgid "No more than %1% steps are allowed."
+msgstr ""
+
+msgid "Only copy steps. This is independent of the selected objects on the canvas."
+msgstr ""
+
+msgid "Only add empty steps. This has nothing to do with the selected objects on the canvas."
+msgstr ""
+
+msgid "Exit"
+msgstr ""
+
+msgid "Click to add Cyber Brick"
+msgstr ""
+
+msgid "Delete this keyframe"
+msgstr ""
+
+msgid "Export PDF"
+msgstr ""
+
+msgid "Export Markdown"
+msgstr ""
+
+msgid "Export MP4"
+msgstr ""
+
+msgid "After exporting the Markdown document, you can edit it in third-party software such as Zettlr and then export it to PDF."
+msgstr ""
+
+msgid "Auto recommend"
+msgstr ""
+
+msgid "Model objects only"
+msgstr ""
+
+msgid "Model parts only"
+msgstr ""
+
+msgid "Automatically choose object-or-part-level labels: objects already shown in earlier steps are collapsed into a single object label, while the rest are labeled per individual part."
+msgstr ""
+
+msgid "Show one label per model object."
+msgstr ""
+
+msgid "Show one label per model part."
+msgstr ""
+
+msgid "Label"
+msgstr ""
+
+msgid "Label settings"
+msgstr ""
+
+msgid "Show Object/Part labels"
+msgstr ""
+
+msgid "Show object and part names  on models"
+msgstr ""
+
+msgid "Automatically select the optimal camera perspective and auto-arrange auto recommend labels each time the checkbox is re-ticked."
+msgstr ""
+
+msgid "Auto layout"
+msgstr ""
+
+msgid "Auto-arrange labels in current view"
+msgstr ""
+
+msgid "Current view labels"
+msgstr ""
+
+msgid "Label Settings"
+msgstr ""
+
+msgid "Font size"
+msgstr ""
+
+msgid "Display mode"
+msgstr ""
+
+msgid "Export assembly guide PDF, Markdown or MP4"
+msgstr ""
+
+msgid "Screw"
+msgstr ""
+
+msgid "Note"
+msgstr "Poznámka"
+
+msgid "Pose changes (e.g. move gizmo) made on the final-assembly step's keyframe will affect the actual assembly display."
+msgstr ""
+
+msgid "Pose changes (e.g. move gizmo) made on this step's keyframe do not affect the actual assembly display."
+msgstr ""
+
+msgid "If necessary, a relatively good position can be restored by pressing the \"apply actual assembly pose\" button at present."
+msgstr ""
+
+msgid "undoing these edits is not yet supported and will be added in a later version."
+msgstr ""
+
+msgid "Some objects were used in an earlier keyframe of the current step and are not exploded here. You can explode them manually with the move tool."
+msgstr ""
+
+msgid "Connection Type"
+msgstr ""
+
+msgid "Clip"
+msgstr ""
+
+msgid "Glue"
+msgstr ""
+
+msgid "Add Clip"
+msgstr ""
+
+msgid "Add Glue"
+msgstr ""
+
+msgid "Add Screw"
+msgstr ""
+
+msgid "Add Notes"
+msgstr ""
+
+msgid "Add Rectangle"
+msgstr ""
+
+msgid "Add Circle"
+msgstr ""
+
+msgid "Add Arrow"
+msgstr ""
+
+msgid "Add Text"
+msgstr ""
+
+msgid "Text"
+msgstr "Text"
+
+msgid "Background"
+msgstr ""
+
+msgid "Timeline"
+msgstr ""
+
+msgid "Play all frames for current step"
+msgstr ""
+
+msgid "At least two keyframes are required to play."
+msgstr ""
+
+msgid "Automatically explode all objects."
+msgstr ""
+
+msgid "Automatically explode all parts."
+msgstr ""
+
+msgid "Apply the final assembly pose to the currently selected object or part(if none is selected, apply it to all objects added in the current frame)"
+msgstr ""
+
+msgid "Apply current camera angle to all frames of the current step"
+msgstr ""
+
+msgid "Add keyframe"
+msgstr ""
+
+msgid "Click to select this frame"
+msgstr ""
+
+msgid "Save update"
+msgstr ""
+
+msgid "Save current frame"
+msgstr ""
+
+msgid "Assembly tree"
+msgstr ""
+
+msgid "Search"
+msgstr "Hledat"
+
+msgid "List"
+msgstr ""
+
+msgid "Select all parts in a step"
+msgstr ""
+
+msgid "Red"
+msgstr ""
+
+msgid "Orange"
+msgstr ""
+
+msgid "Green"
+msgstr ""
+
+msgid "Blue"
+msgstr ""
+
+msgid "Black"
+msgstr ""
+
+msgid "Grey"
+msgstr ""
+
+msgid "White"
+msgstr ""
+
 msgid ""
 "All the selected objects are on the locked plate,\n"
 "We can not do auto-arrange on these objects."
@@ -3233,9 +3653,6 @@ msgstr "Neexistuje žádná platná plocha pro promítnutí textu."
 
 msgid "Text mesh ie empty."
 msgstr "Textová síť je prázdná."
-
-msgid "Text"
-msgstr "Text"
 
 msgid "Error! Unable to create thread!"
 msgstr "Chyba! Nelze vytvořit vlákno!"
@@ -3662,9 +4079,6 @@ msgstr "%s nepodpěruje %s"
 msgid "Dynamic flow Calibration"
 msgstr "Dynamická kalibrace průtoku"
 
-msgid "Step"
-msgstr "Krok"
-
 msgid "Unmapped"
 msgstr "Nezmapováno"
 
@@ -3854,7 +4268,7 @@ msgstr "Při vložení nového filamentu AMS jeho informace automaticky nenačte
 msgid "Power on update"
 msgstr "Aktualizace při zapnutí"
 
-msgid "The AMS will automatically read the information of inserted filament on start-up. It will take about 1 minute.The reading process will roll filament spools."
+msgid "The AMS will automatically read the information of inserted filament on start-up. It will take about 1 minute. The reading process will roll filament spools."
 msgstr "AMS automaticky načte informace o vloženém filamentu při spuštění. Tato operace trvá přibližně 1 minutu. Během načítání se protočí cívky s filamentem."
 
 msgid "The AMS will not automatically read information from inserted filament during startup and will continue to use the information recorded before the last shutdown."
@@ -3909,6 +4323,15 @@ msgstr "Obnovit sekvenci AMS"
 
 msgid "File"
 msgstr "Soubor"
+
+msgid "Save Project"
+msgstr "Uložit projekt"
+
+msgid "Undo"
+msgstr "Zpět"
+
+msgid "Redo"
+msgstr "Zopakovat"
 
 msgid "Calibration"
 msgstr "Kalibrace"
@@ -4025,9 +4448,6 @@ msgstr "Odebrat"
 msgid "Not found:"
 msgstr "Nenalezeno:"
 
-msgid "Model"
-msgstr "Model"
-
 msgid "Choose an STL file to import bed shape from:"
 msgstr "Vyberte soubor STL pro import tvaru podložky:"
 
@@ -4101,7 +4521,7 @@ msgstr ""
 "Obnoveno na výchozí"
 
 #, c-format, boost-format
-msgid "Current chamber temperature is higher than the material's safe temperature,it may result in material softening and clogging.The maximum safe temperature for the material is %d"
+msgid "Current chamber temperature is higher than the material's safe temperature, it may result in material softening and clogging. The maximum safe temperature for the material is %d"
 msgstr "Aktuální teplota komory je vyšší než bezpečná teplota materiálu, což může způsobit změknutí a ucpání materiálu. Maximální bezpečná teplota tohoto materiálu je %d"
 
 msgid ""
@@ -4454,10 +4874,10 @@ msgstr "Pozastavení (chyba první vrstvy)"
 msgid "Pause (nozzle clog)"
 msgstr "Pozastavení (ucpání trysky)"
 
-msgid "Measuring motion percision"
+msgid "Measuring motion precision"
 msgstr "Měření přesnosti pohybu"
 
-msgid "Enhancing motion percision"
+msgid "Enhancing motion precision"
 msgstr "Zvyšování přesnosti pohybu"
 
 msgid "Measure motion accuracy"
@@ -4603,7 +5023,7 @@ msgstr "Teplota AMS je příliš vysoká, což může způsobit změknutí filam
 msgid "The current chamber temperature or the target chamber temperature exceeds 45℃.In order to avoid extruder clogging,low temperature filament(PLA/PETG/TPU) is not allowed to be loaded."
 msgstr "Aktuální nebo cílová teplota komory přesahuje 45 ℃. Aby se zabránilo ucpání extruderu, není dovoleno vkládat nízkoteplotní filament (PLA/PETG/TPU)."
 
-msgid "Low temperature filament(PLA/PETG/TPU) is loaded in the extruder.In order to avoid extruder clogging,it is not allowed to set the chamber temperature."
+msgid "Low temperature filament (PLA/PETG/TPU) is loaded in the extruder. In order to avoid extruder clogging, it is not allowed to set the chamber temperature."
 msgstr "V extruderu je vložen nízkoteplotní filament (PLA/PETG/TPU). Aby se zabránilo ucpání extruderu, nelze nastavit teplotu komory."
 
 msgid "When you set the chamber temperature below 40℃, the chamber temperature control will not be activated. And the target chamber temperature will automatically be set to 0℃."
@@ -4897,9 +5317,6 @@ msgstr "Změny filamentu"
 msgid "Wipe"
 msgstr "Stírání"
 
-msgid "Options"
-msgstr "Možnosti"
-
 msgid "travel"
 msgstr "přesun"
 
@@ -5162,6 +5579,9 @@ msgstr "Poloha nebo velikost modelu %s přesahuje tisknutelný rozsah tiskárny 
 msgid " Please check and adjust the part's position or size to fit the printable range:\n"
 msgstr " Zkontrolujte a upravte polohu nebo velikost dílu tak, aby odpovídaly tisknutelné oblasti:\n"
 
+msgid "Unnamed"
+msgstr ""
+
 msgid "Mirror Object"
 msgstr "Zrcadlit objekt"
 
@@ -5260,9 +5680,6 @@ msgstr "Vyberte podložku"
 msgid "Change camera perspective"
 msgstr "Změnit perspektivu kamery"
 
-msgid "Go to Wiki"
-msgstr "Přejít na Wiki"
-
 #, boost-format
 msgid "Current assembly rate: %1%%%, volume rate: %2%%%"
 msgstr "Aktuální míra sestavení: %1%%%, míra objemu: %2%%%"
@@ -5299,6 +5716,9 @@ msgstr "Přizpůsobit kameru"
 msgid "Fit camera to scene or selected object."
 msgstr "Přizpůsobit kameru scéně nebo vybranému objektu."
 
+msgid "Auto recommend camera angle(Only works when the assembly step function is active)"
+msgstr ""
+
 msgid "Paint Toolbar"
 msgstr "Panel nástrojů Malování"
 
@@ -5316,6 +5736,15 @@ msgstr "Ovládání sestavy"
 
 msgid "Selection Mode"
 msgstr "Režim výběru"
+
+msgid "Show Current Step Objects Only"
+msgstr ""
+
+msgid "X-Ray Other Objects"
+msgstr ""
+
+msgid "Display Mode"
+msgstr ""
 
 msgid "Total Volume:"
 msgstr "Celkový objem:"
@@ -5524,6 +5953,9 @@ msgstr "Náhled"
 msgid "The current page has unsaved changes. You can continue editing or choose to save/discard before leaving."
 msgstr "Aktuální stránka má neuložené změny. Můžete pokračovat v úpravách nebo před odchodem změny uložit či zahodit."
 
+msgid "Home"
+msgstr ""
+
 msgid "Device"
 msgstr "Zařízení"
 
@@ -5698,9 +6130,6 @@ msgstr "Otevřít soubor projektu"
 msgid "Recent projects"
 msgstr "Nedávné projekty"
 
-msgid "Save Project"
-msgstr "Uložit projekt"
-
 msgid "Save current project to file"
 msgstr "Uložit aktuální projekt do souboru"
 
@@ -5758,9 +6187,6 @@ msgstr "Exportovat balíček přednastavení"
 msgid "Export current configuration to files"
 msgstr "Exportovat aktuální konfiguraci do souborů"
 
-msgid "Export"
-msgstr "Exportovat"
-
 msgid "Publish to MakerWorld"
 msgstr "Publikovat na MakerWorld"
 
@@ -5769,12 +6195,6 @@ msgstr "Hromadná správa přednastavení"
 
 msgid "Quit"
 msgstr "Ukončit"
-
-msgid "Undo"
-msgstr "Zpět"
-
-msgid "Redo"
-msgstr "Zopakovat"
 
 msgid "Cut selection to clipboard"
 msgstr "Vyjmout výběr do schránky"
@@ -6379,9 +6799,6 @@ msgstr "Prohodit osy Y/Z"
 msgid "(LAN)"
 msgstr "(LAN)"
 
-msgid "Search"
-msgstr "Hledat"
-
 msgid "My Device"
 msgstr "Mé zařízení"
 
@@ -6850,9 +7267,6 @@ msgstr "%s varování"
 msgid "%s has a warning"
 msgstr "%s má varování"
 
-msgid "Collapse"
-msgstr "Sbalit"
-
 msgid "View details"
 msgstr "Zobrazit podrobnosti"
 
@@ -7014,9 +7428,6 @@ msgstr "Přeskočit na"
 
 msgid "Error:"
 msgstr "Chyba:"
-
-msgid "Enable support for"
-msgstr ""
 
 msgid "Open link for more info"
 msgstr "Otevřít odkaz pro více informací"
@@ -7677,6 +8088,12 @@ msgid "Computing texture colors: %s"
 msgstr ""
 
 msgid "Texture Import Warning"
+msgstr ""
+
+msgid ""
+"The imported STEP file is split by sub-assembly, so some objects may not be placed on the build plate at first.\n"
+"It is expected if they are placed on the build plate later after move,rotate gizmo or similar operations.\n"
+"The overall assembly can be checked from the assembly thumbnail or by entering the assembly view."
 msgstr ""
 
 msgid "Load these files as a single object with multiple parts?\n"
@@ -8459,9 +8876,6 @@ msgstr ""
 "\n"
 "Chcete tuto funkci přesto povolit?"
 
-msgid "Browse"
-msgstr "Procházet"
-
 msgid "Choose Download Directory"
 msgstr "Vyberte adresář pro stahování"
 
@@ -8540,6 +8954,12 @@ msgstr "Správa více zařízení (projeví se po restartování Studia)."
 msgid "With this option enabled, you can send a task to multiple devices at the same time and manage multiple devices."
 msgstr "Pokud je tato volba povolena, můžete odesílat úlohu na více zařízení současně a spravovat více zařízení."
 
+msgid "Take effect after restarting Studio"
+msgstr ""
+
+msgid "The Filament Manager is turned off by default on macOS because compatibility issues on some systems may cause the application to become unresponsive."
+msgstr ""
+
 msgid "Show the step mesh parameter setting dialog."
 msgstr "Zobrazit dialog nastavení parametru kroku sítě."
 
@@ -8591,7 +9011,7 @@ msgstr "Přibližovat k pozici kurzoru myši ve 3D zobrazení namísto středu 2
 msgid "Always show shells in preview"
 msgstr "Vždy zobrazovat stěny v náhledu"
 
-msgid "Always show shells or not in preview view tab.If change value,you should reslice."
+msgid "Always show shells or not in preview view tab. If you change this value, you should reslice."
 msgstr "Určuje, zda se mají stěny v záložce Náhled zobrazovat vždy. Pokud hodnotu změníte, je nutné model znovu rozřezat."
 
 msgid "Import a single SVG and split it"
@@ -9222,7 +9642,7 @@ msgstr "Filament neodpovídá filamentu ve slotu AMS. Aktualizujte firmware tisk
 msgid "The selected printer (%s) is incompatible with the print file configuration (%s). Please adjust the printer preset in the prepare page or choose a compatible printer on this page."
 msgstr "Vybraná tiskárna (%s) není kompatibilní s konfigurací tiskového souboru (%s). Upravte prosím předvolbu tiskárny na stránce Příprava nebo na této stránce zvolte kompatibilní tiskárnu."
 
-msgid "When enable spiral vase mode, machines with I3 structure will not generate timelapse videos."
+msgid "When enabling spiral vase mode, machines with I3 structure will not generate timelapse videos."
 msgstr "Při zapnutí režimu spirálové vázy nebudou tiskárny s konstrukcí I3 generovat časosběrná videa."
 
 msgid "The current printer does not support timelapse in Traditional Mode when printing By-Object."
@@ -9249,8 +9669,14 @@ msgstr "Zkontrolujte prosím následující:"
 msgid "Please fix the error above, otherwise printing cannot continue."
 msgstr "Opravte prosím výše uvedenou chybu, jinak nelze v tisku pokračovat."
 
-msgid "Please click the confirm button if you still want to proceed with printing."
-msgstr "Klikněte prosím na tlačítko „Potvrdit“, pokud si přejete pokračovat v tisku."
+msgid "Please click the \"Continue printing\"  button if you still want to proceed with printing."
+msgstr ""
+
+msgid "Continue printing"
+msgstr ""
+
+msgid "Return to modify"
+msgstr ""
 
 msgid "This checks the flatness of heatbed. Leveling makes extruded height uniform."
 msgstr "Probíhá kontrola rovinnosti vyhřívané podložky. Nivelace zajišťuje jednotnou výšku vytlačovaného materiálu."
@@ -9644,7 +10070,7 @@ msgstr "Načíst a přijmout"
 msgid "Terms and Conditions"
 msgstr "Smluvní podmínky"
 
-msgid "Thank you for purchasing a Bambu Lab device.Before using your Bambu Lab device, please read the termsand conditions.By clicking to agree to use your Bambu Lab device, you agree to abide by the Privacy Policy and Terms of Use(collectively, the \"Terms\"). If you do not comply with or agree to the Bambu Lab Privacy Policy, please do not use Bambu Lab equipment and services."
+msgid "Thank you for purchasing a Bambu Lab device. Before using your Bambu Lab device, please read the terms and conditions. By clicking to agree to use your Bambu Lab device, you agree to abide by the Privacy Policy and Terms of Use (collectively, the \"Terms\"). If you do not comply with or agree to the Bambu Lab Privacy Policy, please do not use Bambu Lab equipment and services."
 msgstr "Děkujeme za zakoupení zařízení Bambu Lab. Před použitím zařízení Bambu Lab si prosím přečtěte podmínky. Kliknutím na možnost souhlasu s používáním zařízení Bambu Lab potvrzujete, že budete dodržovat zásady ochrany osobních údajů a podmínky používání společnosti Bambu Lab (souhrnně „Podmínky“). Pokud se zásadami ochrany osobních údajů společnosti Bambu Lab nesouhlasíte nebo je nedodržujete, nepoužívejte zařízení ani služby Bambu Lab."
 
 msgid "and"
@@ -10163,6 +10589,12 @@ msgstr "Firmwarová retrakce"
 msgid "Detached"
 msgstr "Odpojeno"
 
+msgid "The current preset is embedded in the 3MF project file. Please save changes directly.  'Save as new' is not supported for preset inside project."
+msgstr ""
+
+msgid "Unable to save preset"
+msgstr ""
+
 #, c-format, boost-format
 msgid "%d Filament Preset and %d Process Preset is attached to this printer. Those presets would be deleted if the printer is deleted."
 msgstr "%d přednastavení filamentu a %d procesní přednastavení jsou připojena k této tiskárně. Tato přednastavení budou odstraněna, pokud bude tiskárna smazána."
@@ -10383,9 +10815,6 @@ msgstr "Obrázky"
 msgid "Bill of Materials"
 msgstr "Seznam materiálů"
 
-msgid "Assembly Guide"
-msgstr "Průvodce sestavou"
-
 msgid "Author"
 msgstr "Autor"
 
@@ -10486,9 +10915,6 @@ msgstr "Import textur je dočasně nedostupný, částečné zbarvení bude auto
 msgid " And "
 msgstr " A "
 
-msgid "Note"
-msgstr "Poznámka"
-
 msgid "The color has been selected, you can choose OK to continue or manually adjust it."
 msgstr "Barva byla vybrána. Můžete zvolit OK a pokračovat nebo ji upravit ručně."
 
@@ -10572,9 +10998,6 @@ msgstr ""
 
 msgid "Use AMS"
 msgstr "Použít AMS"
-
-msgid "Tip"
-msgstr "Tip"
 
 msgid "Only synchronize filament type and color, not including AMS slot information."
 msgstr "Synchronizuje se pouze typ a barva filamentu, informace o slotu AMS nejsou zahrnuty."
@@ -12017,6 +12440,9 @@ msgstr "Pro tisk více objektů v režimu spirálové vázy zvolte tiskovou posl
 msgid "The spiral vase mode does not work when an object contains more than one materials."
 msgstr "Režim spirálové vázy nelze použít, pokud objekt obsahuje více než jeden materiál."
 
+msgid "The spiral vase mode does not work when an object contains regions with different print settings."
+msgstr ""
+
 msgid "Variable layer height is not supported with Organic supports."
 msgstr "Proměnná výška vrstvy není podporována s organickými podpěrami."
 
@@ -12322,6 +12748,22 @@ msgstr "Průtok při přemostění"
 
 msgid "Decrease this value slightly(for example 0.9) to reduce the amount of material for bridge, to improve sag"
 msgstr "Mírně snižte tuto hodnotu (například na 0,9), abyste omezili množství materiálu při přemostění a zlepšili průhyb"
+
+msgid "Bridge counterbore holes"
+msgstr ""
+
+msgid ""
+"This option creates bridges for counterbore holes, allowing them to be printed without support. Available modes include:\n"
+"1. None: No bridge is created\n"
+"2. Partially Bridged: Only a part of the unsupported area will be bridged\n"
+"3. Sacrificial Layer: A full sacrificial bridge layer is created"
+msgstr ""
+
+msgid "Partially bridged"
+msgstr ""
+
+msgid "Sacrificial layer"
+msgstr ""
 
 msgid "Top surface flow ratio"
 msgstr "Průtok horního povrchu"
@@ -14392,6 +14834,12 @@ msgstr "Pokud je zvolen režim hladký nebo tradiční, bude pro každý tisk vy
 msgid "Traditional"
 msgstr "Tradiční"
 
+msgid "Farthest point timelapse"
+msgstr ""
+
+msgid "When enabled, the timelapse snapshot is taken at the farthest point from camera instead of traveling to the wipe tower or excess chute. Only effective in traditional timelapse mode on non-I3 printers."
+msgstr ""
+
 msgid "Temperature variation"
 msgstr "Kolísání teploty"
 
@@ -15051,13 +15499,6 @@ msgstr "Generování trajektorie výplně"
 
 msgid "Detect overhangs for auto-lift"
 msgstr "Detekce převisů pro automatické nadzvednutí"
-
-msgid "Levitating objects cannot be printed without supports."
-msgstr ""
-
-#, c-format, boost-format
-msgid "It seems object %s has floating regions. Please re-orient the object or enable support generation."
-msgstr ""
 
 msgid "Checking support necessity"
 msgstr "Kontrola, zda jsou potřeba podpěry"
@@ -16622,7 +17063,7 @@ msgstr "Připojení k Duet funguje správně."
 msgid "Could not connect to Duet"
 msgstr "Nepodařilo se připojit k Duet"
 
-msgid "Unknown error occurred"
+msgid "Unknown error occured"
 msgstr "Došlo k neznámé chybě"
 
 msgid "Wrong password"
@@ -17927,6 +18368,18 @@ msgid ""
 msgstr ""
 "Spolehlivost hned napoprvé\n"
 "Méně dohledu, předvídatelnější výsledky. Příklad: malá farma tisknoucí díly z PETG se vyhne překvapením typu „selhání v 6. hodině“ a udrží výrobu podle plánu."
+
+#~ msgid "Warning:old matrix has at least two parameters: mirroring, scaling, and rotation. If you continue editing, it may not be correct. Please dragging text or cancel using current pose, save and reedit again."
+#~ msgstr "Varování: Stará matice obsahuje alespoň dva parametry: zrcadlení, škálování a rotaci. Pokud budete pokračovat v úpravách, výsledek nemusí být správný. Přetáhněte text nebo zrušte použití aktuální polohy, uložte změny a poté upravujte znovu."
+
+#~ msgid "Please click the confirm button if you still want to proceed with printing."
+#~ msgstr "Klikněte prosím na tlačítko „Potvrdit“, pokud si přejete pokračovat v tisku."
+
+#~ msgid "Hide"
+#~ msgstr "Skrýt"
+
+#~ msgid "Show"
+#~ msgstr "Zobrazit"
 
 #~ msgid "Spiral mode only works when wall loops is 1, support is disabled, clumping detection by probing is disabled, top shell layers is 0, sparse infill density is 0, timelapse type is traditional and smoothing wall speed in z direction is false."
 #~ msgstr "Spirálový režim funguje pouze tehdy, když je počet smyček stěn 1, podpěry jsou vypnuté, detekce shlukování sondováním je vypnutá, počet horních vrstev je 0, hustota řídké výplně je 0, typ časosběru je tradiční a vyhlazování rychlosti stěn v ose Z je vypnuté."

@@ -1038,7 +1038,7 @@ void AMSLib::on_left_down(wxMouseEvent &evt)
                 bottom = size.y - FromDIP(20);
             }
 
-            if (pos.x >= left && pos.x <= right && pos.y >= top && top <= bottom) {
+            if (pos.x >= left && pos.x <= right && pos.y >= top && pos.y <= bottom) {
                 if (m_selected) {
                     if (m_info.material_state == AMSCanType::AMS_CAN_TYPE_VIRTUAL) {
                         post_event(wxCommandEvent(EVT_VAMS_ON_FILAMENT_EDIT));
@@ -1294,6 +1294,31 @@ void AMSLib::render_generic_text(wxDC &dc)
             tooltip_text += m_info.material_name;
         }
 
+        auto append_tooltip_line = [&tooltip_text](const wxString& line) {
+            if (line.empty()) return;
+            if (!tooltip_text.empty()) tooltip_text += "\n";
+            tooltip_text += line;
+        };
+
+        wxString color_text;
+        auto append_color = [&color_text](const wxColour& color) {
+            if (color.Alpha() == 0) return;
+            if (!color_text.empty()) color_text += ", ";
+            color_text += color.GetAsString(wxC2S_HTML_SYNTAX);
+        };
+
+        if (!m_info.material_cols.empty()) {
+            for (const wxColour& color : m_info.material_cols)
+                append_color(color);
+        } else {
+            append_color(m_info.material_colour);
+        }
+
+        if (!color_text.empty() && !m_info.material_name.empty()) {
+            wxString color_label = _L("Color");
+            append_tooltip_line(color_label + ": " + color_text);
+        }
+
         //draw k&n
         if (m_obj && show_k_value) {
             if (m_show_kn) {
@@ -1401,6 +1426,11 @@ void AMSLib::render_lite_lib(wxDC& dc)
         }
     }
 
+    // View-only mode forces the read-only (eye) icon even for third-party spools.
+    if (m_view_only) {
+        temp_bitmap_third = temp_bitmap_brand;
+    }
+
     dc.SetPen(wxPen(*wxTRANSPARENT_PEN));
     if (m_info.material_cols.size() > 1) {
         int left = FromDIP(10);
@@ -1490,6 +1520,11 @@ void AMSLib::render_generic_lib(wxDC &dc)
     if (tmp_lib_colour.Alpha() == 0) {
         temp_bitmap_third = m_bitmap_editable;
         temp_bitmap_brand = m_bitmap_readonly;
+    }
+
+    // View-only mode forces the read-only (eye) icon even for third-party spools.
+    if (m_view_only) {
+        temp_bitmap_third = temp_bitmap_brand;
     }
 
     dc.SetPen(wxPen(tmp_lib_colour, 1, wxPENSTYLE_SOLID));

@@ -16,6 +16,19 @@
 
 wxDECLARE_EVENT(EVT_MEDIA_CTRL_STAT, wxCommandEvent);
 wxDECLARE_EVENT(EVT_MEDIA_CTRL_FIRST_FRAME, wxCommandEvent);
+wxDECLARE_EVENT(EVT_MEDIA_CTRL_SESSION_END, wxCommandEvent);
+
+#ifndef __WXMAC__
+struct FirstFrameInfo {
+    int     first_frame_cost_ms        = 0;   // play_start -> render
+    int64_t first_packet_time_ms       = 0;   // epoch ms of first ReadSample success
+    int64_t decode_first_frame_time_ms = 0;   // epoch ms of first got_frame
+    int64_t render_first_frame_time_ms = 0;   // epoch ms of first frame pushed to UI
+    int     video_codec                = 0;   // sub_type: AVC1=0 / MJPG=1
+    int     resolution_width           = 0;
+    int     resolution_height          = 0;
+};
+#endif
 
 void wxMediaCtrl_OnSize(wxWindow * ctrl, wxSize const & videoSize, int width, int height);
 
@@ -33,6 +46,7 @@ void wxMediaCtrl_OnSize(wxWindow * ctrl, wxSize const & videoSize, int width, in
 #include <wx/image.h>
 #endif
 #include "Printer/BambuTunnel.h"
+#include "Printer/LiveViewTrackContext.h"
 
 #ifdef _WIN32
 typedef wxBitmap PlayFrame;
@@ -68,17 +82,26 @@ public:
 
     void SetConstrainByAspectRatio(bool constrain) { m_constrain_by_aspect_ratio = constrain; }
     bool GetConstrainByAspectRatio() const { return m_constrain_by_aspect_ratio; }
+    void SetTrackChannel(const BambuLiveViewTrack::ChannelInfo& info);
+
+    void UpdateSessionStat();
 
 protected:
     DECLARE_EVENT_TABLE()
 
     void paintEvent(wxPaintEvent &evt);
 
+    void mouseWheelEvent(wxMouseEvent &evt);
+
     wxSize DoGetBestSize() const override;
 
     void DoSetSize(int x, int y, int width, int height, int sizeFlags) override;
 
     static void bambu_log(void *ctx, int level, tchar const *msg);
+
+    static void bambu_streaminfo(void *ctx, Bambu_StreamInfo *info);
+
+    static void on_player_track_event(void *ctx, const PlayerEventC *event);
 
     void PlayThread();
 
@@ -96,7 +119,9 @@ private:
     wxSize m_video_size = wxDefaultSize;
     wxSize m_frame_size = wxDefaultSize;
     PlayFrame m_frame;
+    double m_zoom = 1.0;   // digital zoom factor for the live view (mouse wheel)
     std::shared_ptr<wxURI> m_url;
+    std::atomic<Bambu_Tunnel> m_tunnel{nullptr};
     std::mutex m_mutex;
     std::mutex m_ui_mutex;
     std::condition_variable m_cond;
@@ -110,6 +135,21 @@ private:
 
     wxTimer m_render_timer;
     std::atomic<bool> m_need_refresh{false};
+
+    struct PendingStreamInfo {
+        std::mutex        mutex;
+        Bambu_StreamInfo  info{};
+        std::atomic<bool> changed{false};
+    } m_pending_stream;
+
+    FirstFrameInfo    m_first_frame_info;
+
+public:
+    BambuLiveViewTrack::ChannelInfo m_track_channel;
+
+    Bambu_SessionStat m_session_stat = {};
+    int               m_video_decode_error_count = 0;
+    int               m_render_error_count       = 0;
 };
 
 #endif

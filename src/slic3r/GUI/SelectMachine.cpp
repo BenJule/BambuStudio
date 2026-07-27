@@ -12,6 +12,7 @@
 #include "Widgets/RoundedRectangle.hpp"
 #include "Widgets/StaticBox.hpp"
 #include "Widgets/CheckBox.hpp"
+#include "Widgets/RadioBox.hpp"
 #include "Widgets/Label.hpp"
 #include "BackgroundSlicingProcess.hpp"
 #include "ConnectPrinter.hpp"
@@ -1847,7 +1848,7 @@ void SelectMachineDialog::show_status(PrintDialogStatus status, std::vector<wxSt
         for (auto warning : plate->get_slice_result()->warnings) {
             if (warning.msg == NOT_GENERATE_TIMELAPSE) {
                 if (warning.error_code == "10014001") {
-                    msg_text = _L("When enable spiral vase mode, machines with I3 structure will not generate timelapse videos.");
+                    msg_text = _L("When enabling spiral vase mode, machines with I3 structure will not generate timelapse videos.");
                 }
                 else if (warning.error_code == "10014002") {
                     msg_text = _L("The current printer does not support timelapse in Traditional Mode when printing By-Object.");
@@ -2178,20 +2179,6 @@ void SelectMachineDialog::on_ok_btn(wxCommandEvent &event)
     PartPlate* plate = m_plater->get_partplate_list().get_curr_plate();
 
     bool has_show_traditional_timelapse_waring = false;
-    //check I3 traditional timelapse warning without wipe tower
-    const Print* print = plate ? plate->fff_print() : nullptr;
-    const bool has_wipe_tower = print && print->has_wipe_tower() && print->tool_ordering().has_wipe_tower();
-    if (obj_->get_printer_arch() == PrinterArch::ARCH_I3 &&
-        print && print->config().timelapse_type.value == TimelapseType::tlTraditional &&
-        !has_wipe_tower &&
-        m_checkbox_list["timelapse"]->getValue() == "on") {
-        GCodeProcessorResult::SliceWarning warning;
-        warning.msg = NOT_SUPPORT_TRADITIONAL_TIMELAPSE;
-        confirm_text.push_back(ConfirmBeforeSendInfo(Plater::get_slice_warning_string(warning)));
-        has_show_traditional_timelapse_waring = true;
-        has_slice_warnings = true;
-    }
-
     for (auto warning : plate->get_slice_result()->warnings) {
         if (warning.msg == NOT_SUPPORT_TRADITIONAL_TIMELAPSE) {
             if (!has_show_traditional_timelapse_waring && (m_checkbox_list["timelapse"]->getValue() == "on")) {
@@ -2292,7 +2279,7 @@ void SelectMachineDialog::on_ok_btn(wxCommandEvent &event)
             }
             else
             {
-                shown_infos.emplace_back(ConfirmBeforeSendInfo(_L("Please click the confirm button if you still want to proceed with printing.")));
+                shown_infos.emplace_back(ConfirmBeforeSendInfo(_L("Please click the \"Continue printing\"  button if you still want to proceed with printing.")));
             }
 
             confirm_dlg.update_text(shown_infos, has_warning_msg&& has_normal_msg);
@@ -2300,6 +2287,11 @@ void SelectMachineDialog::on_ok_btn(wxCommandEvent &event)
         else
         {
             confirm_dlg.update_text(confirm_text, false);
+        }
+
+        if (!is_printing_block) 
+        {
+            confirm_dlg.update_btn_label(_L("Continue printing"), _L("Return to modify"));
         }
 
         confirm_dlg.on_show();
@@ -2577,25 +2569,32 @@ void SelectMachineDialog::show_timelapse_folder_popup()
     if (!has_sdcard && m_timelapse_storage == "external")
         m_timelapse_storage = "internal";
 
+    // Reuse the themed RadioBox widget (radio_on / radio_off bitmaps) instead of the
+    // native wxRadioButton: the selected state shows a clear filled dot with good
+    // contrast on every platform, matching the storage selector in SendToPrinter.
     auto make_item = [&](const wxString& label, const std::string& val, bool enabled) {
-        auto* radio = new wxRadioButton(panel, wxID_ANY, label, wxDefaultPosition, wxDefaultSize,
-            val == "internal" ? wxRB_GROUP : 0);
+        auto* radio = new RadioBox(panel);
         radio->SetValue(m_timelapse_storage == val);
-        radio->SetFont(Label::Body_14);
-        radio->Enable(enabled);
-        radio->SetForegroundColour(enabled ? wxColour(0x5C, 0x5C, 0x5C) : wxColour(0xAC, 0xAC, 0xAC));
-        sizer->Add(radio, 0, wxALIGN_CENTER_VERTICAL);
+        if (enabled) radio->Enable(); else radio->Disable();
+
+        auto* text = new Label(panel, Label::Body_14, label);
+        text->SetForegroundColour(enabled ? wxColour(0x5C, 0x5C, 0x5C) : wxColour(0xAC, 0xAC, 0xAC));
 
         if (enabled) {
-            radio->Bind(wxEVT_RADIOBUTTON, [this, val](wxCommandEvent&) {
+            auto on_select = [this, val](wxMouseEvent&) {
                 m_timelapse_storage = val;
                 update_timelapse_folder_btn_icon();
                 if (m_timelapse_storage_popup) m_timelapse_storage_popup->Dismiss();
                 DeviceManager* dev = wxGetApp().getDeviceManager();
                 MachineObject* obj = dev ? dev->get_selected_machine() : nullptr;
                 if (obj) check_timelapse_storage_warning(obj);
-            });
+            };
+            radio->Bind(wxEVT_LEFT_DOWN, on_select);
+            text->Bind(wxEVT_LEFT_DOWN, on_select);
         }
+
+        sizer->Add(radio, 0, wxALIGN_CENTER_VERTICAL);
+        sizer->Add(text, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(6));
     };
 
     make_item(_L("Internal"), "internal", true);
@@ -4203,7 +4202,7 @@ bool SelectMachineDialog::has_timelapse_warning(wxString &msg_text)
     for (auto warning : plate->get_slice_result()->warnings) {
         if (warning.msg == NOT_GENERATE_TIMELAPSE) {
             if (warning.error_code == "10014001") {
-                msg_text = _L("When enable spiral vase mode, machines with I3 structure will not generate timelapse videos.");
+                msg_text = _L("When enabling spiral vase mode, machines with I3 structure will not generate timelapse videos.");
             } else if (warning.error_code == "10014002") {
                 msg_text = _L("The current printer does not support timelapse in Traditional Mode when printing By-Object.");
             }
@@ -4455,6 +4454,7 @@ std::vector<pPresetFilaInfo> sCollectPresetFilamentInfo()
                 if (preset && filament_name.compare(preset->name) == 0) {
                     pPresetFilaInfo fila_info;
                     fila_info.filament_id = preset->filament_id;
+                    fila_info.setting_id = preset->setting_id;
                     fila_info.filament_type = preset->config.get_filament_type(fila_info.filament_display_type);;
                     auto vendor_opt = dynamic_cast<ConfigOptionStrings*>(preset->config.option("filament_vendor"));
                     if (vendor_opt && (vendor_opt->values.size() > 0)) {
@@ -4646,6 +4646,7 @@ void SelectMachineDialog::reset_and_sync_ams_list()
         info.type = preset_filament.filament_type;
         info.brand = preset_filament.filament_vendor;
         info.filament_id = preset_filament.filament_id;
+        info.setting_id = preset_filament.setting_id;
         info.color = wxString::Format("#%02X%02X%02X%02X", colour_rgb.Red(), colour_rgb.Green(), colour_rgb.Blue(), colour_rgb.Alpha()).ToStdString();
         m_filaments.push_back(info);
     }
@@ -6179,16 +6180,19 @@ bool SelectMachineDialog::CheckErrorWarningFilamentMapping(MachineObject* obj_)
             }
         }
 
-        const auto &warning_tpu_filaments = DevPrinterConfigUtil::get_value_from_config<std::vector<std::string>>(obj_->printer_type, "auto_on_cali_warning_tpu_filaments");
-        for (const auto &warning_tpu_filament : warning_tpu_filaments) {
-            if (warning_tpu_filament == check_info.fila_id) {
-                show_status(PrintDialogStatus::PrintStatusTPUUnsuggestCali,
-                            {_L("If 'Dynamic Flow Calibration' is set to Auto/On, the system will use the manual calibration value or the default value and skip "
-                                "the flow calibration process. You can perform a manual flow calibration for TPU filament on the 'Calibration' page.")});
-                break;
+        // The hint only applies when Flow Dynamics Calibration is set to Auto/On; skip it when the option is Off or hidden.
+        const bool flow_cali_auto_or_on = m_checkbox_list["flow_cali"]->IsShown() && m_checkbox_list["flow_cali"]->getValue() != "off";
+        if (flow_cali_auto_or_on) {
+            const auto& warning_tpu_filaments = DevPrinterConfigUtil::get_value_from_config<std::vector<std::string>>(obj_->printer_type, "auto_on_cali_warning_tpu_filaments");
+            for (const auto& warning_tpu_filament : warning_tpu_filaments) {
+                if (warning_tpu_filament == check_info.fila_id) {
+                    show_status(PrintDialogStatus::PrintStatusTPUUnsuggestCali,
+                                { _L("If 'Dynamic Flow Calibration' is set to Auto/On, the system will use the manual calibration value or the default value and skip the flow calibration process. You can perform a manual flow calibration for TPU filament on the 'Calibration' page.") });
+                    break;
+                }
             }
         }
-    };
+    }
 
     for (const auto &iter : extruder_ams_ext_status) {
         if (iter.second.has_ams && iter.second.has_vt_slot) {
@@ -6237,6 +6241,7 @@ bool SelectMachineDialog::CheckWarningFilamentRemain(MachineObject* obj_)
     // key: ams_id slot_id value: remain
     std::map<std::pair<std::string, std::string>, double> fila_remain_map; //collect fila remain info
     std::map<std::pair<std::string, std::string>, FilamentInfo> fila_used_map;
+    std::map<std::pair<std::string, std::string>, std::vector<int>> fila_ids_in_slot; // all filament ids mapped to the same slot
     {
         for (auto ams_item : obj_->GetFilaSystem()->GetAmsList()) {
             std::string ams_id = ams_item.first;
@@ -6274,10 +6279,17 @@ bool SelectMachineDialog::CheckWarningFilamentRemain(MachineObject* obj_)
                 auto volumes_map = gcode_result->print_statistics.total_volumes_per_extruder;
                 if (volumes_map.find(fila.id) != volumes_map.end() && fila.id >= 0 && fila.id < densities.size()) {
                     std::pair<std::string, std::string> key{fila.ams_id, fila.slot_id};
-                    FilamentInfo info;
-                    info.id = fila.id;
-                    info.used_g = densities[fila.id] * (volumes_map[fila.id] / 1000); // mm^3 -> cm^3
-                    fila_used_map[key] = info;
+                    double used_g = densities[fila.id] * (volumes_map[fila.id] / 1000); // mm^3 -> cm^3
+                    auto used_it = fila_used_map.find(key);
+                    if (used_it == fila_used_map.end()) {
+                        FilamentInfo info;
+                        info.id = fila.id;
+                        info.used_g = used_g;
+                        fila_used_map[key] = info;
+                    } else {
+                        used_it->second.used_g += used_g;
+                    }
+                    fila_ids_in_slot[key].push_back(fila.id);
                 } else {
                     BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << "the list of filament densities can't find "<< fila.id;
                     return true;
@@ -6348,7 +6360,8 @@ bool SelectMachineDialog::CheckWarningFilamentRemain(MachineObject* obj_)
                             }
                         }
                     } else {
-                        filaments_not_enough.push_back(item.second.id);
+                        const auto& slot_ids = fila_ids_in_slot[ams_slot_key];
+                        filaments_not_enough.insert(filaments_not_enough.end(), slot_ids.begin(), slot_ids.end());
                         BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << "The filament is not enough in ams: "
                                                    << ams_slot_key.first << " slot: " << ams_slot_key.second
                                                    << ", used: " << fila_used << ", available: " << total_remain;
@@ -6358,7 +6371,8 @@ bool SelectMachineDialog::CheckWarningFilamentRemain(MachineObject* obj_)
                     return true;
                 }
             } else {
-                filaments_not_enough.push_back(item.second.id);
+                const auto& slot_ids = fila_ids_in_slot[ams_slot_key];
+                filaments_not_enough.insert(filaments_not_enough.end(), slot_ids.begin(), slot_ids.end());
                 BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << "The filament is not enough in ams slot: "
                                            << ams_slot_key.first << " slot: " << ams_slot_key.second
                                            << ", used: " << fila_used << ", available: " << fila_remain;
@@ -6519,7 +6533,7 @@ bool SelectMachineDialog::slicing_with_fila_switch() const
     }
 
     if (m_print_type == FROM_NORMAL) {
-        auto has_filament_switcher = wxGetApp().preset_bundle->full_config().option<ConfigOptionBool>("has_filament_switcher");
+        auto has_filament_switcher = wxGetApp().preset_bundle->project_config.option<ConfigOptionBool>("has_filament_switcher");
         if (has_filament_switcher) {
             return has_filament_switcher->value;
         }

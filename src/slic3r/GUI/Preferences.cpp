@@ -11,6 +11,7 @@
 #include "Notebook.hpp"
 #include "ReleaseNote.hpp"
 #include "OG_CustomCtrl.hpp"
+#include "fila_manager/wgtFilaManagerFeature.h"
 #include "wx/graphics.h"
 
 #include <wx/listimpl.cpp>
@@ -746,33 +747,46 @@ wxBoxSizer *PreferencesDialog::create_item_switch(wxString title, wxWindow *pare
     return m_sizer_switch;
 }
 
-wxBoxSizer* PreferencesDialog::create_item_darkmode_checkbox(wxString title, wxWindow* parent, wxString tooltip, int padding_left, std::string param)
+wxBoxSizer* PreferencesDialog::create_item_darkmode_combobox(wxString title, wxWindow* parent, wxString tooltip, int padding_left)
 {
-    wxBoxSizer* m_sizer_checkbox = new wxBoxSizer(wxHORIZONTAL);
+    // A single read-only combobox replacing the former dark-mode checkbox, letting the
+    // user pick Light / Dark / Follow system. "Follow system" makes dark_mode() track the
+    // OS appearance; the two underlying config keys are driven from here.
+    std::vector<wxString> label_list = { _L("Light"), _L("Dark"), _L("Follow system") };
 
-    m_sizer_checkbox->Add(0, 0, 0, wxEXPAND | wxLEFT, 23);
+    wxBoxSizer* m_sizer_combox = new wxBoxSizer(wxHORIZONTAL);
+    m_sizer_combox->Add(0, 0, 0, wxEXPAND | wxLEFT, 23);
 
-    auto checkbox = new ::CheckBox(parent);
-    m_checkbox_list[m_checkbox_list.size()] = checkbox;
-    checkbox->SetValue((app_config->get(param) == "1") ? true : false);
-    m_dark_mode_ckeckbox = checkbox;
+    auto combo_title = new wxStaticText(parent, wxID_ANY, title, wxDefaultPosition, DESIGN_TITLE_SIZE, 0);
+    combo_title->SetForegroundColour(DESIGN_GRAY900_COLOR);
+    combo_title->SetFont(::Label::Body_13);
+    combo_title->SetToolTip(tooltip);
+    combo_title->Wrap(-1);
+    m_sizer_combox->Add(combo_title, 0, wxALIGN_CENTER | wxALL, 3);
 
-    m_sizer_checkbox->Add(checkbox, 0, wxALIGN_CENTER, 0);
-    m_sizer_checkbox->Add(0, 0, 0, wxEXPAND | wxLEFT, 8);
+    auto combobox = new ::ComboBox(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, DESIGN_LARGE_COMBOBOX_SIZE, 0, nullptr, wxCB_READONLY);
+    m_combobox_list[m_combobox_list.size()] = combobox;
+    combobox->SetFont(::Label::Body_13);
+    combobox->GetDropDown().SetFont(::Label::Body_13);
+    for (auto& label : label_list)
+        combobox->Append(label);
 
-    auto checkbox_title = new wxStaticText(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, 0);
-    checkbox_title->SetForegroundColour(DESIGN_GRAY900_COLOR);
-    checkbox_title->SetFont(::Label::Body_13);
+    // Initial selection: Follow system > Dark > Light.
+    int sel = 0;
+    if (app_config->get("dark_mode_follow_system") == "1")
+        sel = 2;
+    else if (app_config->get("dark_color_mode") == "1")
+        sel = 1;
+    combobox->SetSelection(sel);
 
-    auto size = checkbox_title->GetTextExtent(title);
-    checkbox_title->SetMinSize(wxSize(size.x + FromDIP(40), -1));
-    checkbox_title->Wrap(-1);
-    m_sizer_checkbox->Add(checkbox_title, 0, wxALIGN_CENTER | wxALL, 3);
-
+    m_sizer_combox->Add(combobox, 0, wxALIGN_CENTER, 0);
 
     //// save config
-    checkbox->Bind(wxEVT_TOGGLEBUTTON, [this, checkbox, param](wxCommandEvent& e) {
-        app_config->set(param, checkbox->GetValue() ? "1" : "0");
+    combobox->GetDropDown().Bind(wxEVT_COMBOBOX, [this](wxCommandEvent& e) {
+        int idx = e.GetSelection();
+        app_config->set("dark_mode_follow_system", idx == 2 ? "1" : "0");
+        if (idx != 2)  // Light/Dark set the colour explicitly; Follow system lets the OS decide.
+            app_config->set("dark_color_mode", idx == 1 ? "1" : "0");
         app_config->save();
         wxGetApp().Update_dark_mode_flag();
 
@@ -787,8 +801,8 @@ wxBoxSizer* PreferencesDialog::create_item_darkmode_checkbox(wxString title, wxW
         e.Skip();
         });
 
-    checkbox->SetToolTip(tooltip);
-    return m_sizer_checkbox;
+    combobox->SetToolTip(tooltip);
+    return m_sizer_combox;
 }
 
 void PreferencesDialog::set_dark_mode()
@@ -1325,8 +1339,21 @@ wxWindow* PreferencesDialog::create_general_page()
     std::vector<wxString> FlushOptionLabels = {_L("All"),_L("Color change"),_L("Disabled")};
     std::vector<std::string> FlushOptionValues = { "all","color change","disabled" };
     auto item_auto_flush = create_item_combobox(_L("Auto Flush"), page, _L("Auto calculate flush volumes"), "auto_calculate_flush", FlushOptionLabels, FlushOptionValues);
+
+    std::vector<wxString> DefaultPrintActionLabels = {_L("Print plate"), _L("Print all"), _L("Send"), _L("Send all")};
+    std::vector<std::string> DefaultPrintActionValues = {"print_plate", "print_all", "send", "send_all"};
+    auto item_default_print_action = create_item_combobox(_L("Default print action"), page,
+        _L("Action selected by default on the print button. You can still change it from the button's dropdown."),
+        "default_print_action", DefaultPrintActionLabels, DefaultPrintActionValues);
     //auto item_hints = create_item_checkbox(_L("Show \"Tip of the day\" notification after start"), page, _L("If enabled, useful hints are displayed at startup."), 50, "show_hints");
     auto item_multi_machine = create_item_checkbox(_L("Multi-device Management(Take effect after restarting Studio)."), page, _L("With this option enabled, you can send a task to multiple devices at the same time and manage multiple devices."), 50, "enable_multi_machine");
+    auto item_fila_manager = create_item_checkbox(_L("Filament Manager") + " (" + _L("Take effect after restarting Studio") + ")", page,
+#if __APPLE__
+        _L("The Filament Manager is turned off by default on macOS because compatibility issues on some systems may cause the application to become unresponsive."),
+#else
+        wxEmptyString,
+#endif
+        50, FilaManagerEnabledConfigKey);
     auto item_step_mesh_setting = create_item_checkbox(_L("Show the step mesh parameter setting dialog."), page, _L("If enabled,a parameter settings dialog will appear during STEP file import."), 50, "enable_step_mesh_setting");
     auto item_beta_version_update = create_item_checkbox(_L("Support beta version update."), page, _L("With this option enabled, you can receive beta version updates."), 50, "enable_beta_version_update");
     auto item_mix_print_high_low_temperature = create_item_checkbox(_L("Remove the restriction on mixed printing of high and low temperature filaments."), page, _L("With this option enabled, you can print materials with a large temperature difference together."), 50, "enable_high_low_temp_mixed_printing");
@@ -1350,7 +1377,7 @@ wxWindow* PreferencesDialog::create_general_page()
                                                          _L("Zoom in towards the mouse pointer's position in the 3D view, rather than the 2D window center."), 50,
                                                          "zoom_to_mouse");
     auto  item_show_shells_in_preview_settings = create_item_checkbox(_L("Always show shells in preview"), page,
-                                                         _L("Always show shells or not in preview view tab.If change value,you should reslice."), 50,
+                                                         _L("Always show shells or not in preview view tab. If you change this value, you should reslice."), 50,
                                                          "show_shells_in_preview");
     auto  item_import_single_svg_and_split         = create_item_checkbox(_L("Import a single SVG and split it"), page,
                                                                      _L("Import a single SVG and then split it to several parts."), 50,
@@ -1358,6 +1385,28 @@ wxWindow* PreferencesDialog::create_general_page()
     auto  item_gamma_correct_in_import_obj = create_item_checkbox(_L("Enable gamma correction for the imported obj file"), page,
                                                                  _L("Perform gamma correction on color after importing the obj model."), 50,
                                                                  "gamma_correct_in_import_obj");
+
+    std::vector<wxString> standard_3mf_color_import_labels = {
+        _L("Ask every time"),
+        _L("Apply automatic color mapping"),
+        _L("Import geometry only")
+    };
+    std::vector<std::string> standard_3mf_color_import_values = {
+        "ask",
+        "auto",
+        "geometry_only"
+    };
+    auto item_standard_3mf_color_import = create_item_combobox(
+        _L("Standard 3MF color import"),
+        page,
+        _L("Choose how color information from standard 3MF files is handled during import."),
+        "standard_3mf_color_import_mode",
+        standard_3mf_color_import_labels,
+        standard_3mf_color_import_values,
+        nullptr,
+        FromDIP(180),
+        FromDIP(190));
+
     auto  item_enable_record_gcodeviewer_option_item = create_item_checkbox(_L("Remember last used color scheme"), page,
                                                                  _L("When enabled, the last used color scheme (e.g., Line Type, Speed) will be automatically applied on next startup."), 50,
                                                                  "enable_record_gcodeviewer_option_item");
@@ -1404,6 +1453,12 @@ wxWindow* PreferencesDialog::create_general_page()
                 GLGizmoBase::Grabber::GrabberSizeFactor = d_value;
             }
         });
+
+    auto item_arrow_move_step = create_item_range_input(_L("Object move step"), page,
+        _L("Step in mm that arrow keys nudge the selected object. Hold Shift for a 0.1x step and Alt for a 0.01x step.") +
+            _L("Value range") + ":[0.01,100]",
+        "arrow_move_step", 0.01f, 100.0f, 2, nullptr);
+
     range_min = 0.0f;
     range_max = 150.0f;
     auto item_tooltip_offset_size_settings = create_item_range_two_input(_L("Tooltip offset"), page,
@@ -1446,6 +1501,7 @@ wxWindow* PreferencesDialog::create_general_page()
     });
     // auto item_backup = create_item_switch(_L("Backup switch"), page, _L("Backup switch"), "units");
     auto item_gcodes_warning = create_item_checkbox(_L("No warnings when loading 3MF with modified G-codes"), page,_L("No warnings when loading 3MF with modified G-codes"), 50, "no_warn_when_modified_gcodes");
+    auto item_cloud_server_warning = create_item_checkbox(_L("Don't show cloud device server connection warnings"), page, _L("When enabled, the \"Failed to connect to the cloud device server\" dialog will not appear. Uncheck to restore the warning."), 50, "suppress_cloud_device_server_warning");
     auto item_backup  = create_item_checkbox(_L("Auto-Backup"), page,_L("Backup your project periodically for restoring from the occasional crash."), 50, "backup_switch");
     auto item_backup_interval = create_item_backup_input(_L("every"), page, _L("The peroid of backup in seconds."), "backup_interval");
 
@@ -1456,10 +1512,10 @@ wxWindow* PreferencesDialog::create_general_page()
     auto title_media = create_item_title(_L("Media"), page, _L("Media"));
     auto item_auto_stop_liveview = create_item_checkbox(_L("Keep liveview when printing."), page, _L("By default, Liveview will pause after 15 minutes of inactivity on the computer. Check this box to disable this feature during printing."), 50, "auto_stop_liveview");
 
-    //dark mode
-#ifdef _WIN32
+    //dark mode (native on macOS; manual toggle on Windows and Linux)
+#ifndef __APPLE__
     auto title_darkmode = create_item_title(_L("Dark Mode"), page, _L("Dark Mode"));
-    auto item_darkmode = create_item_darkmode_checkbox(_L("Enable dark mode"), page,_L("Enable dark mode"), 50, "dark_color_mode");
+    auto item_darkmode = create_item_darkmode_combobox(_L("Dark mode"), page, _L("Choose the interface theme: light, dark, or follow the system setting."), 50);
 #endif
 
 #if 0
@@ -1497,10 +1553,12 @@ wxWindow* PreferencesDialog::create_general_page()
     sizer_page->Add(item_region, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_currency, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_auto_flush, 0, wxTOP, FromDIP(3));
+    sizer_page->Add(item_default_print_action, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_single_instance, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_bed_type_follow_preset, 0, wxTOP, FromDIP(3));
     //sizer_page->Add(item_hints, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_multi_machine, 0, wxTOP, FromDIP(3));
+    sizer_page->Add(item_fila_manager, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_12h_time_format, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_step_mesh_setting, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_beta_version_update, 0, wxTOP, FromDIP(3));
@@ -1516,6 +1574,7 @@ wxWindow* PreferencesDialog::create_general_page()
     sizer_page->Add(item_show_shells_in_preview_settings, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_import_single_svg_and_split, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_gamma_correct_in_import_obj, 0, wxTOP, FromDIP(3));
+    sizer_page->Add(item_standard_3mf_color_import, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_enable_record_gcodeviewer_option_item, 0, wxTOP, FromDIP(3));
     sizer_page->Add(enable_assemble_view_preview_settings, 0, wxTOP, FromDIP(3));
 #if !BBL_RELEASE_TO_PUBLIC
@@ -1526,6 +1585,7 @@ wxWindow* PreferencesDialog::create_general_page()
     sizer_page->Add(enable_advanced_gcode_viewer, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_toolbar_style, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_grabber_size_settings, 0, wxTOP, FromDIP(3));
+    sizer_page->Add(item_arrow_move_step, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_tooltip_offset_size_settings, 0, wxTOP, FromDIP(3));
     sizer_page->Add(title_presets, 0, wxTOP | wxEXPAND, FromDIP(20));
     sizer_page->Add(item_user_sync, 0, wxTOP, FromDIP(3));
@@ -1558,6 +1618,7 @@ wxWindow* PreferencesDialog::create_general_page()
     sizer_page->Add(item_max_recent_count, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_save_choise, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_gcodes_warning, 0, wxTOP, FromDIP(3));
+    sizer_page->Add(item_cloud_server_warning, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_backup, 0, wxTOP,FromDIP(3));
     item_backup->Add(item_backup_interval, 0, wxLEFT, 0);
 
@@ -1567,7 +1628,7 @@ wxWindow* PreferencesDialog::create_general_page()
     sizer_page->Add(title_media, 0, wxTOP| wxEXPAND, FromDIP(20));
     sizer_page->Add(item_auto_stop_liveview, 0, wxEXPAND, FromDIP(3));
 
-#ifdef _WIN32
+#ifndef __APPLE__
     sizer_page->Add(title_darkmode, 0, wxTOP | wxEXPAND, FromDIP(20));
     sizer_page->Add(item_darkmode, 0, wxEXPAND, FromDIP(3));
 #endif
@@ -1601,11 +1662,11 @@ void PreferencesDialog::create_gui_page()
 
     auto title_index_and_tip = create_item_title(_L("Home page and daily tips"), page, _L("Home page and daily tips"));
     auto item_home_page      = create_item_checkbox(_L("Show home page on startup"), page, _L("Show home page on startup"), 50, "show_home_page");
-    //auto item_daily_tip      = create_item_checkbox(_L("Show daily tip on startup"), page, _L("Show daily tip on startup"), 50, "show_daily_tips");
+    auto item_daily_tip      = create_item_checkbox(_L("Show daily tips"), page, _L("Show the daily tips panel in the slicing progress window."), 50, "show_daily_tips");
 
     sizer_page->Add(title_index_and_tip, 0, wxTOP, 26);
     sizer_page->Add(item_home_page, 0, wxTOP, 6);
-    //sizer_page->Add(item_daily_tip, 0, wxTOP, 6);
+    sizer_page->Add(item_daily_tip, 0, wxTOP, 6);
 
     page->SetSizer(sizer_page);
     page->Layout();

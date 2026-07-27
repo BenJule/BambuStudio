@@ -49,11 +49,11 @@
 #include "../Utils/MacDarkMode.hpp"
 
 #include <fstream>
-#include <string_view>
 #include <memory>
+#include <string_view>
 
 #include "GUI_App.hpp"
-#include "GUI_Utils.hpp"   // on_window_geometry — Wayland-safe deferred window geometry
+#include "GUI_Utils.hpp"
 #include "UnsavedChangesDialog.hpp"
 #include "MsgDialog.hpp"
 #include "Notebook.hpp"
@@ -127,6 +127,12 @@ static bool should_skip_fit_camera_shortcut(Plater *plater)
     return is_gizmo_running(plater->get_view3D_canvas3D()) ||
            is_gizmo_running(plater->get_assmeble_canvas3D()) ||
            is_gizmo_running(plater->get_current_canvas3D());
+}
+
+static bool should_block_window_resize_for_assembly(Plater *plater)
+{
+    GLCanvas3D *canvas = plater ? plater->get_assmeble_canvas3D() : nullptr;
+    return canvas && canvas->is_assembly_play_or_export_mode();
 }
 
 enum class ERescaleTarget
@@ -297,6 +303,19 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
 	});
 #endif
 
+    // Auto-save timer: silently saves the open project every 5 minutes when enabled
+    m_autosave_timer = new wxTimer(this);
+    Bind(wxEVT_TIMER, [this](wxTimerEvent& e) {
+        if (e.GetTimer().GetId() != m_autosave_timer->GetId()) { e.Skip(); return; }
+        if (!wxGetApp().app_config || wxGetApp().app_config->get("autosave_enabled") != "1") return;
+        if (!m_plater) return;
+        if (!m_plater->is_project_dirty()) return;
+        if (m_plater->get_project_filename(".3mf").IsEmpty()) return;
+        BOOST_LOG_TRIVIAL(info) << "auto-save: saving project";
+        m_plater->save_project(false);
+    });
+    m_autosave_timer->Start(5 * 60 * 1000); // every 5 minutes
+
 #ifdef __APPLE__
     // Initialize the docker task bar icon.
     switch (wxGetApp().get_app_mode()) {
@@ -390,6 +409,9 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
                 m_topbar->SetMaximizedSize();
             }
 #endif
+        if (should_block_window_resize_for_assembly(m_plater))
+            return;
+
 #ifdef _WIN32
         if (m_is_in_move_or_resize) {
             ULONGLONG now = GetTickCount64();
@@ -551,6 +573,9 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
             event.Veto();
             return;
         }
+        if (GLCanvas3D *canvas = m_plater->get_assmeble_canvas3D()) {
+            canvas->close_project_and_save_assembly_steps_tree();
+        }
 
     #if 0 // BBS
         //if (m_plater != nullptr) {
@@ -602,6 +627,9 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
                 j["color_painting"] = get_value(GLGizmosManager::convert_gizmo_type_to_string(GLGizmosManager::EType::MmuSegmentation));
                 j["brimears"]            = get_value(GLGizmosManager::convert_gizmo_type_to_string(GLGizmosManager::EType::BrimEars));
                 j["assembly_view"] = get_value("assembly_view");
+                j["assembly_view_export_pdf"] = get_value("assembly_view_export_pdf");
+                j["assembly_view_export_markdown"] = get_value("assembly_view_export_markdown");
+                j["assembly_view_export_mp4"] = get_value("assembly_view_export_mp4");
 
                 agent->track_event("key_func", j.dump());
 
@@ -794,6 +822,14 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
             return;
         }
 
+        // F1–F4: switch main tabs
+        if (!evt.HasAnyModifiers()) {
+            if (key_code == WXK_F1) { select_tab(size_t(tp3DEditor)); return; }
+            if (key_code == WXK_F2) { select_tab(size_t(tpPreview));  return; }
+            if (key_code == WXK_F3) { select_tab(size_t(tpMonitor));  return; }
+            if (key_code == WXK_F4) { select_tab(size_t(tpProject));  return; }
+        }
+
         // Pass 3D view preset shortcuts directly to the current canvas. (Only 0-7 currently used but reserve 8 & 9 anyway.)
         if (evt.CmdDown() && ((key_code >= '0' && key_code <= '9') || (key_code >= WXK_NUMPAD0 && key_code <= WXK_NUMPAD9)) && m_plater) {
             if (auto *canvas = m_plater->canvas3D()) {
@@ -935,10 +971,14 @@ WXLRESULT MainFrame::MSWWindowProc(WXUINT nMsg, WXWPARAM wParam, WXLPARAM lParam
         break;
     }
     case WM_ENTERSIZEMOVE:
+        if (should_block_window_resize_for_assembly(m_plater))
+            return 0;
         m_is_in_move_or_resize = true;
         break;
     case WM_EXITSIZEMOVE:
         m_is_in_move_or_resize = false;
+        if (should_block_window_resize_for_assembly(m_plater))
+            return 0;
         Refresh();
         Layout();
         wxQueueEvent(wxGetApp().plater(), new SimpleEvent(EVT_NOTICE_CHILDE_SIZE_CHANGED));
@@ -1396,12 +1436,22 @@ void MainFrame::init_tabpanel()
             // Defer hash navigation until after the notebook paints (macOS + WKWebView).
             CallAfter([this]() {
                 if (m_web_device && m_tabpanel && m_tabpanel->GetCurrentPage() == m_web_device)
-                    m_web_device->NavigateTo("/filament_manager");
+                    m_web_device->NavigateTo("/filament_manager", /*re_init=*/true);
             });
 #else
-            m_web_device->NavigateTo("/filament_manager");
+            // Switching back to this tab: re-run init() to pick up changes.
+            m_web_device->NavigateTo("/filament_manager", /*re_init=*/true);
 #endif
         }
+#if defined(__WXOSX__)
+        // macOS root cause fix: suspend the Filament Manager WKWebView whenever it
+        // is not the visible tab. Its live React SPA, if left mounted in a hidden
+        // webview, keeps the CFRunLoop busy and starves wxEVT_IDLE app-wide, which
+        // freezes the 3D canvas / tab switching on the prepare page and breaks the
+        // language-switch GUI rebuild. Returning to the tab reloads it (NavigateTo).
+        if (m_web_device && panel != m_web_device)
+            m_web_device->Suspend();
+#endif
 #ifndef __APPLE__
         if (sel == tp3DEditor) {
             m_topbar->EnableUndoRedoItems();
@@ -1446,6 +1496,7 @@ void MainFrame::init_tabpanel()
             m_webview->load_url(url);
         });
         m_tabpanel->AddPage(m_webview, "", "tab_home_active", "tab_home_active", false);
+        m_tabpanel->SetPageToolTip(tpHome, _L("Home"));
         m_param_panel = new ParamsPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBK_LEFT | wxTAB_TRAVERSAL);
     }
 
@@ -1485,8 +1536,10 @@ void MainFrame::init_tabpanel()
     m_calibration->SetBackgroundColour(*wxWHITE);
     m_tabpanel->AddPage(m_calibration, _L("Calibration"), std::string("tab_calibration_active"), std::string("tab_calibration_active"), false);
 
-    m_web_device = new DeviceWebPage(m_tabpanel);
-    m_tabpanel->AddPage(m_web_device, _L("Filament Manager"), std::string("tab_filament_active"), std::string("tab_filament_active"), false);
+    if (!wxGetApp().is_fila_manager_disabled()) {
+        m_web_device = new DeviceWebPage(m_tabpanel);
+        m_tabpanel->AddPage(m_web_device, _L("Filament Manager"), std::string("tab_filament_active"), std::string("tab_filament_active"), false);
+    }
 
     if (m_plater) {
         // load initial config
@@ -1934,12 +1987,26 @@ wxBoxSizer* MainFrame::create_side_tools()
     m_slice_select = eSlicePlate;
     m_print_select = ePrintPlate;
 
+    // #11187: the default action on the print button is configurable in Preferences
+    // ("Default print action"). Fall back to "Print plate" for empty/unknown values.
+    wxString print_btn_label = _L("Print plate");
+    if (wxGetApp().app_config) {
+        const std::string default_action = wxGetApp().app_config->get("default_print_action");
+        if (default_action == "print_all") {
+            m_print_select = ePrintAll;          print_btn_label = _L("Print all");
+        } else if (default_action == "send") {
+            m_print_select = eSendToPrinter;     print_btn_label = _L("Send");
+        } else if (default_action == "send_all") {
+            m_print_select = eSendToPrinterAll;  print_btn_label = _L("Send all");
+        }
+    }
+
     auto slice_panel = new wxPanel(this,wxID_ANY,wxDefaultPosition,wxDefaultSize,wxTRANSPARENT_WINDOW);
     auto print_panel = new wxPanel(this,wxID_ANY,wxDefaultPosition,wxDefaultSize,wxTRANSPARENT_WINDOW);
 
     m_slice_btn = new SideButton(slice_panel, _L("Slice plate"), "");
     m_slice_option_btn = new SideButton(slice_panel, "", "sidebutton_dropdown", 0, FromDIP(14));
-    m_print_btn = new SideButton(print_panel, _L("Print plate"), "");
+    m_print_btn = new SideButton(print_panel, print_btn_label, "");
     m_print_option_btn = new SideButton(print_panel, "", "sidebutton_dropdown", 0, FromDIP(14));
 
     auto slice_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -1959,12 +2026,11 @@ wxBoxSizer* MainFrame::create_side_tools()
     sizer->Add(expand_program_holder, 0, wxALIGN_CENTER, 0);
     sizer->Add(FromDIP(4), 0, 0, 0, 0);
     sizer->Add(split_line_icon, 0, wxALIGN_CENTER, 0);
-    sizer->Add(FromDIP(10), 0, 0, 0, 0);
+    sizer->Add(FromDIP(6), 0, 0, 0, 0);
     sizer->Add(slice_panel);
-    sizer->Add(FromDIP(15), 0, 0, 0, 0);
+    sizer->Add(FromDIP(8), 0, 0, 0, 0);
     sizer->Add(print_panel);
     sizer->Add(FromDIP(4), 0, 0, 0, 0);
-    sizer->Add(FromDIP(19), 0, 0, 0, 0);
 
     sizer->Layout();
 
@@ -2341,7 +2407,7 @@ wxBoxSizer* MainFrame::create_side_tools()
     });
     sizer->Add(aux_btn, 0, wxLEFT | wxALIGN_CENTER_VERTICAL, 1 * em / 10);
     */
-    sizer->Add(FromDIP(19), 0, 0, 0, 0);
+    // sizer->Add(FromDIP(19), 0, 0, 0, 0);
 
     return sizer;
 }
@@ -2646,10 +2712,8 @@ void MainFrame::on_sys_color_changed()
     // update label colors in respect to the system mode
     wxGetApp().init_label_colours();
 
-#ifndef __WINDOWS__
     wxGetApp().force_colors_update();
     wxGetApp().update_ui_from_settings();
-#endif //__APPLE__
 
 #ifdef __WXMSW__
     wxGetApp().UpdateDarkUI(m_tabpanel);
@@ -2716,6 +2780,9 @@ static wxMenu* generate_help_menu()
     // Open Config Folder
     append_menu_item(helpMenu, wxID_ANY, _L("Show Configuration Folder"), _L("Show Configuration Folder"),
         [](wxCommandEvent&) { Slic3r::GUI::desktop_open_datadir_folder(); });
+
+    append_menu_item(helpMenu, wxID_ANY, _L("Show Log Folder"), _L("Show Log Folder"),
+        [](wxCommandEvent&) { Slic3r::GUI::desktop_open_log_folder(); });
 
     append_menu_item(helpMenu, wxID_ANY, _L("Show Tip of the Day"), _L("Show Tip of the Day"), [](wxCommandEvent&) {
         wxGetApp().plater()->get_dailytips()->open();
@@ -2885,6 +2952,15 @@ void MainFrame::init_menubar_as_editor()
 
         Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& evt) { evt.Enable(can_open_project() && (m_recent_projects.GetCount() > 0)); }, recent_projects_submenu->GetId());
 
+        // #11401: let users clear the recent projects list from the UI
+        append_menu_item(fileMenu, wxID_ANY, _L("Clear recent projects"), _L("Clear the recent projects list"),
+            [this](wxCommandEvent&) {
+                while (m_recent_projects.GetCount() > 0)
+                    m_recent_projects.RemoveFileFromHistory(m_recent_projects.GetCount() - 1);
+                wxGetApp().app_config->set_recent_projects(std::vector<std::string>());
+                wxGetApp().app_config->save();
+            }, "", nullptr, [this]() { return m_recent_projects.GetCount() > 0; }, this);
+
         // BBS: close save project
 #ifndef __APPLE__
         append_menu_item(fileMenu, wxID_ANY, _L("Save Project") + "\t" + ctrl + "S", _L("Save current project to file"),
@@ -2906,6 +2982,21 @@ void MainFrame::init_menubar_as_editor()
             [this](wxCommandEvent&) { if (m_plater) m_plater->save_project(true); }, "", nullptr,
             [this](){return m_plater != nullptr && can_save_as(); }, this);
 #endif
+
+        append_menu_item(fileMenu, wxID_ANY, _L("Show Project in Folder"), _L("Show current project in folder"),
+            [this](wxCommandEvent&) {
+                if (m_plater) {
+                    const wxString filename = m_plater->get_project_filename(".3mf");
+                    if (!filename.IsEmpty() && wxFileExists(filename))
+                        Slic3r::GUI::desktop_open_any_folder(into_u8(filename));
+                }
+            }, "", nullptr,
+            [this]() {
+                if (m_plater == nullptr)
+                    return false;
+                const wxString filename = m_plater->get_project_filename(".3mf");
+                return !filename.IsEmpty() && wxFileExists(filename);
+            }, this);
 
 
         fileMenu->AppendSeparator();
@@ -4366,20 +4457,12 @@ void MainFrame::open_recent_project(size_t file_id, wxString const & filename)
     }
     else
     {
-        MessageDialog msg(this, _L("The project is no longer available."), _L("Error"), wxOK | wxYES_DEFAULT);
+        MessageDialog msg(this,
+            _L("The project is no longer available. Do you want to remove it from the recent projects list?"),
+            _L("Error"),
+            wxYES_NO | wxYES_DEFAULT | wxICON_WARNING);
         if (msg.ShowModal() == wxID_YES)
-        {
-            m_recent_projects.RemoveFileFromHistory(file_id);
-            std::vector<std::string> recent_projects;
-            size_t count = m_recent_projects.GetCount();
-            for (size_t i = 0; i < count; ++i)
-            {
-                recent_projects.push_back(into_u8(m_recent_projects.GetHistoryFile(i)));
-            }
-            wxGetApp().app_config->set_recent_projects(recent_projects);
-            wxGetApp().app_config->save();
-            m_webview->SendRecentList(-1);
-        }
+            remove_recent_project(file_id, filename);
     }
 }
 

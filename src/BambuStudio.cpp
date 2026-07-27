@@ -32,6 +32,7 @@ using namespace nlohmann;
 #include <condition_variable>
 #include <mutex>
 #include <sys/stat.h>
+#include <syslog.h>
 #include <boost/thread.hpp>
 #endif
 
@@ -87,6 +88,7 @@ using namespace nlohmann;
 #include "slic3r/GUI/Plater.hpp"
 #include "slic3r/GUI/GuiColor.hpp"
 #include <GLFW/glfw3.h>
+#include <cstdlib>
 
 #ifdef __WXGTK__
 #include <X11/Xlib.h>
@@ -271,6 +273,11 @@ typedef struct  _sliced_plate_info{
 
     std::vector<object_info_t> objects;
     std::vector<filament_info_t> filaments;
+
+    // first-layer bbox data extracted from PrintObjects before Print::clear() in CLI all-plates mode.
+    int    first_extruder{0};
+    std::vector<BBoxData>         bbox_objs;
+    std::vector<coordf_t>         wipe_tower_bbox; // {min.x, min.y, max.x, max.y} if wipe tower exists
 }sliced_plate_info_t;
 
 typedef struct _sliced_info {
@@ -1407,6 +1414,15 @@ static bool is_preset_compatible_with_printer(const std::vector<std::string> &co
     return std::find(compatible_printers.begin(), compatible_printers.end(), printer_system_name) != compatible_printers.end();
 }
 
+// todo: temp modify: P1P/P1S share filament presets loosely; skip compatible_printers validation for them.
+static bool is_p1p_or_p1s_printer(const std::string &printer_model_name, const std::string &printer_system_name)
+{
+    if (printer_model_name == "Bambu Lab P1P" || printer_model_name == "Bambu Lab P1S")
+        return true;
+    return printer_system_name.find("P1P") != std::string::npos
+        || printer_system_name.find("P1S") != std::string::npos;
+}
+
 // For estimate_mode: given a source filament preset name (e.g. "Bambu PLA Basic @BBL P1S 0.4 nozzle")
 // and the new machine's BBL tag (e.g. "X2D 0.4 nozzle"), construct the target filament preset name
 // (e.g. "Bambu PLA Basic @BBL X2D 0.4 nozzle") and verify it exists in filament_full_dir.
@@ -1540,6 +1556,17 @@ int CLI::run(int argc, char **argv)
     set_current_thread_name("bambustu_main");
     // Save the thread ID of the main thread.
     save_main_thread_id();
+
+#if defined(__linux__) || defined(__LINUX__)
+    // The closed-source bambu_networking plugin calls syslog() with LOG_EMERG
+    // for certain non-critical errors (e.g. "SO register failed").  On Linux,
+    // systemd-journald broadcasts every PRIORITY=0 message to all logged-in
+    // terminals as a wall message, which is disruptive.  Suppress LOG_EMERG
+    // and LOG_ALERT in this process's syslog mask so those messages are simply
+    // not forwarded to the system journal.  All other priorities (CRIT and
+    // below) are unaffected.
+    setlogmask(LOG_UPTO(LOG_DEBUG) & ~LOG_MASK(LOG_EMERG) & ~LOG_MASK(LOG_ALERT));
+#endif
 
 #ifdef __WXGTK__
     // On Linux, wxGTK has no support for Wayland, and the app crashes on
@@ -3055,30 +3082,33 @@ int CLI::run(int argc, char **argv)
     }
 
     // Validate compatible_printers for externally loaded filament presets.
-    {
-        std::string effective_printer_system_name;
-        if (!new_printer_system_name.empty())
-            effective_printer_system_name = new_printer_system_name;
-        else
-            effective_printer_system_name = current_printer_system_name;
-
-        if (!effective_printer_system_name.empty()) {
-            for (size_t index = 0; index < load_filaments_config.size(); ++index) {
-                const auto *compatible_printers_opt = load_filaments_config[index].option<ConfigOptionStrings>("compatible_printers");
-                if (!compatible_printers_opt)
-                    continue;
-                const std::vector<std::string> &compatible_printers = compatible_printers_opt->values;
-                if (is_preset_compatible_with_printer(compatible_printers, effective_printer_system_name))
-                    continue;
-
-                const std::string &filament_name = (index < load_filaments_name.size()) ? load_filaments_name[index] : "";
-                BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(" %1%: filament preset %2% (slot %3%) is not compatible with printer %4%.")
-                    % __LINE__ % filament_name % (index + 1) % effective_printer_system_name;
-                record_exit_reson(outfile_dir, CLI_CONFIG_FILE_ERROR, 0, cli_errors[CLI_CONFIG_FILE_ERROR], sliced_info);
-                flush_and_exit(CLI_CONFIG_FILE_ERROR);
-            }
-        }
-    }
+    // {
+    //     std::string effective_printer_system_name;
+    //     if (!new_printer_system_name.empty())
+    //         effective_printer_system_name = new_printer_system_name;
+    //     else
+    //         effective_printer_system_name = current_printer_system_name;
+    //
+    //     const std::string effective_printer_model = !printer_model.empty() ? printer_model : current_printer_model;
+    //
+    //     if (!is_p1p_or_p1s_printer(effective_printer_model, effective_printer_system_name)
+    //         && !effective_printer_system_name.empty()) {
+    //         for (size_t index = 0; index < load_filaments_config.size(); ++index) {
+    //             const auto *compatible_printers_opt = load_filaments_config[index].option<ConfigOptionStrings>("compatible_printers");
+    //             if (!compatible_printers_opt)
+    //                 continue;
+    //             const std::vector<std::string> &compatible_printers = compatible_printers_opt->values;
+    //             if (is_preset_compatible_with_printer(compatible_printers, effective_printer_system_name))
+    //                 continue;
+    //
+    //             const std::string &filament_name = (index < load_filaments_name.size()) ? load_filaments_name[index] : "";
+    //             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(" %1%: filament preset %2% (slot %3%) is not compatible with printer %4%.")
+    //                 % __LINE__ % filament_name % (index + 1) % effective_printer_system_name;
+    //             record_exit_reson(outfile_dir, CLI_CONFIG_FILE_ERROR, 0, cli_errors[CLI_CONFIG_FILE_ERROR], sliced_info);
+    //             flush_and_exit(CLI_CONFIG_FILE_ERROR);
+    //         }
+    //     }
+    // }
 
     if (estimate_mode && (new_printer_name.empty() || current_printer_name.empty() || (new_printer_name == current_printer_name))) {
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(" %1%: estimate_mode requires a machine switch via --load_settings") % __LINE__;
@@ -3891,6 +3921,17 @@ int CLI::run(int argc, char **argv)
             std::vector<double> &flush_vol_matrix = m_print_config.option<ConfigOptionFloats>("flush_volumes_matrix", true)->values;
             flush_vol_matrix.resize(project_filament_count * project_filament_count * new_extruder_count, 0.f);
 
+            const std::vector<std::string>& flush_filament_ids = m_print_config.option<ConfigOptionStrings>("filament_ids", true)->values;
+            auto get_flush_filament_id = [&flush_filament_ids](int idx) -> std::string {
+                return (idx >= 0 && idx < (int)flush_filament_ids.size()) ? flush_filament_ids[idx] : std::string();
+            };
+            {
+                std::ostringstream ids_str;
+                for (size_t i = 0; i < flush_filament_ids.size(); ++i)
+                    ids_str << "[" << i << "]=" << flush_filament_ids[i] << " ";
+                BOOST_LOG_TRIVIAL(info) << "flush filament_ids (count=" << flush_filament_ids.size() << "): " << ids_str.str();
+            }
+
             // set multiplier to 1?
             std::vector<double>& flush_multipliers = m_print_config.option<ConfigOptionFloats>("flush_multiplier", true)->values;
             flush_multipliers.resize(new_extruder_count, 1.f);
@@ -3949,7 +3990,7 @@ int CLI::run(int argc, char **argv)
                                 Slic3r::GUI::BitmapCache::parse_color4(to_color, to_rgb);
 
                                 Slic3r::FlushVolCalculator calculator(min_flush_volumes[from_idx], Slic3r::g_max_flush_volume,nozzle_flush_dataset[nozzle_id]);
-                                flushing_volume = calculator.calc_flush_vol(from_rgb[3], from_rgb[0], from_rgb[1], from_rgb[2], to_rgb[3], to_rgb[0], to_rgb[1], to_rgb[2]);
+                                flushing_volume = calculator.calc_flush_vol(get_flush_filament_id(from_idx), get_flush_filament_id(to_idx), from_rgb[3], from_rgb[0], from_rgb[1], from_rgb[2], to_rgb[3], to_rgb[0], to_rgb[1], to_rgb[2]);
                                 if (is_from_support) { flushing_volume = std::max(Slic3r::g_min_flush_volume_from_support, flushing_volume); }
                             }
 
@@ -7129,6 +7170,16 @@ int CLI::run(int argc, char **argv)
                                     BOOST_LOG_TRIVIAL(info) << "print::process: first time_using_cache is " << slice_time[TIME_USING_CACHE] << " secs.";
                                 }
                                 if (printer_technology == ptFFF) {
+                                    FilamentMapMode current_map_mode = print_fff->config().filament_map_mode.value;
+                                    if (is_auto_filament_map_mode(current_map_mode)) {
+                                        part_plate->set_filament_maps(print_fff->get_filament_maps());
+                                        part_plate->set_filament_volume_maps(print_fff->get_filament_volume_maps());
+                                    }
+                                    if (current_map_mode != FilamentMapMode::fmmNozzleManual) {
+                                        std::vector<int> f_nozzle_maps = print_fff->get_filament_nozzle_maps();
+                                        part_plate->set_filament_nozzle_maps(f_nozzle_maps);
+                                    }
+
                                     std::string conflict_result = print_fff->get_conflict_string();
                                     if (!conflict_result.empty()) {
                                        BOOST_LOG_TRIVIAL(error) << "plate "<< index+1<< ": found slicing result conflict!"<< std::endl;
@@ -7392,7 +7443,51 @@ int CLI::run(int argc, char **argv)
                                         flush_and_exit(CLI_SLICING_TIME_EXCEEDS_LIMIT);
                                     }
                                 }
+                                // CLI all-plates mode: before pushing to sliced_plates, cache the
+                                // data we'll still need after Print/GCodeResult memory is freed.
+                                if (plate_to_slice == 0) {
+                                    // first-layer bbox of each print object (used by first_layer_bboxes loop)
+                                    sliced_plate_info.first_extruder = print_fff->get_tool_ordering().first_extruder();
+                                    auto orig_cli = part_plate->get_origin();
+                                    Vec2d orig2d_cli = { orig_cli[0], orig_cli[1] };
+                                    for (auto obj_cli : print_fff->objects()) {
+                                        BBoxData bd;
+                                        auto bb_scaled = obj_cli->get_first_layer_bbox(bd.area, bd.layer_height, bd.name);
+                                        auto bb = unscaled(bb_scaled);
+                                        bd.area *= (SCALING_FACTOR * SCALING_FACTOR);
+                                        bd.id   = obj_cli->id().id;
+                                        bd.bbox = { bb.min.x(), bb.min.y(), bb.max.x(), bb.max.y() };
+                                        sliced_plate_info.bbox_objs.emplace_back(std::move(bd));
+                                    }
+                                    if (print_fff->has_wipe_tower()) {
+                                        auto wt_corners = print_fff->first_layer_wipe_tower_corners();
+                                        if (!wt_corners.empty()) {
+                                            BoundingBox bb_scaled = {wt_corners[0], wt_corners[2]};
+                                            auto bb = unscaled(bb_scaled);
+                                            bb.min -= orig2d_cli;
+                                            bb.max -= orig2d_cli;
+                                            sliced_plate_info.wipe_tower_bbox = { bb.min.x(), bb.min.y(), bb.max.x(), bb.max.y() };
+                                        }
+                                    }
+                                }
+
                                 sliced_info.sliced_plates.push_back(sliced_plate_info);
+
+                                // CLI all-plates mode: release the two largest memory consumers
+                                // now that all needed data has been extracted into sliced_plate_info.
+                                // - print_fff->clear() releases all PrintObject slice data (layers, supports).
+                                // - clearing moves/lines_ends frees the gcode path buffer, which is
+                                //   the other large allocation; the rest of gcode_result is left intact
+                                //   so that store_to_3mf_structure() can still read fields like
+                                //   layer_filaments, filament_change_sequence, label_object_enabled, etc.
+                                if (plate_to_slice == 0) {
+                                    print_fff->clear();
+                                    gcode_result->moves.clear();
+                                    gcode_result->moves.shrink_to_fit();
+                                    gcode_result->lines_ends.clear();
+                                    gcode_result->lines_ends.shrink_to_fit();
+                                    BOOST_LOG_TRIVIAL(info) << boost::format("Plate %1%: slice data released to free memory.")%(index+1);
+                                }
                             } catch (const std::exception &ex) {
                                 BOOST_LOG_TRIVIAL(error) << "found slicing or export error for partplate "<<index+1 << std::endl;
                                 boost::nowide::cerr << ex.what() << std::endl;
@@ -7964,6 +8059,7 @@ int CLI::run(int argc, char **argv)
                 plate_bboxes.push_back(new PlateBBoxData());
                 continue;
             }
+
             PrintBase  *print_base=NULL;
             Slic3r::GUI::GCodeResult *gcode_result = NULL;
             int print_index;
@@ -8009,7 +8105,6 @@ int CLI::run(int argc, char **argv)
                 BOOST_LOG_TRIVIAL(info) << boost::format("plate %1% print by object, set from plate self")%(i+1);
                 plate_bbox->is_seq_print = true;
             }
-            plate_bbox->first_extruder = print->get_tool_ordering().first_extruder();
             //bed type;
             BedType plate_bed_type = part_plate->get_bed_type();
             if (plate_bed_type == btDefault) {
@@ -8021,43 +8116,75 @@ int CLI::run(int argc, char **argv)
             }
             else {
                 BOOST_LOG_TRIVIAL(info) << boost::format("plate %1% bed type: %2%, set from plate self")%(i+1) %plate_bed_type;
-                plate_bbox->bed_type       = bed_type_to_gcode_string(plate_bed_type);
+                plate_bbox->bed_type = bed_type_to_gcode_string(plate_bed_type);
             }
-            // get nozzle diameter
-            auto opt_nozzle_diameters = m_print_config.option<ConfigOptionFloatsNullable>("nozzle_diameter");
-            if (opt_nozzle_diameters != nullptr)
-                plate_bbox->nozzle_diameter = float(opt_nozzle_diameters->get_at(plate_bbox->first_extruder));
 
-            auto objects = print->objects();
-            auto orig = part_plate->get_origin();
-            Vec2d orig2d = { orig[0], orig[1] };
+            if (plate_to_slice == 0) {
+                // CLI all-plates mode: Print memory was already released after slicing.
+                // Use the bbox data cached into sliced_plate_info during slicing.
+                // sliced_plates is populated in plate order, so index i maps directly.
+                if (i < (int)sliced_info.sliced_plates.size()) {
+                    const sliced_plate_info_t* spi = &sliced_info.sliced_plates[i];
+                    plate_bbox->first_extruder = spi->first_extruder;
+                    // get nozzle diameter
+                    auto opt_nozzle_diameters = m_print_config.option<ConfigOptionFloatsNullable>("nozzle_diameter");
+                    if (opt_nozzle_diameters != nullptr)
+                        plate_bbox->nozzle_diameter = float(opt_nozzle_diameters->get_at(plate_bbox->first_extruder));
 
-            for (auto obj : objects)
-            {
-                BBoxData data;
-                auto bb_scaled = obj->get_first_layer_bbox(data.area, data.layer_height, data.name);
-                auto bb = unscaled(bb_scaled);
-                bbox_all.merge(bb);
-                data.area *= (SCALING_FACTOR * SCALING_FACTOR); // unscale area
-                data.id = obj->id().id;
-                data.bbox = { bb.min.x(),bb.min.y(),bb.max.x(),bb.max.y() };
-                id_bboxes.emplace_back(std::move(data));
-            }
-            // add wipe tower bounding box
-            if (print->has_wipe_tower()) {
-                BBoxData data;
-                auto   wt_corners = print->first_layer_wipe_tower_corners();
-                // when loading gcode.3mf, wipe tower info may not be correct
-                if (!wt_corners.empty()) {
-                    BoundingBox bb_scaled = {wt_corners[0], wt_corners[2]};
-                    auto        bb        = unscaled(bb_scaled);
-                    bb.min -= orig2d;
-                    bb.max -= orig2d;
+                    for (const BBoxData& bd : spi->bbox_objs) {
+                        BoundingBoxf bb(Vec2d(bd.bbox[0], bd.bbox[1]), Vec2d(bd.bbox[2], bd.bbox[3]));
+                        bbox_all.merge(bb);
+                        id_bboxes.push_back(bd);
+                    }
+                    if (!spi->wipe_tower_bbox.empty()) {
+                        BBoxData data;
+                        BoundingBoxf bb(Vec2d(spi->wipe_tower_bbox[0], spi->wipe_tower_bbox[1]),
+                                        Vec2d(spi->wipe_tower_bbox[2], spi->wipe_tower_bbox[3]));
+                        bbox_all.merge(bb);
+                        data.name = "wipe_tower";
+                        data.id   = partplate_list.get_curr_plate()->get_index() + 1000;
+                        data.bbox = spi->wipe_tower_bbox;
+                        id_bboxes.emplace_back(std::move(data));
+                    }
+                }
+            } else {
+                plate_bbox->first_extruder = print->get_tool_ordering().first_extruder();
+                // get nozzle diameter
+                auto opt_nozzle_diameters = m_print_config.option<ConfigOptionFloatsNullable>("nozzle_diameter");
+                if (opt_nozzle_diameters != nullptr)
+                    plate_bbox->nozzle_diameter = float(opt_nozzle_diameters->get_at(plate_bbox->first_extruder));
+
+                auto objects = print->objects();
+                auto orig = part_plate->get_origin();
+                Vec2d orig2d = { orig[0], orig[1] };
+
+                for (auto obj : objects)
+                {
+                    BBoxData data;
+                    auto bb_scaled = obj->get_first_layer_bbox(data.area, data.layer_height, data.name);
+                    auto bb = unscaled(bb_scaled);
                     bbox_all.merge(bb);
-                    data.name = "wipe_tower";
-                    data.id   = partplate_list.get_curr_plate()->get_index() + 1000;
-                    data.bbox = {bb.min.x(), bb.min.y(), bb.max.x(), bb.max.y()};
+                    data.area *= (SCALING_FACTOR * SCALING_FACTOR); // unscale area
+                    data.id = obj->id().id;
+                    data.bbox = { bb.min.x(),bb.min.y(),bb.max.x(),bb.max.y() };
                     id_bboxes.emplace_back(std::move(data));
+                }
+                // add wipe tower bounding box
+                if (print->has_wipe_tower()) {
+                    BBoxData data;
+                    auto   wt_corners = print->first_layer_wipe_tower_corners();
+                    // when loading gcode.3mf, wipe tower info may not be correct
+                    if (!wt_corners.empty()) {
+                        BoundingBox bb_scaled = {wt_corners[0], wt_corners[2]};
+                        auto        bb        = unscaled(bb_scaled);
+                        bb.min -= orig2d;
+                        bb.max -= orig2d;
+                        bbox_all.merge(bb);
+                        data.name = "wipe_tower";
+                        data.id   = partplate_list.get_curr_plate()->get_index() + 1000;
+                        data.bbox = {bb.min.x(), bb.min.y(), bb.max.x(), bb.max.y()};
+                        id_bboxes.emplace_back(std::move(data));
+                    }
                 }
             }
             plate_bbox->bbox_all = { bbox_all.min.x(),bbox_all.min.y(),bbox_all.max.x(),bbox_all.max.y() };

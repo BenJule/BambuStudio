@@ -251,6 +251,9 @@ public:
     // update changed name in the object model
     void                update_name_in_model(const wxDataViewItem& item) const;
     void                update_name_in_list(int obj_idx, int vol_idx) const;
+    // Refresh a list item's displayed name from the model, without relying on the
+    // current selection (vol_idx < 0 targets the object row).
+    void                sync_name_from_model(int obj_idx, int vol_idx);
     void                update_filament_values_for_items(const size_t filaments_count);
     void                update_filament_values_for_items_when_delete_filament(const size_t filament_id, const int replace_id = -1);
 
@@ -316,6 +319,7 @@ public:
     bool                del_subobject_from_object(const int obj_idx, const int idx, const int type);
     void                del_info_item(const int obj_idx, InfoItemType type);
     void                split();
+    void                link_selected_copies_as_instances();
     void                merge(bool to_multipart_object);
     void                merge_volumes(); // BBS: merge parts to single part
     void                layers_editing();
@@ -329,6 +333,7 @@ public:
     bool                is_splittable(bool to_objects);
     bool                selected_instances_of_same_object();
     bool                can_split_instances();
+    bool                can_link_selected_copies_as_instances() const;
     bool                can_merge_to_multipart_object() const;
     bool                can_merge_to_single_object() const;
     bool                can_mesh_boolean() const;
