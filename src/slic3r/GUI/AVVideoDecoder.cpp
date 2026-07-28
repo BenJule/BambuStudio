@@ -2,6 +2,8 @@
 
 #include <assert.h>
 
+#ifndef BAMBUSTUDIO_NO_AVVIDEODECODER
+
 extern "C"
 {
     #include <libavutil/avutil.h>
@@ -189,3 +191,22 @@ bool AVVideoDecoder::toWxBitmap(wxBitmap &bitmap, wxSize const &size2)
     }
     return true;
 }
+
+#else // BAMBUSTUDIO_NO_AVVIDEODECODER
+
+// No prebuilt libav for this target (Windows ARM64 - the deps system has no
+// ARM64 FFmpeg libraries yet). Camera/live-view decoding is unavailable here;
+// every call reports failure so wxMediaCtrl3 treats it the same as a normal
+// "no frame decoded" condition instead of needing its own guard.
+
+AVVideoDecoder::AVVideoDecoder() {}
+AVVideoDecoder::~AVVideoDecoder() {}
+int AVVideoDecoder::open(Bambu_StreamInfo const &) { return -1; }
+int AVVideoDecoder::reopen(Bambu_StreamInfo const &) { return -1; }
+int AVVideoDecoder::decode(Bambu_Sample const &) { return -1; }
+int AVVideoDecoder::flush() { return -1; }
+void AVVideoDecoder::close() {}
+bool AVVideoDecoder::toWxImage(wxImage &, wxSize const &) { return false; }
+bool AVVideoDecoder::toWxBitmap(wxBitmap &, wxSize const &) { return false; }
+
+#endif // BAMBUSTUDIO_NO_AVVIDEODECODER

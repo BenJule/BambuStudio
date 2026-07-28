@@ -3,10 +3,12 @@
 
 #include "Printer/BambuTunnel.h"
 
+#ifndef BAMBUSTUDIO_NO_AVVIDEODECODER
 extern "C" {
     #include <libavcodec/avcodec.h>
     #include <libswscale/swscale.h>
 }
+#endif // BAMBUSTUDIO_NO_AVVIDEODECODER
 #include <vector>
 #include <wx/bitmap.h>
 #include <wx/gdicmn.h>
@@ -39,9 +41,11 @@ public:
     bool toWxBitmap(wxBitmap &bitmap, wxSize const & size);
 
 private:
+#ifndef BAMBUSTUDIO_NO_AVVIDEODECODER
     AVCodecContext *codec_ctx_ = nullptr;
     AVFrame *       frame_     = nullptr;
     SwsContext *    sws_ctx_   = nullptr;
+#endif // BAMBUSTUDIO_NO_AVVIDEODECODER
     bool got_frame_ = false;
     int width_ { 0 }; // scale result width
     std::vector<uint8_t> bits_;
