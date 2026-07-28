@@ -25,13 +25,13 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920  # v2.20.0
         with:
           # audit (not block) to match the other deploy workflows — block mode
           # rejected the checkout connection to github.com even though it was
           # allow-listed, failing the deploy at the checkout step.
           egress-policy: audit
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Determine version
         id: version
@@ -69,7 +69,7 @@ jobs:
           echo "sha_intel=$SHA_INTEL" >> "$GITHUB_OUTPUT"
 
       - name: Update Homebrew Cask via PR
-        uses: mislav/bump-homebrew-formula-action@ccf2332299a883f6af50a1d2d41e5df7904dd769  # v4
+        uses: mislav/bump-homebrew-formula-action@f865c8b0dbebd6e263cc06782a0e974c61cf12d2  # v4
         with:
           formula-name: bambu-studio
           formula-path: Casks/bambu-studio.rb

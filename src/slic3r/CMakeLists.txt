@@ -690,12 +690,14 @@ if (APPLE)
         )
     FIND_LIBRARY(DISKARBITRATION_LIBRARY DiskArbitration)
 else ()
-    if (NOT (MSVC AND ((CMAKE_SYSTEM_PROCESSOR MATCHES "^(ARM64|aarch64)$") OR (CMAKE_GENERATOR_PLATFORM STREQUAL "ARM64"))))
-        list(APPEND SLIC3R_GUI_SOURCES
-                GUI/AVVideoDecoder.cpp
-                GUI/AVVideoDecoder.hpp
-            )
-    endif ()
+    # AVVideoDecoder.cpp itself compiles a stub (no libav calls) when
+    # BAMBUSTUDIO_NO_AVVIDEODECODER is defined (set further below for MSVC
+    # ARM64, which has no prebuilt libav libraries yet), so it's always part
+    # of the sources - wxMediaCtrl3.cpp needs a real class either way.
+    list(APPEND SLIC3R_GUI_SOURCES
+            GUI/AVVideoDecoder.cpp
+            GUI/AVVideoDecoder.hpp
+        )
     list(APPEND SLIC3R_GUI_SOURCES
             GUI/wxMediaCtrl2.cpp
             GUI/wxMediaCtrl2.h

@@ -32,19 +32,19 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920  # v2.20.0
         continue-on-error: true
         with:
           egress-policy: audit
 
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           lfs: 'true'
           fetch-depth: 0
 
       - name: load cached deps
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
         with:
           path: ${{ inputs.cache-path || format('{0}/deps/build', github.workspace) }}
           key: ${{ inputs.cache-key }}
@@ -98,7 +98,7 @@ jobs:
 # ── macOS ───────────────────────────────────────────────────────────────────
       - name: Install cmake 3.31.x (macOS)
         if: runner.os == 'macOS'
-        uses: lukka/get-cmake@f5b8fbb4d77cec1acc5a5f9f0df4beffaf5d98d9  # v4.3.4
+        uses: lukka/get-cmake@e6906078ebd1ccb8ce51ab4626ac46a1b5a517e3  # v4.4.0
         with:
           cmakeVersion: "~3.31.0"
           useLocalCache: true
@@ -106,7 +106,7 @@ jobs:
 
       - name: Cache Homebrew downloads (macOS)
         if: runner.os == 'macOS'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v5
         with:
           path: ~/Library/Caches/Homebrew/downloads
           key: brew-core-${{ inputs.os }}-${{ hashFiles('.github/workflows/_build-core.yml') }}
@@ -223,7 +223,7 @@ jobs:
 # ── Windows ─────────────────────────────────────────────────────────────────
       - name: Install cmake 3.31.x (Windows)
         if: runner.os == 'Windows'
-        uses: lukka/get-cmake@f5b8fbb4d77cec1acc5a5f9f0df4beffaf5d98d9  # v4.3.4
+        uses: lukka/get-cmake@e6906078ebd1ccb8ce51ab4626ac46a1b5a517e3  # v4.4.0
         with:
           cmakeVersion: "~3.31.0"
           useLocalCache: true

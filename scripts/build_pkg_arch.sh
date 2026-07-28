@@ -6,12 +6,18 @@ set -e
 ROOT=$(dirname "$(readlink -f "$0")")/..
 
 BASE=$(grep 'set(SLIC3R_VERSION_BASE' "$ROOT/version.inc" | cut -d '"' -f2)
-if [ -z "$BASE" ]; then
+if [ -n "$BASE" ]; then
+    # Fork dev schema: base version + commit count
+    COUNT=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo "0")
+    VERSION="${BASE}.${COUNT}"
+else
+    # Upstream/release schema: full version is stored directly
+    VERSION=$(grep 'set(SLIC3R_VERSION ' "$ROOT/version.inc" | cut -d '"' -f2)
+fi
+if [ -z "$VERSION" ]; then
     echo "Error: could not read version from version.inc" >&2
     exit 1
 fi
-COUNT=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo "0")
-VERSION="${BASE}.${COUNT}"
 
 ARCH=$(uname -m)
 APPDIR="$ROOT/build/package"
@@ -23,6 +29,11 @@ if [ ! -f "$APPDIR/bin/bambu-studio" ]; then
     echo "Run './BuildLinux.sh -sf' first." >&2
     exit 1
 fi
+
+# Ensure packaging tools — makepkg needs fakeroot, absent from the base image.
+SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
+command -v makepkg  >/dev/null 2>&1 || $SUDO pacman -Sy --needed --noconfirm base-devel
+command -v fakeroot >/dev/null 2>&1 || $SUDO pacman -Sy --needed --noconfirm fakeroot
 
 echo "Building .pkg.tar.zst for BambuStudio ${VERSION}..."
 rm -rf "$PKGDIR"
@@ -38,6 +49,20 @@ done
 
 install -m 755 "$APPDIR/bin/bambu-studio" "$STAGING/usr/lib/${PKGNAME}/"
 find "$APPDIR/bin" -name "*.so*" -exec install -m 755 {} "$STAGING/usr/lib/${PKGNAME}/" \;
+
+# Bundle libOSMesa (+ its libglapi dependency). Arch's modern mesa no longer
+# ships classic OSMesa, which BambuStudio links against (-lOSMesa); linux.d/arch
+# extracts them from mesa-amber into /usr/lib during the dependency step, so pull
+# them into the package as well (the launcher sets LD_LIBRARY_PATH to this dir).
+for L in libOSMesa.so.8.0.0 libglapi.so.0.0.0; do
+    [ -e "/usr/lib/$L" ] && install -m 755 "/usr/lib/$L" "$STAGING/usr/lib/${PKGNAME}/"
+done
+(
+    cd "$STAGING/usr/lib/${PKGNAME}"
+    [ -e libOSMesa.so.8.0.0 ] && ln -sf libOSMesa.so.8.0.0 libOSMesa.so.8
+    [ -e libglapi.so.0.0.0 ]  && ln -sf libglapi.so.0.0.0  libglapi.so.0
+    true
+)
 cp -r "$APPDIR/resources" "$STAGING/usr/lib/${PKGNAME}/"
 
 cat > "$STAGING/usr/bin/${PKGNAME}" << 'WRAPPER'

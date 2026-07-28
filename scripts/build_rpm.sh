@@ -6,12 +6,18 @@ set -e
 ROOT=$(dirname "$(readlink -f "$0")")/..
 
 BASE=$(grep 'set(SLIC3R_VERSION_BASE' "$ROOT/version.inc" | cut -d '"' -f2)
-if [ -z "$BASE" ]; then
+if [ -n "$BASE" ]; then
+    # Fork dev schema: base version + commit count
+    COUNT=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo "0")
+    VERSION="${BASE}.${COUNT}"
+else
+    # Upstream/release schema: full version is stored directly
+    VERSION=$(grep 'set(SLIC3R_VERSION ' "$ROOT/version.inc" | cut -d '"' -f2)
+fi
+if [ -z "$VERSION" ]; then
     echo "Error: could not read version from version.inc" >&2
     exit 1
 fi
-COUNT=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo "0")
-VERSION="${BASE}.${COUNT}"
 
 ARCH=$(uname -m)
 APPDIR="$ROOT/build/package"
@@ -24,6 +30,11 @@ if [ ! -f "$APPDIR/bin/bambu-studio" ]; then
     echo "Run './BuildLinux.sh -sf' first." >&2
     exit 1
 fi
+
+# Ensure packaging tools — the Fedora CI image ships neither by default.
+SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
+command -v rpmbuild >/dev/null 2>&1 || $SUDO dnf install -y -q rpm-build
+command -v python3  >/dev/null 2>&1 || $SUDO dnf install -y -q python3
 
 echo "Building .rpm for BambuStudio ${VERSION}..."
 mkdir -p "$RPMTOP"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
