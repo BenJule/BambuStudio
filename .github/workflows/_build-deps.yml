@@ -32,7 +32,7 @@ jobs:
       date:
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920  # v2.20.0
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25  # v2.22.1
         with:
           egress-policy: audit
 
@@ -54,7 +54,7 @@ jobs:
 
       - name: Install cmake 3.31.x (Windows)
         if: startsWith(inputs.os, 'windows-')
-        uses: lukka/get-cmake@e6906078ebd1ccb8ce51ab4626ac46a1b5a517e3  # v4.4.0
+        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9  # v4.4.4
         with:
           cmakeVersion: "~3.31.0"
           useLocalCache: true
@@ -140,7 +140,7 @@ jobs:
 
       - name: Install cmake 3.31.x (macOS)
         if: startsWith(inputs.os, 'macos-')
-        uses: lukka/get-cmake@e6906078ebd1ccb8ce51ab4626ac46a1b5a517e3  # v4.4.0
+        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9  # v4.4.4
         with:
           cmakeVersion: "~3.31.0"
           useLocalCache: true
@@ -235,7 +235,7 @@ jobs:
       # Upload Artifacts
       - name: Upload Mac ${{ inputs.arch }} artifacts
         if: startsWith(inputs.os, 'macos-')
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: BambuStudio_dep_${{ inputs.os }}_${{ inputs.arch }}_${{ env.date }}
           path: ${{ github.workspace }}/deps/BambuStudio_dep_mac_${{ inputs.arch }}*.tar.gz
@@ -247,14 +247,14 @@ jobs:
 
       - name: Upload Windows artifacts
         if: startsWith(inputs.os, 'windows-')
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: BambuStudio_dep_${{ inputs.os }}_${{ env.date }}
           path: ${{ github.workspace }}/deps/build/BambuStudio_dep*.zip
 
       - name: Upload Ubuntu artifacts
         if: ${{ ! env.ACT && startsWith(inputs.os, 'ubuntu-') }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: BambuStudio_dep_${{ inputs.os }}_${{ env.date }}
           path: ${{ github.workspace }}/deps/build/BambuStudio_dep_${{ inputs.os }}_*.tar.gz

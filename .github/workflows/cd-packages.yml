@@ -62,7 +62,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920  # v2.20.0
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25  # v2.22.1
         with:
           egress-policy: audit
 
@@ -165,7 +165,7 @@ jobs:
         uses: ./.github/actions/get-version
 
       - name: Upload artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: BambuStudio_debian-trixie_deb_${{ steps.ver.outputs.ver }}
           path: ./build/bambustudio_*.deb
@@ -191,7 +191,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920  # v2.20.0
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25  # v2.22.1
         with:
           egress-policy: audit
 
@@ -235,7 +235,7 @@ jobs:
         uses: ./.github/actions/get-version
 
       - name: Upload artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: BambuStudio_fedora42_rpm_${{ steps.ver.outputs.ver }}
           path: ./build/bambustudio-*.rpm
@@ -261,7 +261,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920  # v2.20.0
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25  # v2.22.1
         with:
           egress-policy: audit
 
@@ -282,7 +282,7 @@ jobs:
           key: pkg-deps-arch-${{ hashFiles('deps/CMakeLists.txt', 'deps/**/*.cmake') }}
 
       - name: Install cmake 3.31.x (Arch)
-        uses: lukka/get-cmake@e6906078ebd1ccb8ce51ab4626ac46a1b5a517e3  # v4.4.0
+        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9  # v4.4.4
         with:
           cmakeVersion: "~3.31.0"
           useLocalCache: true
@@ -313,7 +313,7 @@ jobs:
         uses: ./.github/actions/get-version
 
       - name: Upload artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: BambuStudio_arch_pkg_${{ steps.ver.outputs.ver }}
           path: ./build/bambustudio-*.pkg.tar.zst
